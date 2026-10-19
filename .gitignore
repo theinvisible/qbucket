@@ -1,0 +1,53 @@
+# Build directories
+build/
+build-*/
+out/
+cmake-build-*/
+
+# CLion / JetBrains
+.idea/
+*.iml
+
+# CMake artefacts (when generated in source — keep out as a safety net)
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+Makefile
+compile_commands.json
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.so.*
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ilk
+
+# Qt
+*.user
+*.user.*
+*.autosave
+*.qmlc
+*.jsc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+
+# VS / VSCode
+.vs/
+.vscode/
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

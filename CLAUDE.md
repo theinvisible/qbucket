@@ -1,0 +1,197 @@
+# QBucket
+
+A Qt6/C++ desktop browser for S3 and S3-compatible object storage (AWS,
+Hetzner Object Storage, Ceph RGW, MinIO, Cloudflare R2, Backblaze B2, …).
+Feature yardstick: NetSDK's **S3 Browser** — but open source and
+cross-platform.
+
+Targets: **Windows** and **Linux** as equals; Linux ships as a **Flatpak**
+first. Stay platform-neutral outside `src/platform/`.
+
+License: **MIT**.
+
+Provider priority: **Hetzner Object Storage first.** Everything
+provider-specific goes through a provider profile in `src/providers/` —
+see "Provider profiles" below.
+
+## Status
+
+**Planning.** No code yet. The full plan — decisions, scope, architecture,
+milestones M0–M8, test strategy, protocol pitfalls — lives in **`PLAN.md`**.
+Start there, and update this section as milestones land.
+
+## Devlog
+
+**[docs/devlog/](docs/devlog/)** — one entry per step, numbered
+(`NNN-short-slug.md`), **written in English**, format as in
+`000-project-start-and-planning.md` (`# Devlog NNN — Title`, `**Date:**`,
+then: what was built, decisions + why, measurements, pitfalls, open
+points). Add a new entry after every completed milestone and after any
+notable detour (bug hunt, design change, provider quirk discovered).
+Screenshots go to `docs/devlog/img/`.
+
+## Stack
+
+- **Qt 6.5+** (local: `H:/Qt/6.12.0/msvc2022_64`), C++20, CMake ≥ 3.21
+- **UI: Qt Widgets** on Fusion with Dark / Light / System theming — design
+  system ported from the sibling project **xyz-profiler**
+  (`H:\DEV\CLion\xyz-profiler`: `ui/Theme`, `ui/DarkFusionStyle`,
+  `ui/IconFactory`). Keep the palette tokens identical.
+- **S3:** own client on `QNetworkAccessManager` (SigV4 + `QXmlStreamReader`).
+  No AWS SDK.
+- **Secrets:** every password / secret key is stored with **QtKeychain**
+  (FetchContent) through `accounts/SecretStore` — never in the INI, a JSON
+  file, logs or the transfer resume store. No plaintext fallback: without a
+  keychain backend the account asks once per session and keeps the secret
+  in memory only.
+- **Settings:** `QSettings` INI through `SettingsController`.
+
+## Build & test
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --target qbucket -j
+ctest --test-dir build --output-on-failure
+```
+
+The top-level `CMakeLists.txt` auto-detects Qt under `H:/Qt` / `C:/Qt` (same
+logic as xyz-profiler). Override with `-DCMAKE_PREFIX_PATH=...`.
+
+Integration tests against a real endpoint are opt-in via `QBUCKET_IT_*`
+environment variables (endpoint, region, access key, secret, bucket,
+addressing style) and are skipped when unset.
+
+## Conventions
+
+Inherited from xyz-profiler — keep both projects consistent.
+
+- `namespace qbucket`. **No `Q` class prefix** — that reads as Qt API.
+- Layering: `domain` ← `providers` ← `s3` ← `transfer` ← `controllers` /
+  `models` ← `ui`. `providers`, `s3` and `transfer` must not include widget
+  headers.
+- Business logic in `QObject` controllers; the UI connects to signals and
+  calls public methods. Dialogs are `QDialog` subclasses.
+- **The UI never blocks, on any action or data size.** The GUI thread only
+  paints, handles widgets and appends finished batches to models.
+  `S3Client` + its own QNAM live on worker threads (browse thread per
+  account, transfer pool); the GUI talks to them only via the `S3Session`
+  proxy (queued calls, value-type results, `RequestId` cancellation).
+  Hashing, directory walks, plan/journal I/O and large sorts run in the I/O
+  pool. Never share a QNAM across threads; workers never touch widgets or
+  models. No `QDialog::exec()` around long work, no `QEventLoop::exec()`,
+  no `waitForFinished()` on the GUI thread. See `PLAN.md` §3 threading
+  model.
+- C++20, no exceptions on hot paths; errors flow back as result structs /
+  `S3Error` or via signals.
+- `QStringLiteral` / `u"…"` for literals; no implicit `const char*` →
+  `QString`.
+- Headers under `src/<module>/`, included as `"module/Header.h"`. One class
+  per file, filename = class name.
+- Tests: QtTest, one binary per module under `tests/`, `QTEST_GUILESS_MAIN`
+  for non-UI tests, fixtures under `tests/data/` via `TEST_DATA_DIR`.
+- New UI strings: run `lupdate` and add the German entry to
+  `translations/qbucket_de.ts`.
+- Commits: Conventional Commits; feature branches `feat/<slug>`.
+
+## Lessons carried over from xyz-profiler
+
+Each of these cost time there; don't relearn them.
+
+- **Settings writes are synchronous disk I/O.** Debounce anything
+  high-frequency (splitter, column widths, window geometry) with a 300 ms
+  single-shot timer, flushed on `aboutToQuit`.
+- **No catch-all `QWidget {}` QSS rule**, install Fusion only once, set the
+  font only when it changed — otherwise every theme switch re-polishes the
+  whole tree.
+- **`QHeaderView::ResizeToContents` is O(rows)** per resize. Use
+  `Interactive` with fixed widths for predictable columns — critical with
+  100k-row object listings.
+- **Debug builds are 8–13× slower** in the paint stack (debug Qt DLLs + CRT).
+  Check the build profile before chasing a performance complaint.
+- **Standard shortcuts on Windows:** route `QKeySequence::Quit` /
+  `Preferences` through a `setStandardShortcut()` helper, otherwise menus
+  show phantom "Exit"/"Settings" text.
+- **Column indices persisted in settings are append-only.** Never insert a
+  column enum value anywhere but at the end.
+- **Delegates never do I/O in `paint()`.** Anything that needs loading
+  (thumbnails, lazy HEADs) goes async and triggers a repaint.
+
+## Production data — safety rules
+
+QBucket almost always runs against **production data**. Robustness beats
+convenience and speed: **check once too often rather than once too
+little.** Full rules in `PLAN.md` §12; the ones every change must respect:
+
+- **One mutation gate:** every write/delete/copy/config change goes through
+  `OperationController` (read-only accounts, environment marker,
+  confirmation, journal, verification). The UI never calls mutating
+  `S3Client` methods directly.
+- **Plan → preview → execute → verify → report** for every bulk or
+  destructive operation. Scope comes from a fresh listing, never from what
+  the view shows.
+- **Move = copy → verify → delete source.** Metadata edits merge the full
+  current state and copy with `x-amz-copy-source-if-match`.
+- **Never trust a status code alone:** CopyObject / UploadPartCopy /
+  CompleteMultipartUpload can return 200 with an `<Error>` body.
+- **Retry only idempotent requests**; resolve an unclear
+  CompleteMultipartUpload by HEAD, not by retrying.
+- **Integrity:** `Content-MD5` on every PUT and part; downloads verified and
+  only then renamed from `.qbpart`. Report "size verified only" honestly.
+- **An error is never an empty folder.** Listing loops (repeated
+  continuation token) abort with an error.
+- **No secrets in logs:** redact `Authorization`, presigned signatures,
+  session tokens.
+- Object-lock governance bypass only per operation with explicit
+  confirmation; never implicit.
+
+## Performance rules
+
+Second priority after safety, but mandatory with millions of objects
+(`PLAN.md` §13, budgets in §13.4, measured in release builds only):
+
+- Never load a whole bucket; page with `fetchMore`, prefetch near the end.
+- Compact row structs, lazy display strings, one `beginInsertRows` per
+  page, no `dynamicSortFilter` re-sorting on appends.
+- Bulk operations stream (list page → plan file → batch → next page);
+  memory stays bounded at any scale.
+- Adaptive concurrency (AIMD on SlowDown/503) per account.
+- GUI-thread stalls > 50 ms are bugs; the debug stall watchdog reports
+  them.
+
+## Provider profiles
+
+- **The protocol core never checks which provider it talks to.** No
+  endpoint/hostname sniffing in `s3/`, `transfer/`, `models/` or `ui/`.
+  Every deviation from plain S3 is a `ProviderProfile` hook or a
+  `Capabilities` flag (`PLAN.md` §3.1).
+- `GenericS3Profile` holds the S3 defaults; concrete profiles override only
+  what differs. `HetznerProfile` is first-class; others are added as
+  needed.
+- Profile capabilities are the baseline; runtime probing (501 /
+  `NotImplemented`) can only narrow them, cached per account.
+- A new provider = one profile class + fixtures under
+  `tests/data/<provider>/` + `test_provider_<id>.cpp` + one registry line.
+- Hetzner is the primary integration-test target; a change touching the
+  protocol must pass the Hetzner integration run.
+
+## S3 subsystem notes
+
+Fill in as they're discovered. Seeded from `PLAN.md` §8:
+
+- Send `Content-MD5` where S3 requires integrity headers; do not adopt the
+  `x-amz-checksum-*` defaults (they break third-party providers).
+- Path-style vs. virtual-hosted is per provider preset, overridable per
+  account. Dotted bucket names need path-style over TLS.
+- ETags are quoted and only equal the MD5 for single-part, non-KMS objects.
+- "Folders" are prefixes; a `prefix/` marker object may or may not exist.
+- Clock skew: correct from the server `Date` header, never ask the user to
+  fix their clock.
+- Self-signed TLS: per-account certificate pinning, never a global ignore.
+
+## References
+
+- Amazon S3 API reference: <https://docs.aws.amazon.com/AmazonS3/latest/API/>
+- SigV4 signing: <https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv.html>
+- Hetzner Object Storage docs: <https://docs.hetzner.com/storage/object-storage/>
+- QtKeychain: <https://github.com/frankosterfeld/qtkeychain>
+- Qt6 Widgets: <https://doc.qt.io/qt-6/qtwidgets-index.html>
