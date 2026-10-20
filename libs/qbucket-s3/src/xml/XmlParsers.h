@@ -52,6 +52,9 @@ QBUCKET_S3_EXPORT Result<ListPage> parseListObjectsV1(const QByteArray& body, bo
 
 QBUCKET_S3_EXPORT Result<DeleteObjectsResult> parseDeleteResult(const QByteArray& body);
 
+// <CopyObjectResult> of a successful copy (ETag, LastModified).
+QBUCKET_S3_EXPORT Result<CopyObjectResult> parseCopyObjectResult(const QByteArray& body);
+
 // Raw LocationConstraint value ("" for us-east-1, legacy "EU", …). Mapping
 // to a signing region is the provider profile's job.
 QBUCKET_S3_EXPORT Result<QString> parseLocationConstraint(const QByteArray& body);

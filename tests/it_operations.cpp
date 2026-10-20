@@ -12,6 +12,7 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
+#include "controllers/RenameJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "support/FakeKeychainBackend.h"
@@ -159,6 +160,31 @@ private slots:
         QVERIFY(exists(keep));
         for (const QString& key : keys)
             QVERIFY2(!exists(key), qPrintable(key));
+    }
+
+    void renameAnObjectAndAFolder()
+    {
+        m_ops->setPlanDir(m_dir.filePath(QStringLiteral("plans")));
+        const QString file = m_root + QStringLiteral("before ä.txt");
+        QVERIFY(put(file, "rename me"));
+        Job* job = run(new RenameJob(m_account, m_bucket, file, false, QStringLiteral("after ü.txt"), m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        QVERIFY(!exists(file));
+        QVERIFY(exists(m_root + QStringLiteral("after ü.txt")));
+
+        const QString folder = m_root + QStringLiteral("dir old/");
+        const QStringList keys = {folder, folder + QStringLiteral("a"), folder + QStringLiteral("sub/b+c")};
+        for (const QString& k : keys)
+            QVERIFY(put(k, k.endsWith(u'/') ? QByteArray() : k.toUtf8()));
+        job = run(new RenameJob(m_account, m_bucket, folder, true, QStringLiteral("dir new"), m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().succeeded, keys.size());
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        for (const QString& k : keys) {
+            QVERIFY2(!exists(k), qPrintable(k));
+            QVERIFY2(exists(m_root + QStringLiteral("dir new/") + k.mid(folder.size())), qPrintable(k));
+        }
     }
 
 private:

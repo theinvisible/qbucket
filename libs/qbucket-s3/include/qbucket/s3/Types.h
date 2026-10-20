@@ -107,6 +107,28 @@ struct DeleteObjectResult {
     QString requestId;                    // x-amz-request-id, for the journal
 };
 
+// CopyObject within or between buckets (up to 5 GiB; larger objects need
+// UploadPartCopy). Metadata, content type and tags are copied (directive
+// COPY); the storage class is NOT — without storageClass the copy lands in
+// the server's default class. ACLs are never copied.
+struct CopyObjectParams {
+    QString sourceBucket;
+    QString sourceKey;
+    QString sourceVersionId;              // empty: the current version
+    QString bucket;                       // destination
+    QString key;
+    QString ifMatch;                      // x-amz-copy-source-if-match, ETag with quotes; empty: none
+    QString storageClass;                 // of the copy; empty: server default
+};
+
+struct CopyObjectResult {
+    QString etag;
+    QDateTime lastModified;
+    QString versionId;                    // of the copy (versioned buckets)
+    QString sourceVersionId;
+    QString requestId;                    // x-amz-request-id, for the journal
+};
+
 struct CreateBucketParams {
     QString bucket;
     QString region;                       // → LocationConstraint via the provider profile

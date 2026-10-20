@@ -16,6 +16,7 @@ struct FakeObject {
     QString key;
     qint64 size = 0;
     QByteArray storageClass = "STANDARD";
+    QByteArray etag = "\"0\"";
 };
 
 // Answers ListObjectsV2 like S3 does — prefix, "/" delimiter with common
@@ -32,8 +33,17 @@ public:
 
     void add(const QString& key, qint64 size = 0, const QByteArray& storageClass = "STANDARD")
     {
-        m_objects.append({key, size, storageClass});
+        m_objects.append({key, size, storageClass, "\"0\""});
     }
+    [[nodiscard]] FakeObject* find(const QString& key)
+    {
+        const qsizetype i = indexOf(key);
+        return i < 0 ? nullptr : &m_objects[i];
+    }
+
+    // Copies whose size comes out one byte off (a corrupt copy).
+    QSet<QString> corruptCopies;
+    int copies = 0;
     void sort()
     {
         std::sort(m_objects.begin(), m_objects.end(),
@@ -74,7 +84,30 @@ public:
             const qsizetype i = indexOf(key);
             return i < 0 ? FakeResponse::s3Error(404, "NotFound")
                          : FakeResponse().withHeader("Content-Length", QByteArray::number(m_objects[i].size))
-                               .withHeader("ETag", "\"0\"");
+                               .withHeader("ETag", m_objects[i].etag)
+                               .withHeader("x-amz-storage-class", m_objects[i].storageClass);
+        }
+        if (req.method == "PUT" && !key.isEmpty() && !req.header("x-amz-copy-source").isNull()) {
+            ++copies;
+            const QString source = QUrl::fromPercentEncoding(req.header("x-amz-copy-source"));
+            const qsizetype cut = source.indexOf(u'/', 1);
+            const FakeObject* src = find(cut < 0 ? QString() : source.mid(cut + 1));
+            if (!src)
+                return FakeResponse::s3Error(404, "NoSuchKey");
+            const QByteArray ifMatch = req.header("x-amz-copy-source-if-match");
+            if (!ifMatch.isNull() && ifMatch != src->etag)
+                return FakeResponse::s3Error(412, "PreconditionFailed");
+            FakeObject copy = *src;
+            copy.key = key;
+            copy.storageClass = req.header("x-amz-storage-class").isNull() ? QByteArray("STANDARD")
+                                                                          : req.header("x-amz-storage-class");
+            if (corruptCopies.contains(key))
+                copy.size += 1;
+            remove(key);
+            m_objects.append(copy);
+            sort();
+            return FakeResponse::ok("<CopyObjectResult><LastModified>2026-10-20T09:00:00.000Z</LastModified><ETag>"
+                                    + copy.etag + "</ETag></CopyObjectResult>");
         }
         if (req.method == "PUT" && !key.isEmpty()) {
             remove(key);
@@ -142,7 +175,7 @@ public:
                 }
             }
             contents += "<Contents><Key>" + escape(o.key)
-                      + "</Key><LastModified>2026-10-20T08:00:00.000Z</LastModified><ETag>\"0\"</ETag><Size>"
+                      + "</Key><LastModified>2026-10-20T08:00:00.000Z</LastModified><ETag>" + escape(QString::fromLatin1(o.etag)) + "</ETag><Size>"
                       + QByteArray::number(o.size) + "</Size><StorageClass>" + o.storageClass
                       + "</StorageClass></Contents>";
             ++count;

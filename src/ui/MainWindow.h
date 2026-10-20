@@ -68,6 +68,7 @@ private:
     void updateMutationActions_();
     void newFolder_();
     void deleteSelection_();
+    void renameSelection_();
     void restoreWindowState_();
     void saveWindowState_();
 

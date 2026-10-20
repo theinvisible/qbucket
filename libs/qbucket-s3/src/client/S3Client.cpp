@@ -1,5 +1,7 @@
 #include "client/S3Client.h"
 
+#include "http/UriEncoding.h"
+
 #include "core/HttpDate.h"
 #include "xml/XmlParsers.h"
 #include "xml/XmlWriters.h"
@@ -441,6 +443,53 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
         out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
         out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
         return Result<PutObjectResult>(out);
+    });
+}
+
+quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResult> done)
+{
+    if (params.sourceBucket.isEmpty() || params.sourceKey.isEmpty() || params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("source or destination is missing")));
+    if (params.sourceBucket == params.bucket && params.sourceKey == params.key && params.sourceVersionId.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("an object cannot be copied onto itself")));
+    // Same rule as for request paths: QNAM would normalise them in the URL,
+    // the server might in the header.
+    for (const QString& k : {params.sourceKey, params.key}) {
+        const QStringList segments = k.split(u'/');
+        if (segments.contains(QStringLiteral(".")) || segments.contains(QStringLiteral("..")))
+            return failLater(std::move(done), invalid(QStringLiteral("keys with \".\" or \"..\" segments cannot be copied")));
+    }
+
+    RequestSpec spec;
+    spec.operation = Operation::CopyObject;
+    spec.method = "PUT";
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.contentType = "application/octet-stream";   // ignored with the COPY directive
+    // A lost answer leaves the outcome open (another version on versioned
+    // buckets): never retried blindly — the caller checks with HEAD.
+    spec.idempotent = false;
+    QByteArray source = '/' + uriEncodeText(params.sourceBucket, SlashMode::Encode) + '/'
+                      + uriEncodeText(params.sourceKey, SlashMode::Keep);
+    if (!params.sourceVersionId.isEmpty())
+        source += "?versionId=" + uriEncodeText(params.sourceVersionId, SlashMode::Encode);
+    spec.headers.append({"x-amz-copy-source", source});
+    spec.headers.append({"x-amz-metadata-directive", QByteArray("COPY")});
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"x-amz-copy-source-if-match", params.ifMatch.toLatin1()});
+    if (!params.storageClass.isEmpty())
+        spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
+    // A copy can fail after the 200 has been sent: the body says so.
+    spec.mayReturn200Error = true;
+
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<CopyObjectResult> {
+        Result<CopyObjectResult> parsed = xml::parseCopyObjectResult(r.body);
+        if (!parsed)
+            return parsed;
+        parsed->versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+        parsed->sourceVersionId = QString::fromUtf8(r.header("x-amz-copy-source-version-id"));
+        parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return parsed;
     });
 }
 

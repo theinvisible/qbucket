@@ -5,6 +5,7 @@
 
 #include <QCryptographicHash>
 #include <QXmlStreamReader>
+#include <QFile>
 #include <QtTest>
 
 #include <optional>
@@ -296,6 +297,87 @@ private Q_SLOTS:
         const Result<void> full =
             await<void>([&](auto cb) { client->deleteBucket(QStringLiteral("full"), std::move(cb)); });
         QCOMPARE(full.error().category, ErrorCategory::Conflict);
+    }
+
+    void copyObjectSendsTheSourceAndKeepsTheClass()
+    {
+        QFile f(QStringLiteral(TEST_DATA_DIR "/generic/copy-object-result.xml"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        m_server->on("PUT", QString(), FakeResponse::ok(f.readAll(), kXml).withHeader("x-amz-version-id", "v9"));
+        auto client = makeClient();
+        CopyObjectParams p;
+        p.sourceBucket = QStringLiteral("bkt");
+        p.sourceKey = QStringLiteral("old dir/a+b ü.txt");
+        p.bucket = QStringLiteral("bkt");
+        p.key = QStringLiteral("new dir/a+b ü.txt");
+        p.ifMatch = QStringLiteral("\"9b2cf535f27731c974343645a3985328\"");
+        p.storageClass = QStringLiteral("STANDARD_IA");
+        const Result<CopyObjectResult> r =
+            await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QVERIFY2(r, qPrintable(r ? QString() : r.error().toString()));
+        QCOMPARE(r->etag, QStringLiteral("\"9b2cf535f27731c974343645a3985328\""));
+        QCOMPARE(r->lastModified, QDateTime(QDate(2026, 10, 20), QTime(8, 15, 30), QTimeZone::UTC));
+        QCOMPARE(r->versionId, QStringLiteral("v9"));
+        QVERIFY(!r->requestId.isEmpty());
+
+        const RecordedRequest req = m_server->requests().first();
+        QCOMPARE(req.method, QByteArray("PUT"));
+        QCOMPARE(req.path, QByteArray("/bkt/new%20dir/a%2Bb%20%C3%BC.txt"));
+        QCOMPARE(req.header("x-amz-copy-source"), QByteArray("/bkt/old%20dir/a%2Bb%20%C3%BC.txt"));
+        QCOMPARE(req.header("x-amz-metadata-directive"), QByteArray("COPY"));
+        QCOMPARE(req.header("x-amz-copy-source-if-match"), p.ifMatch.toLatin1());
+        QCOMPARE(req.header("x-amz-storage-class"), QByteArray("STANDARD_IA"));
+        QVERIFY(req.body.isEmpty());
+    }
+
+    void copyObjectFailuresAreNeverSuccesses()
+    {
+        auto client = makeClient();
+        CopyObjectParams p;
+        p.sourceBucket = QStringLiteral("bkt");
+        p.sourceKey = QStringLiteral("a");
+        p.bucket = QStringLiteral("bkt");
+        p.key = QStringLiteral("b");
+
+        // 200 with an <Error> body: the copy failed after the headers went out.
+        m_server->on("PUT", QString(), FakeResponse::ok("<Error><Code>InternalError</Code><Message>x</Message></Error>", kXml), 1);
+        Result<CopyObjectResult> r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().httpStatus, 200);
+        QCOMPARE(r.error().code, QStringLiteral("InternalError"));
+        QCOMPARE(m_server->requestCount(), 1);   // not retried: not idempotent
+
+        // The source changed since the plan.
+        m_server->on("PUT", QString(), FakeResponse::s3Error(412, "PreconditionFailed"), 1);
+        p.ifMatch = QStringLiteral("\"old\"");
+        r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::PreconditionFailed);
+
+        // A lost answer: the copy may exist. Unknown, and sent once.
+        m_server->clearRequests();
+        FakeResponse drop;
+        drop.dropWithoutResponse = true;
+        m_server->on("PUT", QString(), drop);
+        r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QVERIFY(!r);
+        QVERIFY(r.error().outcomeUnknown);
+        QCOMPARE(m_server->requestCount(), 1);
+    }
+
+    void copyObjectRefusesWhatCannotBeSent()
+    {
+        auto client = makeClient();
+        CopyObjectParams p;
+        p.sourceBucket = QStringLiteral("bkt");
+        p.sourceKey = QStringLiteral("a");
+        p.bucket = QStringLiteral("bkt");
+        p.key = QStringLiteral("a");   // onto itself
+        Result<CopyObjectResult> r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        p.key = QStringLiteral("x/../a");
+        r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        QCOMPARE(m_server->requestCount(), 0);
     }
 
     void lostRepliesOfNonIdempotentRequests()

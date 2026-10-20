@@ -29,12 +29,28 @@ PlanFile::~PlanFile()
 
 void PlanFile::append(const QStringList& keys)
 {
-    if (keys.isEmpty())
-        return;
-    m_count += keys.size();
-    QByteArray lines;
+    QList<QStringList> records;
+    records.reserve(keys.size());
     for (const QString& k : keys)
-        lines += QUrl::toPercentEncoding(k) + '\n';
+        records.append({k});
+    appendRecords(records);
+}
+
+void PlanFile::appendRecords(const QList<QStringList>& records)
+{
+    if (records.isEmpty())
+        return;
+    m_count += records.size();
+    QByteArray lines;
+    for (const QStringList& fields : records) {
+        for (qsizetype i = 0; i < fields.size(); ++i) {
+            if (i > 0)
+                lines += ' ';
+            // Never empty on disk: an empty field would merge with its neighbour.
+            lines += fields[i].isEmpty() ? QByteArray("%") : QUrl::toPercentEncoding(fields[i]);
+        }
+        lines += '\n';
+    }
     const QString file = m_path;
     const QPointer<PlanFile> self(this);
     m_io.start([this, self, file, lines] {
@@ -63,32 +79,46 @@ void PlanFile::flush(std::function<void(bool)> done)
 
 void PlanFile::readNext(int n, std::function<void(const QStringList&)> done)
 {
+    readNextRecords(n, [done = std::move(done)](const QList<QStringList>& records) {
+        QStringList keys;
+        keys.reserve(records.size());
+        for (const QStringList& r : records)
+            keys.append(r.value(0));
+        done(keys);
+    });
+}
+
+void PlanFile::readNextRecords(int n, std::function<void(const QList<QStringList>&)> done)
+{
     const QString file = m_path;
     const QPointer<PlanFile> self(this);
     // m_ioOffset lives on the I/O thread: reads queued back to back still
     // follow each other.
     m_io.start([this, self, file, n, done = std::move(done)] {
-        QStringList keys;
+        QList<QStringList> records;
         QString error;
         QFile f(file);
         if (f.open(QIODevice::ReadOnly)) {
             f.seek(m_ioOffset);
-            while (keys.size() < n) {
+            while (records.size() < n) {
                 const QByteArray line = f.readLine();
                 if (line.isEmpty())
                     break;
                 m_ioOffset += line.size();
-                keys.append(QUrl::fromPercentEncoding(line.trimmed()));
+                QStringList fields;
+                for (const QByteArray& field : line.trimmed().split(' '))
+                    fields.append(field == "%" ? QString() : QUrl::fromPercentEncoding(field));
+                records.append(fields);
             }
         } else if (QFile::exists(file)) {
             error = f.errorString();
         }
-        QMetaObject::invokeMethod(this, [self, done, keys, error] {
+        QMetaObject::invokeMethod(this, [self, done, records, error] {
             if (!self)
                 return;
             if (!error.isEmpty() && self->m_error.isEmpty())
                 self->m_error = error;
-            done(keys);
+            done(records);
         }, Qt::QueuedConnection);
     });
 }

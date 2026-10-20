@@ -19,6 +19,7 @@ QString operationName(Operation op)
     case Operation::DeleteBucket:         return QStringLiteral("DeleteBucket");
     case Operation::GetBucketSubresource: return QStringLiteral("GetBucketSubresource");
     case Operation::GetObjectSubresource: return QStringLiteral("GetObjectSubresource");
+    case Operation::CopyObject:           return QStringLiteral("CopyObject");
     }
     return QStringLiteral("Unknown");
 }
@@ -31,6 +32,7 @@ bool isMutating(Operation op)
     case Operation::DeleteObjects:
     case Operation::CreateBucket:
     case Operation::DeleteBucket:
+    case Operation::CopyObject:
         return true;
     default:
         return false;

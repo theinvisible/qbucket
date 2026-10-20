@@ -332,6 +332,13 @@ RequestId Session::deleteObjects(const QString& bucket, const QList<ObjectIdenti
                                           });
 }
 
+RequestId Session::copyObject(const CopyObjectParams& params, QObject* context, Callback<CopyObjectResult> callback)
+{
+    return d->submit<CopyObjectResult>(context, std::move(callback), [params](S3Client* c, auto done) {
+        return c->copyObject(params, std::move(done));
+    });
+}
+
 RequestId Session::createBucket(const CreateBucketParams& params, QObject* context,
                                 Callback<void> callback)
 {

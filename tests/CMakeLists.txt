@@ -156,6 +156,12 @@ qbucket_add_test(test_main_window_operations
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_rename_job
+    test_rename_job.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

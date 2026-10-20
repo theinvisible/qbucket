@@ -26,6 +26,7 @@ enum class Operation : quint16 {
     DeleteBucket,
     GetBucketSubresource,   // capability probes: ?versioning, ?cors, …
     GetObjectSubresource,   // capability probes: ?tagging, ?acl, …
+    CopyObject,
 };
 
 // Stable English name, e.g. "ListObjectsV2".

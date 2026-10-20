@@ -8,6 +8,7 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
+#include "controllers/RenameJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -214,6 +215,31 @@ void MainWindow::updateMutationActions_()
     m_browser->setMutationsAllowed(del.allowed, del.reason);
 }
 
+void MainWindow::renameSelection_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    const QModelIndexList rows = m_browser->selectedRows();
+    if (!m_operations || !account || !here.hasBucket() || rows.size() != 1)
+        return;
+    const QString key = rows.first().data(ObjectTableModel::KeyRole).toString();
+    const bool folder = rows.first().data(ObjectTableModel::IsFolderRole).toBool();
+    const QString name = rows.first().data(ObjectTableModel::NameRole).toString();
+    auto* dlg = new QInputDialog(this);
+    dlg->setWindowTitle(folder ? tr("Rename Folder") : tr("Rename"));
+    dlg->setLabelText(tr("New name for “%1”:").arg(name));
+    dlg->setTextValue(name);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QInputDialog::textValueSelected, this, [this, here, account, key, folder](const QString& newName) {
+        if (const QString problem = CreateFolderJob::validateName(newName); !problem.isEmpty()) {
+            statusBar()->showMessage(tr("Not renamed: %1").arg(problem), 10000);
+            return;
+        }
+        m_operations->start(new RenameJob(*account, here.bucket, key, folder, newName, m_operations->planDir()));
+    });
+    dlg->open();
+}
+
 void MainWindow::deleteSelection_()
 {
     const Location here = m_browser->navigation()->current();
@@ -334,6 +360,7 @@ void MainWindow::connectBrowser_()
     m_actNewFolder->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     connect(m_newFolderBtn, &QToolButton::clicked, m_actNewFolder, &QAction::trigger);
     connect(m_browser->deleteAction(), &QAction::triggered, this, &MainWindow::deleteSelection_);
+    connect(m_browser->renameAction(), &QAction::triggered, this, &MainWindow::renameSelection_);
     connect(m_deleteBtn, &QToolButton::clicked, m_browser->deleteAction(), &QAction::trigger);
     connect(m_browser->deleteAction(), &QAction::changed, this, [this] {
         m_deleteBtn->setEnabled(m_browser->deleteAction()->isEnabled());

@@ -304,6 +304,28 @@ Result<ListPage> parseListObjectsV1(const QByteArray& body, bool plusIsSpace)
     return page;
 }
 
+Result<CopyObjectResult> parseCopyObjectResult(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("CopyObjectResult")))
+        return *err;
+    CopyObjectResult out;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("ETag"))
+            out.etag = r.readElementText();
+        else if (n == QLatin1String("LastModified"))
+            out.lastModified = parseIsoTimestamp(r.readElementText());
+        else
+            r.skipCurrentElement();
+    }
+    if (r.hasError())
+        return Error::make(ErrorCategory::Protocol, QStringLiteral("malformed CopyObjectResult: ") + r.errorString());
+    if (out.etag.isEmpty())
+        return Error::make(ErrorCategory::Protocol, QStringLiteral("CopyObjectResult without an ETag"));
+    return out;
+}
+
 Result<DeleteObjectsResult> parseDeleteResult(const QByteArray& body)
 {
     QXmlStreamReader r(body);

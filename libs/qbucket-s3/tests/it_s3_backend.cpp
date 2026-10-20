@@ -245,6 +245,40 @@ private Q_SLOTS:
         QCOMPARE(gone.error().category, ErrorCategory::NotFound);
     }
 
+    void copyObjectKeepsContentAndChecksIfMatch()
+    {
+        const QByteArray data = QByteArray("copy me\n").repeated(500);
+        const QString src = key(QStringLiteral("copy src/ä+b.txt"));
+        const QString dst = key(QStringLiteral("copy dst/ä+b.txt"));
+        const Result<PutObjectResult> put = this->put(src, data);
+        VERIFY_OK(put);
+
+        CopyObjectParams p;
+        p.sourceBucket = m_bucket;
+        p.sourceKey = src;
+        p.bucket = m_bucket;
+        p.key = dst;
+        p.ifMatch = put->etag;
+        const Result<CopyObjectResult> copied =
+            await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+        VERIFY_OK(copied);
+        QCOMPARE(copied->etag, put->etag);   // single part: the content's MD5
+        const Result<ObjectData> get = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, dst, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(get);
+        QCOMPARE(get->data, data);
+        QCOMPARE(get->meta.contentType, QStringLiteral("text/plain"));   // metadata directive COPY
+
+        // A stale ETag: refused, nothing written.
+        p.key = key(QStringLiteral("copy dst/never.txt"));
+        p.ifMatch = QStringLiteral("\"00000000000000000000000000000000\"");
+        const Result<CopyObjectResult> stale =
+            await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+        QVERIFY(!stale);
+        QCOMPARE(stale.error().category, ErrorCategory::PreconditionFailed);
+        const Result<ObjectMeta> none = await<ObjectMeta>([&](auto cb) { m_session->headObject(m_bucket, p.key, {}, &m_ctx, std::move(cb)); });
+        QVERIFY(!none);
+    }
+
     void nastyKeysRoundTrip()
     {
         const QString base = key(QStringLiteral("nasty/"));

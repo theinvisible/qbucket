@@ -120,6 +120,33 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->rowOfKey(QStringLiteral("fresh/")) >= 0, true, 10000);
     }
 
+    void renameFromTheList()
+    {
+        m_browser->view()->setFocus();
+        m_browser->view()->selectRow(1);   // keep.txt
+        QAction* rename = m_browser->renameAction();
+        QTRY_VERIFY(rename->isEnabled());
+        rename->trigger();
+        QTRY_VERIFY(m_window->findChild<QInputDialog*>() != nullptr);
+        auto* ask = m_window->findChild<QInputDialog*>();
+        QVERIFY(ask);
+        QCOMPARE(ask->textValue(), QStringLiteral("keep.txt"));
+        ask->setTextValue(QStringLiteral("kept.txt"));
+        ask->accept();
+
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<OperationPreviewDialog*>() != nullptr, 10000);
+        auto* dlg = m_window->findChild<OperationPreviewDialog*>();
+        QVERIFY(dlg);
+        dlg->productionCheck()->setChecked(true);
+        dlg->confirmButton()->click();
+        QTRY_VERIFY_WITH_TIMEOUT(m_bucket.contains(QStringLiteral("kept.txt")), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!m_bucket.contains(QStringLiteral("keep.txt")), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(m_browser->model()->rowOfKey(QStringLiteral("kept.txt")) >= 0, 10000);
+        // Two rows selected: one name can't go to both.
+        m_browser->view()->selectAll();
+        QVERIFY(!rename->isEnabled());
+    }
+
     void aReadOnlyAccountOffersNoChanges()
     {
         Account ro = m_h->account;

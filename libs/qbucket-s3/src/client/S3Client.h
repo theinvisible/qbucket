@@ -56,6 +56,9 @@ public:
     quint64 putObject(const PutObjectParams& params, Done<PutObjectResult> done);
     quint64 deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                          Done<DeleteObjectResult> done);
+    // CopyObject (≤ 5 GiB), directive COPY; 200-with-error aware; never
+    // retried after a lost answer (outcomeUnknown).
+    quint64 copyObject(const CopyObjectParams& params, Done<CopyObjectResult> done);
     // One batch (at most ProviderProfile::maxDeleteBatch()), with Content-MD5.
     // Every requested key ends up in deleted or failed — keys the server did
     // not report are listed as failed ("NotReported").

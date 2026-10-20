@@ -86,6 +86,9 @@ public:
     // One batch of at most ProviderProfile::maxDeleteBatch() objects.
     RequestId deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
                             QObject* context, Callback<DeleteObjectsResult> callback);
+    // Server-side copy (≤ 5 GiB). A lost answer is reported with
+    // Error::outcomeUnknown and not retried: look the target up.
+    RequestId copyObject(const CopyObjectParams& params, QObject* context, Callback<CopyObjectResult> callback);
     RequestId createBucket(const CreateBucketParams& params, QObject* context,
                            Callback<void> callback);
     RequestId deleteBucket(const QString& bucket, QObject* context, Callback<void> callback);

@@ -9,9 +9,10 @@
 namespace qbucket {
 
 // The keys a bulk job will touch, on disk instead of in memory (PLAN.md
-// §13.2: list page → plan file → act in batches): one percent-encoded key
-// per line (keys may contain line breaks). Written while planning, read
-// back in batches while executing. File I/O runs on its own thread, in
+// §13.2: list page → plan file → act in batches): one record per line,
+// its fields percent-encoded (keys may contain line breaks) and separated
+// by a space — a key alone, or a key with size, ETag, …. Written while
+// planning, read back in batches while executing. File I/O runs on its own thread, in
 // call order; callbacks come back to this object's thread and are dropped
 // with it. The file is removed when the PlanFile is destroyed.
 //
@@ -28,12 +29,14 @@ public:
     [[nodiscard]] bool failed() const { return !m_error.isEmpty(); }
     [[nodiscard]] QString errorText() const { return m_error; }
 
-    void append(const QStringList& keys);
+    void append(const QStringList& keys);                // one-field records
+    void appendRecords(const QList<QStringList>& records);
     // Called once everything appended before has been written (or failed).
     void flush(std::function<void(bool ok)> done);
     // The next up to `n` keys after those read (or asked for) so far; empty
     // at the end. Calls are served in order.
-    void readNext(int n, std::function<void(const QStringList& keys)> done);
+    void readNext(int n, std::function<void(const QStringList& keys)> done);   // first fields
+    void readNextRecords(int n, std::function<void(const QList<QStringList>& records)> done);
     void rewind();
 
 private:

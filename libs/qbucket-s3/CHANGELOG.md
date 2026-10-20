@@ -42,6 +42,10 @@ version bump may break the API.
   answer, as received.
 - `requestId` in `PutObjectResult`, `DeleteObjectResult` and
   `DeleteObjectsResult` (`x-amz-request-id`, for audit journals).
+- `Session::copyObject` with `CopyObjectParams` / `CopyObjectResult` and
+  `Operation::CopyObject`: server-side copy up to 5 GiB, metadata directive
+  COPY, optional `x-amz-copy-source-if-match` and storage class; a 200 with
+  an `<Error>` body is an error; never retried after a lost answer.
 
 - `AwsProfile` and `GarageProfile` know `BatchDelete` as supported (AWS also
   `CrossBucketCopy`): write-only features the probes cannot confirm.
