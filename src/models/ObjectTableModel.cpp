@@ -32,6 +32,51 @@ int compare3(qint64 a, qint64 b)
     return a < b ? -1 : (a > b ? 1 : 0);
 }
 
+// "file9" before "file10": digit runs compare by value, the text between
+// them through the collator. Done here rather than with
+// QCollator::setNumericMode, which Qt builds without ICU ignore.
+int naturalCompare(const QCollator& collator, QStringView a, QStringView b)
+{
+    qsizetype i = 0;
+    qsizetype j = 0;
+    while (i < a.size() && j < b.size()) {
+        const bool da = a[i].isDigit();
+        const bool db = b[j].isDigit();
+        qsizetype ei = i;
+        qsizetype ej = j;
+        while (ei < a.size() && a[ei].isDigit() == da)
+            ++ei;
+        while (ej < b.size() && b[ej].isDigit() == db)
+            ++ej;
+        const QStringView ra = a.sliced(i, ei - i);
+        const QStringView rb = b.sliced(j, ej - j);
+        int c = 0;
+        if (da && db) {
+            // By value: without leading zeros, the longer run is larger.
+            qsizetype za = 0;
+            qsizetype zb = 0;
+            while (za + 1 < ra.size() && ra[za] == u'0')
+                ++za;
+            while (zb + 1 < rb.size() && rb[zb] == u'0')
+                ++zb;
+            const QStringView va = ra.sliced(za);
+            const QStringView vb = rb.sliced(zb);
+            c = va.size() != vb.size() ? (va.size() < vb.size() ? -1 : 1) : va.compare(vb);
+        } else {
+            c = collator.compare(ra, rb);
+        }
+        if (c != 0)
+            return c;
+        i = ei;
+        j = ej;
+    }
+    if (i < a.size())
+        return 1;
+    if (j < b.size())
+        return -1;
+    return 0;
+}
+
 // Folders first in both directions; ties keep server order.
 std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::SortOrder order, const QCollator& collator)
 {
@@ -42,7 +87,7 @@ std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::Sort
         int c = 0;
         switch (column) {
         case ObjectTableModel::NameColumn:
-            c = collator.compare(a.name, b.name);
+            c = naturalCompare(collator, a.name, b.name);
             break;
         case ObjectTableModel::SizeColumn:
             c = compare3(a.size, b.size);
@@ -70,7 +115,6 @@ std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::Sort
 QCollator naturalCollator()
 {
     QCollator c;
-    c.setNumericMode(true);
     c.setCaseSensitivity(Qt::CaseInsensitive);
     return c;
 }

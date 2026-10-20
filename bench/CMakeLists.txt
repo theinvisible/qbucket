@@ -9,5 +9,7 @@ target_link_libraries(bench_listing PRIVATE
 )
 if(WIN32)
     target_link_libraries(bench_listing PRIVATE psapi)
+    # windows.h: no min/max macros over std::min / std::max.
+    target_compile_definitions(bench_listing PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 set_target_properties(bench_listing PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")

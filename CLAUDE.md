@@ -262,6 +262,11 @@ Each of these cost time there; don't relearn them.
 - **No `QSortFilterProxyModel` over big listings**: it sorts synchronously
   on the GUI thread. `ObjectTableModel` sorts itself (thread pool above
   5 000 rows, applied with `layoutChanged`).
+- **`QCollator::setNumericMode` needs ICU** — the Qt of the CI installer
+  has none and silently sorts "file10" before "file9". Natural order is
+  `ObjectTableModel`'s own digit-run comparison.
+- **`windows.h` defines `min` / `max`** — targets including it get
+  `NOMINMAX`.
 - **`QAbstractItemModelTester` re-checks the whole model on every change**
   (30 s with thousands of rows) and calls `fetchMore` inside its own reset
   handling — use it on small models; `fetchMore` must not insert rows

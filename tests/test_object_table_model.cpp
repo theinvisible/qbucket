@@ -283,6 +283,26 @@ private slots:
         QCOMPARE(nine.row(), 3);
     }
 
+    void naturalOrderNeedsNoIcu()
+    {
+        // Digit runs by value, text without case — the same with any
+        // QCollator backend (CI's Qt has no ICU).
+        for (const char* k : {"b", "a10b10", "A3", "a02x", "a10b2", "a2", "img001.png", "img1000.png", "img20.png"})
+            m_bucket.add(QString::fromLatin1(k));
+        m_bucket.sort();
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, QStringLiteral("bkt"), QString());
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        model.sort(ObjectTableModel::NameColumn, Qt::AscendingOrder);
+        QStringList names;
+        for (int r = 0; r < model.rowCount(); ++r)
+            names.append(name(model, r));
+        QCOMPARE(names, (QStringList{QStringLiteral("a2"), QStringLiteral("a02x"), QStringLiteral("A3"),
+                                     QStringLiteral("a10b2"), QStringLiteral("a10b10"), QStringLiteral("b"),
+                                     QStringLiteral("img001.png"), QStringLiteral("img20.png"),
+                                     QStringLiteral("img1000.png")}));
+    }
+
     void largeSortsRunInTheBackgroundAndPagesAreSortedIn()
     {
         for (int i = 0; i < 7000; ++i)
