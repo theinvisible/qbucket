@@ -21,6 +21,7 @@ QString Error::categoryName(ErrorCategory category)
     case ErrorCategory::Tls:                return QStringLiteral("Tls");
     case ErrorCategory::Credentials:        return QStringLiteral("Credentials");
     case ErrorCategory::Internal:           return QStringLiteral("Internal");
+    case ErrorCategory::LocalIo:            return QStringLiteral("LocalIo");
     }
     return QStringLiteral("Unknown");
 }

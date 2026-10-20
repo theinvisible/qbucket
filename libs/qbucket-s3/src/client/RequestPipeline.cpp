@@ -1,5 +1,6 @@
 #include "client/RequestPipeline.h"
 
+#include "client/FileRangeDevice.h"
 #include "core/ErrorMapping.h"
 #include "core/HttpDate.h"
 #include "core/Mailbox.h"
@@ -8,7 +9,9 @@
 
 #include <qbucket/s3/Logging.h>
 
+#include <QCryptographicHash>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QPointer>
@@ -47,9 +50,26 @@ struct RequestPipeline::Call {
     bool skewRetried = false;
     bool redirected = false;
     bool credentialsRetried = false;
+    bool throttled = false;
+
+    // Current attempt's streamed body; owned by its reply.
+    QPointer<FileRangeDevice> upload;
+    // Current attempt's sink. Undecided until the status is known: a 2xx
+    // body goes to the file, anything else into errorBody.
+    enum class SinkMode : quint8 { Undecided, File, Memory };
+    std::unique_ptr<QFile> sink;
+    std::unique_ptr<QCryptographicHash> sinkHash;
+    qint64 sinkWritten = 0;
+    SinkMode sinkMode = SinkMode::Undecided;
+    QByteArray errorBody;
+    QString localError;   // a local file failed: LocalIo, never retried
 };
 
 namespace {
+
+// QNAM's read buffer for sink downloads: reading stops while the disk is
+// behind, nothing piles up in memory.
+constexpr qint64 kSinkReadBufferBytes = Q_INT64_C(1) * 1024 * 1024;
 
 ErrorCategory categoryForNetworkError(QNetworkReply::NetworkError e)
 {
@@ -209,6 +229,8 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     ctx.addressing = endpoint.addressing == AddressingStyle::Auto ? profile.defaultAddressing()
                                                                    : endpoint.addressing;
     ctx.https = endpoint.isHttps();
+    // Streamed bodies are not hashed twice: Content-MD5 protects them.
+    ctx.unsignedPayload = spec.file.has_value();
     profile.prepareRequest(ctx);
 
     const Result<S3Uri> uri = S3Uri::build(endpoint, ctx.addressing, spec.bucket, spec.key, spec.query);
@@ -224,9 +246,20 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     in.headers = HeaderList{{"host", uri->host()}};
     for (const auto& h : ctx.headers)
         in.headers.append(h);
-    if (!spec.body.isEmpty() || !spec.contentType.isEmpty())
+    if (!spec.body.isEmpty() || spec.file || !spec.contentType.isEmpty())
         in.headers.append({"Content-Type", spec.contentType});
-    if (spec.body.isEmpty())
+    if (spec.file) {
+        if (ctx.unsignedPayload && ctx.https) {
+            in.payloadHash = SigV4Signer::kUnsignedPayload;
+        } else if (!spec.file->sha256Hex.isEmpty()) {
+            in.payloadHash = spec.file->sha256Hex;
+        } else {
+            finish(call, Error::make(ErrorCategory::InvalidRequest,
+                                     QStringLiteral("this endpoint needs the SHA-256 of a streamed "
+                                                    "body (plain HTTP or no UNSIGNED-PAYLOAD)")));
+            return;
+        }
+    } else if (spec.body.isEmpty())
         in.payloadHash = SigV4Signer::kEmptyPayloadHash;
     else if (ctx.unsignedPayload && ctx.https)
         in.payloadHash = SigV4Signer::kUnsignedPayload;
@@ -259,20 +292,82 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     req.setRawHeader("Accept-Encoding", "identity");
 
     call->redactedUrl = redact::url(uri->url());
+
+    // Fresh body and sink for every attempt: a retry sends / writes the same
+    // bytes again from the start.
+    FileRangeDevice* upload = nullptr;
+    if (spec.file) {
+        upload = new FileRangeDevice(spec.file->path, spec.file->offset, spec.file->length);
+        if (!upload->open(QIODevice::ReadOnly)) {
+            const QString why = upload->failure();
+            delete upload;
+            Error e = Error::make(ErrorCategory::LocalIo, why);
+            e.resource = spec.key.isEmpty() ? spec.bucket : spec.bucket + u'/' + spec.key;
+            finish(call, e);
+            return;
+        }
+        req.setHeader(QNetworkRequest::ContentLengthHeader, spec.file->length);
+        // Stream from the device; QNAM would otherwise read it all first.
+        req.setAttribute(QNetworkRequest::DoNotBufferUploadDataAttribute, true);
+    }
+    call->sink.reset();
+    call->sinkHash.reset();
+    call->sinkWritten = 0;
+    call->sinkMode = Call::SinkMode::Undecided;
+    call->errorBody.clear();
+    if (!spec.sinkPath.isEmpty()) {
+        auto file = std::make_unique<QFile>(spec.sinkPath);
+        // ReadWrite: created if missing, never truncated (other ranges of
+        // the same file may already be there).
+        if (!file->open(QIODevice::ReadWrite) || !file->seek(spec.sinkOffset)) {
+            delete upload;
+            Error e = Error::make(ErrorCategory::LocalIo,
+                                  QStringLiteral("%1: %2").arg(spec.sinkPath, file->errorString()));
+            e.resource = spec.key.isEmpty() ? spec.bucket : spec.bucket + u'/' + spec.key;
+            finish(call, e);
+            return;
+        }
+        call->sink = std::move(file);
+        call->sinkHash = std::make_unique<QCryptographicHash>(QCryptographicHash::Md5);
+    }
+
     call->startedAt = QDateTime::currentDateTimeUtc();
     call->timer.start();
 
-    QNetworkReply* reply = spec.method == "HEAD"
-        ? nam()->head(req)
-        : nam()->sendCustomRequest(req, spec.method, spec.body);
+    QNetworkReply* reply = nullptr;
+    if (spec.method == "HEAD")
+        reply = nam()->head(req);
+    else if (upload)
+        reply = nam()->sendCustomRequest(req, spec.method, upload);
+    else
+        reply = nam()->sendCustomRequest(req, spec.method, spec.body);
     call->reply = reply;
+    if (upload) {
+        upload->setParent(reply);   // must outlive the reply; goes with it
+        call->upload = upload;
+    }
 
-    connect(reply, &QNetworkReply::downloadProgress, this, [this, call](qint64 received, qint64) {
+    if (call->sink) {
+        reply->setReadBufferSize(kSinkReadBufferBytes);
+        connect(reply, &QNetworkReply::readyRead, this, [this, call] { drainToSink(call); });
+    }
+    connect(reply, &QNetworkReply::downloadProgress, this, [this, call](qint64 received, qint64 total) {
+        if (call->sink && call->sinkMode != Call::SinkMode::Memory) {
+            if (call->spec.progress && call->sinkMode == Call::SinkMode::File)
+                call->spec.progress(received, total);
+            return;
+        }
         if (received > m_config.maxResponseBytes && !call->tooLarge && call->reply) {
             call->tooLarge = true;
             call->reply->abort();
         }
     });
+    if (upload && spec.progress) {
+        connect(reply, &QNetworkReply::uploadProgress, this, [call](qint64 sent, qint64) {
+            if (call->spec.progress && call->spec.file)
+                call->spec.progress(sent, call->spec.file->length);
+        });
+    }
 #if QT_CONFIG(ssl)
     connect(reply, &QNetworkReply::sslErrors, this, [this, reply](const QList<QSslError>& errors) {
         // Per-account certificate pinning: accept exactly the pinned
@@ -288,11 +383,45 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     qCDebug(lcHttp).noquote() << spec.method << call->redactedUrl;
 }
 
+void RequestPipeline::drainToSink(const std::shared_ptr<Call>& call)
+{
+    QNetworkReply* reply = call->reply;
+    if (!reply || !call->sink || !call->localError.isEmpty())
+        return;
+    if (call->sinkMode == Call::SinkMode::Undecided) {
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        call->sinkMode = status >= 200 && status < 300 ? Call::SinkMode::File : Call::SinkMode::Memory;
+    }
+    while (reply->bytesAvailable() > 0) {
+        const QByteArray chunk = reply->read(qint64(256) * 1024);
+        if (chunk.isEmpty())
+            break;
+        if (call->sinkMode == Call::SinkMode::Memory) {
+            call->errorBody += chunk;
+            if (call->errorBody.size() > m_config.maxResponseBytes && !call->tooLarge) {
+                call->tooLarge = true;
+                reply->abort();
+                return;
+            }
+            continue;
+        }
+        if (call->sink->write(chunk) != chunk.size()) {
+            call->localError = QStringLiteral("%1: %2").arg(call->spec.sinkPath, call->sink->errorString());
+            reply->abort();
+            return;
+        }
+        call->sinkHash->addData(chunk);
+        call->sinkWritten += chunk.size();
+    }
+}
+
 void RequestPipeline::onFinished(const std::shared_ptr<Call>& call)
 {
     QNetworkReply* reply = call->reply;
     if (!reply || call->finished)
         return;
+    if (call->sink && reply->isOpen())
+        drainToSink(call);   // whatever arrived after the last readyRead
     reply->deleteLater();
     call->reply = nullptr;
 
@@ -303,8 +432,20 @@ void RequestPipeline::onFinished(const std::shared_ptr<Call>& call)
     RawResponse raw;
     raw.status = status;
     raw.headers = reply->rawHeaderPairs();
-    if (reply->isOpen())
+    if (call->sink) {
+        raw.body = call->errorBody;
+        if (reply->isOpen())
+            raw.body += reply->readAll();
+        if (call->sinkMode == Call::SinkMode::File) {
+            raw.sinkBytes = call->sinkWritten;
+            raw.sinkMd5 = call->sinkHash->result();
+        }
+        if (!call->sink->flush() && call->localError.isEmpty())
+            call->localError = QStringLiteral("%1: %2").arg(spec.sinkPath, call->sink->errorString());
+        call->sink->close();
+    } else if (reply->isOpen()) {
         raw.body = reply->readAll();
+    }
     const QByteArray requestId = raw.header("x-amz-request-id");
 
     const auto withContext = [&](Error e) {
@@ -318,6 +459,12 @@ void RequestPipeline::onFinished(const std::shared_ptr<Call>& call)
     Result<RawResponse> result = raw;
     if (call->aborted) {
         result = withContext(Error::make(ErrorCategory::Cancelled, QStringLiteral("request cancelled")));
+    } else if (!call->localError.isEmpty()) {
+        result = withContext(Error::make(ErrorCategory::LocalIo, call->localError));
+    } else if (call->upload && call->upload->failed()) {
+        // The body file changed under us; the server has at most a partial,
+        // rejected body.
+        result = withContext(Error::make(ErrorCategory::LocalIo, call->upload->failure()));
     } else if (call->tooLarge) {
         result = withContext(Error::make(
             ErrorCategory::InvalidRequest,
@@ -446,6 +593,8 @@ bool RequestPipeline::handleFailure(const std::shared_ptr<Call>& call, const Raw
     }
 
     // 4. Transient failures, idempotent-only (RetryPolicy).
+    if (error.httpStatus == 503 || error.code == QLatin1String("SlowDown"))
+        call->throttled = true;
     std::optional<int> retryAfter;
     bool ok = false;
     const int seconds = raw.header("retry-after").trimmed().toInt(&ok);
@@ -496,8 +645,8 @@ void RequestPipeline::notifyObserver(const Call& call, const Result<RawResponse>
     r.attempt = call.attempt;
     r.startedAt = call.startedAt;
     r.durationMs = ms;
-    r.bytesSent = call.spec.body.size();
-    r.bytesReceived = body.size();
+    r.bytesSent = call.spec.file ? call.spec.file->length : call.spec.body.size();
+    r.bytesReceived = result ? result->sinkBytes + body.size() : body.size();
     r.httpStatus = status;
     r.requestId = QString::fromLatin1(requestId);
     r.ok = result.has_value();
@@ -514,6 +663,9 @@ void RequestPipeline::finish(const std::shared_ptr<Call>& call, Result<RawRespon
         return;
     call->finished = true;
     m_calls.erase(call->id);
+    if (result)
+        result->throttled = call->throttled;
+    call->sink.reset();
     if (call->done)
         call->done(std::move(result));
 }

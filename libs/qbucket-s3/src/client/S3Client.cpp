@@ -410,10 +410,104 @@ quint64 S3Client::getObject(const QString& bucket, const QString& key, const QSt
     });
 }
 
-quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult> done)
+quint64 S3Client::getObjectToFile(const GetObjectToFileParams& params, Done<DownloadResult> done,
+                                  Progress progress)
 {
     if (params.bucket.isEmpty() || params.key.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (params.filePath.isEmpty() || params.fileOffset < 0)
+        return failLater(std::move(done), invalid(QStringLiteral("no target file")));
+    const bool ranged = params.rangeLength >= 0;
+    if (ranged && (params.rangeStart < 0 || params.rangeLength == 0))
+        return failLater(std::move(done), invalid(QStringLiteral("invalid byte range")));
+    if (ranged && params.partNumber > 0)
+        return failLater(std::move(done), invalid(QStringLiteral("a range and a part number exclude each other")));
+
+    RequestSpec spec;
+    spec.operation = Operation::GetObject;
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.versionId = params.versionId;
+    if (!params.versionId.isEmpty())
+        spec.query.append({"versionId", params.versionId.toUtf8(), false});
+    if (params.partNumber > 0)
+        spec.query.append({"partNumber", QByteArray::number(params.partNumber), false});
+    if (ranged) {
+        spec.headers.append({"Range", "bytes=" + QByteArray::number(params.rangeStart) + '-'
+                                          + QByteArray::number(params.rangeStart + params.rangeLength - 1)});
+    }
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"If-Match", params.ifMatch.toLatin1()});
+    spec.sinkPath = params.filePath;
+    spec.sinkOffset = params.fileOffset;
+    spec.progress = std::move(progress);
+
+    return single(std::move(spec), std::move(done), [params, ranged](const RawResponse& r) -> Result<DownloadResult> {
+        DownloadResult out;
+        out.meta = metaFromHeaders(params.key, r);
+        out.bytesWritten = r.sinkBytes;
+        out.md5 = r.sinkMd5;
+        out.throttled = r.throttled;
+        bool ok = false;
+        const int parts = r.header("x-amz-mp-parts-count").trimmed().toInt(&ok);
+        out.partsCount = ok ? parts : 0;
+
+        // "bytes 0-99/1234": the object's size; "*" when unknown.
+        const QByteArray contentRange = r.header("content-range").trimmed();
+        if (const qsizetype slash = contentRange.lastIndexOf('/'); slash >= 0) {
+            const qint64 total = contentRange.mid(slash + 1).toLongLong(&ok);
+            if (ok)
+                out.objectSize = total;
+        }
+        if (ranged) {
+            if (r.status != 206) {
+                return Error::make(ErrorCategory::Protocol,
+                                   QStringLiteral("the server ignored the Range header (status %1)").arg(r.status));
+            }
+            const QByteArray expected = "bytes " + QByteArray::number(params.rangeStart) + '-';
+            if (!contentRange.startsWith(expected)) {
+                return Error::make(ErrorCategory::Protocol,
+                                   QStringLiteral("the server answered another range: ")
+                                       + QString::fromLatin1(contentRange));
+            }
+        } else if (params.partNumber <= 0 && out.objectSize < 0) {
+            out.objectSize = out.meta.size;
+        }
+        if (out.meta.size >= 0 && out.meta.size != out.bytesWritten) {
+            return Error::make(ErrorCategory::Transient,
+                               QStringLiteral("received %1 bytes, expected %2").arg(out.bytesWritten).arg(out.meta.size));
+        }
+        if (ranged && out.bytesWritten != params.rangeLength
+            && !(out.objectSize >= 0 && params.rangeStart + out.bytesWritten == out.objectSize)) {
+            return Error::make(ErrorCategory::Protocol,
+                               QStringLiteral("received %1 bytes of a %2-byte range").arg(out.bytesWritten).arg(params.rangeLength));
+        }
+        if (!ranged && params.partNumber <= 0 && etagIsContentMd5(out.meta.etag, r)) {
+            QString expected = out.meta.etag;
+            expected.remove(QLatin1Char('"'));
+            if (expected.toLatin1().toLower() != out.md5.toHex()) {
+                return Error::make(ErrorCategory::Protocol,
+                                   QStringLiteral("integrity check failed: MD5 of the received "
+                                                  "data does not match the ETag"));
+            }
+            out.integrity = Integrity::Md5Verified;
+        }
+        return out;
+    });
+}
+
+quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult> done, Progress progress)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (params.file) {
+        if (!params.data.isEmpty())
+            return failLater(std::move(done), invalid(QStringLiteral("either data or a file, not both")));
+        if (params.file->path.isEmpty() || params.file->offset < 0 || params.file->length < 0)
+            return failLater(std::move(done), invalid(QStringLiteral("invalid file body")));
+        if (params.file->md5Base64.isEmpty())
+            return failLater(std::move(done), invalid(QStringLiteral("a streamed body needs its Content-MD5")));
+    }
 
     RequestSpec spec;
     spec.operation = Operation::PutObject;
@@ -421,12 +515,14 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
     spec.bucket = params.bucket;
     spec.key = params.key;
     spec.body = params.data;
+    spec.file = params.file;
+    spec.progress = std::move(progress);
     spec.contentType = params.contentType.isEmpty() ? QByteArray("application/octet-stream")
                                                     : params.contentType.toUtf8();
     // Retrying a PUT of the same bytes is safe (on versioned buckets it may
     // leave one extra version).
     spec.idempotent = true;
-    spec.headers.append({"Content-MD5", contentMd5(params.data)});
+    spec.headers.append({"Content-MD5", params.file ? params.file->md5Base64 : contentMd5(params.data)});
     if (!params.storageClass.isEmpty())
         spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
     for (auto it = params.metadata.cbegin(); it != params.metadata.cend(); ++it) {
@@ -442,6 +538,7 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
         out.etag = QString::fromLatin1(r.header("etag"));
         out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
         out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        out.throttled = r.throttled;
         return Result<PutObjectResult>(out);
     });
 }

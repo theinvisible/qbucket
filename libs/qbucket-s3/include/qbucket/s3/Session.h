@@ -24,6 +24,12 @@ enum class RequestId : quint64 { Invalid = 0 };
 template <typename T>
 using Callback = std::function<void(Result<T>)>;
 
+// Bytes sent or received by a request's current attempt, and the total (-1
+// if unknown). Runs on the context's thread, at most ~10 times per second
+// plus the final value, always before the request's callback. A retry
+// starts again from 0.
+using ProgressCallback = std::function<void(qint64 done, qint64 total)>;
+
 struct SessionOptions {
     Endpoint endpoint;
     std::shared_ptr<const ProviderProfile> profile;     // required
@@ -39,11 +45,18 @@ struct SessionOptions {
     // Server time minus local time to start with — e.g. the offset a
     // previous Session reported via clockSkewDetected. Corrected anyway.
     qint64 initialClockOffsetSecs = 0;
+    // Extra worker threads, each with its own QNetworkAccessManager, for
+    // transfer requests (file bodies, downloads to files) — so browsing
+    // never queues behind transfers and the per-QNAM connection limit
+    // applies per lane. Started on demand. 0: transfers share the browse
+    // thread.
+    int transferLanes = 0;
 };
 
 // The entry point of the library: one S3 endpoint + credentials, served by
-// its own worker thread with its own QNetworkAccessManager. The calling
-// thread never blocks on network I/O.
+// its own worker thread with its own QNetworkAccessManager (plus optional
+// transfer lanes, see SessionOptions::transferLanes). The calling thread
+// never blocks on network I/O.
 //
 // Every request method:
 //   - returns at once with a RequestId (Invalid only for a null context),
@@ -76,11 +89,20 @@ public:
                          QObject* context, Callback<ObjectMeta> callback);
     RequestId getObject(const QString& bucket, const QString& key, const QString& versionId,
                         QObject* context, Callback<ObjectData> callback);
+    // Streams the object (or a range / part of it) into a local file on a
+    // transfer lane; see GetObjectToFileParams and DownloadResult.
+    RequestId getObjectToFile(const GetObjectToFileParams& params, QObject* context,
+                              Callback<DownloadResult> callback, ProgressCallback progress = {});
+
+    // Streamed bodies (FileBody) need FileBody::sha256Hex when true: plain
+    // HTTP, or a provider that refuses UNSIGNED-PAYLOAD. Thread-safe.
+    [[nodiscard]] bool requiresPayloadHash() const;
 
     // --- data-changing requests — applications route these through their
     //     own safety layer (confirmations, read-only accounts, journals) ---
+    // With PutObjectParams::file the body is streamed on a transfer lane.
     RequestId putObject(const PutObjectParams& params, QObject* context,
-                        Callback<PutObjectResult> callback);
+                        Callback<PutObjectResult> callback, ProgressCallback progress = {});
     RequestId deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                            QObject* context, Callback<DeleteObjectResult> callback);
     // One batch of at most ProviderProfile::maxDeleteBatch() objects.

@@ -32,6 +32,8 @@ enum class ErrorCategory : quint8 {
     Tls,                 // TLS handshake or certificate pinning failure
     Credentials,         // the CredentialsProvider failed (keychain locked, no backend)
     Internal,            // a bug in this library
+    LocalIo,             // reading or writing a local file failed (transfer bodies,
+                         // download targets) — never retried
 };
 
 // A failed operation. Value type; reentrant (distinct instances may be used

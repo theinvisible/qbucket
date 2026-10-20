@@ -32,6 +32,8 @@ class QBUCKET_S3_EXPORT S3Client : public QObject {
 public:
     template <typename T>
     using Done = std::function<void(Result<T>)>;
+    // Bytes of the current attempt so far, total (-1 unknown); our thread.
+    using Progress = std::function<void(qint64 done, qint64 total)>;
 
     explicit S3Client(ClientConfig config, QObject* parent = nullptr);
     ~S3Client() override;
@@ -52,8 +54,13 @@ public:
     // is the transfer engine's job.
     quint64 getObject(const QString& bucket, const QString& key, const QString& versionId,
                       Done<ObjectData> done);
-    // Single PUT with Content-MD5.
-    quint64 putObject(const PutObjectParams& params, Done<PutObjectResult> done);
+    // Streamed into a file (range, part or whole object); see
+    // GetObjectToFileParams. A server that ignores the Range header is an
+    // error, never silently a whole object at the wrong offset.
+    quint64 getObjectToFile(const GetObjectToFileParams& params, Done<DownloadResult> done,
+                            Progress progress = {});
+    // Single PUT with Content-MD5, from memory or streamed from a file.
+    quint64 putObject(const PutObjectParams& params, Done<PutObjectResult> done, Progress progress = {});
     quint64 deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                          Done<DeleteObjectResult> done);
     // CopyObject (≤ 5 GiB), directive COPY; 200-with-error aware; never

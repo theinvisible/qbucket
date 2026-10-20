@@ -6,6 +6,7 @@
 #include <qbucket/s3/Operation.h>
 #include <qbucket/s3/RequestObserver.h>
 #include <qbucket/s3/Result.h>
+#include <qbucket/s3/Types.h>
 #include <qbucket/s3/providers/ProviderProfile.h>
 
 #include "client/RetryPolicy.h"
@@ -54,7 +55,19 @@ struct RequestSpec {
     QueryParams query;
     HeaderList headers;          // all are signed
     QByteArray body;
-    QByteArray contentType;      // required when body is set
+    QByteArray contentType;      // required when body or file is set
+    // Streamed body instead of `body`, re-read from the range start on every
+    // attempt. UNSIGNED-PAYLOAD over TLS unless the profile vetoes it,
+    // otherwise FileBody::sha256Hex (required then).
+    std::optional<FileBody> file;
+    // A 2xx response body goes to this file from sinkOffset on, not into
+    // memory (and is not limited by maxResponseBytes); error documents are
+    // still read into memory. Reopened and rewritten on every attempt.
+    QString sinkPath;
+    qint64 sinkOffset = 0;
+    // Bytes sent (file bodies) or received (sinks) by the current attempt,
+    // and the total (-1 if unknown). Called on the pipeline's thread.
+    std::function<void(qint64 done, qint64 total)> progress;
     bool idempotent = true;
     // CopyObject / UploadPartCopy / CompleteMultipartUpload can answer 200
     // with an <Error> document. Never set for GetObject (user data).
@@ -65,6 +78,11 @@ struct RawResponse {
     int status = 0;
     HeaderList headers;
     QByteArray body;
+    // With RequestSpec::sinkPath: what went to the file.
+    qint64 sinkBytes = 0;
+    QByteArray sinkMd5;          // raw 16 bytes
+    // At least one attempt was throttled (SlowDown / 503) before this answer.
+    bool throttled = false;
     [[nodiscard]] QByteArray header(const QByteArray& name) const;   // case-insensitive
 };
 
@@ -109,6 +127,7 @@ private:
 
     void attempt(const std::shared_ptr<Call>& call);
     void start(const std::shared_ptr<Call>& call, const Credentials& credentials);
+    void drainToSink(const std::shared_ptr<Call>& call);
     void onFinished(const std::shared_ptr<Call>& call);
     // Retry / re-sign / re-route a failed attempt; false: give up.
     bool handleFailure(const std::shared_ptr<Call>& call, const RawResponse& raw, const Error& error);

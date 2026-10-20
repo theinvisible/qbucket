@@ -6,6 +6,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <optional>
 #include <utility>
 
 // Value types exchanged with the library. All of them are plain structs with
@@ -86,10 +87,29 @@ struct ObjectData {
     Integrity integrity = Integrity::SizeVerified;
 };
 
+// A byte range of a local file as a request body: streamed from disk on the
+// worker thread, never held in memory, re-read from the start on a retry.
+// The hashes are computed by the caller beforehand (e.g. on a thread pool):
+//   - md5Base64 is sent as Content-MD5 and is required — the server rejects a
+//     body that changed after hashing (BadDigest);
+//   - sha256Hex is the signed payload hash; it is needed only when
+//     Session::requiresPayloadHash() (plain HTTP, or a provider that refuses
+//     UNSIGNED-PAYLOAD) and ignored otherwise.
+struct FileBody {
+    QString path;
+    qint64 offset = 0;
+    qint64 length = 0;
+    QByteArray md5Base64;
+    QByteArray sha256Hex;
+};
+
 struct PutObjectParams {
     QString bucket;
     QString key;
     QByteArray data;                      // sent with Content-MD5
+    // Instead of `data` (which must then be empty): stream a file range.
+    // Such requests run on the Session's transfer lanes.
+    std::optional<FileBody> file;
     QString contentType;                  // empty: application/octet-stream
     QMap<QString, QString> metadata;      // x-amz-meta-*; printable ASCII only (for now)
     QString storageClass;                 // empty: server default
@@ -99,6 +119,39 @@ struct PutObjectResult {
     QString etag;
     QString versionId;                    // versioned buckets only
     QString requestId;                    // x-amz-request-id, for the journal
+    // The server throttled (SlowDown / 503) at least once before the request
+    // succeeded — a signal for adaptive concurrency.
+    bool throttled = false;
+};
+
+// GetObject streamed into a local file. The file is created if missing and
+// never truncated: the bytes land at fileOffset onwards (several ranges of
+// one object can be downloaded into one preallocated file in parallel). A
+// retry writes the same range again from its start.
+struct GetObjectToFileParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version
+    QString filePath;
+    qint64 fileOffset = 0;
+    // Byte range of the object; rangeLength < 0: the whole object. Mutually
+    // exclusive with partNumber.
+    qint64 rangeStart = 0;
+    qint64 rangeLength = -1;
+    int partNumber = 0;                   // > 0: GET ?partNumber= (one part of a multipart object)
+    QString ifMatch;                      // ETag with quotes; the object changed → PreconditionFailed
+};
+
+struct DownloadResult {
+    ObjectMeta meta;                      // headers of this response (size: bytes of this response)
+    qint64 bytesWritten = 0;
+    QByteArray md5;                       // raw MD5 (16 bytes) of the bytes written
+    qint64 objectSize = -1;               // whole object: from Content-Range or Content-Length
+    int partsCount = 0;                   // x-amz-mp-parts-count, if the server sent it
+    // Whole single-part objects: the MD5 was compared with the ETag. Ranges
+    // and parts are only size-checked here; the caller verifies the whole.
+    Integrity integrity = Integrity::SizeVerified;
+    bool throttled = false;               // as PutObjectResult::throttled
 };
 
 struct DeleteObjectResult {

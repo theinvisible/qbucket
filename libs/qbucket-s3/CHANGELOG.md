@@ -50,6 +50,24 @@ version bump may break the API.
 - `AwsProfile` and `GarageProfile` know `BatchDelete` as supported (AWS also
   `CrossBucketCopy`): write-only features the probes cannot confirm.
 
+- Streaming transfers: `FileBody` (a file range as a request body, read from
+  disk on every attempt, with caller-computed Content-MD5 and optional
+  SHA-256) in `PutObjectParams::file`; `Session::getObjectToFile` with
+  `GetObjectToFileParams` (whole object, byte range or part number, written
+  at a file offset, `If-Match`) and `DownloadResult` (bytes, MD5, object
+  size, parts count, integrity). A server that ignores the Range header is an
+  error.
+- `ProgressCallback` for `putObject` and `getObjectToFile` (≤ 10 per second
+  plus the final value, always before the result).
+- `SessionOptions::transferLanes`: worker threads with their own QNAM for
+  transfer requests, started on demand; browsing stays on its own thread.
+- `Session::requiresPayloadHash()`: whether streamed bodies need their
+  SHA-256 (plain HTTP, or a profile that vetoes `UNSIGNED-PAYLOAD`).
+- `PutObjectResult::throttled` / `DownloadResult::throttled`: the server
+  answered SlowDown / 503 before the request succeeded.
+- `ErrorCategory::LocalIo` — a local file could not be read or written
+  (never retried).
+
 ### Fixed
 
 - `ServerFingerprint::requestIdShape` no longer contains the length of
