@@ -8,11 +8,14 @@
 #include <qbucket/s3/Result.h>
 #include <qbucket/s3/providers/ProviderProfile.h>
 
+#include "client/RetryPolicy.h"
 #include "http/S3Uri.h"
 #include "signing/SigV4Signer.h"
 
+#include <QHash>
 #include <QObject>
 
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -34,6 +37,11 @@ struct ClientConfig {
     qint64 maxResponseBytes = Q_INT64_C(64) * 1024 * 1024;   // in-memory bodies
     int captureResponseBodyBytes = 0;            // > 0: RequestRecord::responseBody
     QByteArray userAgent = "qbucket-s3";
+    RetryOptions retry;
+    // Server time minus local time, learned from RequestTimeTooSkewed and
+    // Date headers; shared with whoever presigns for this endpoint. Created
+    // by the pipeline when null.
+    std::shared_ptr<std::atomic<qint64>> clockOffsetSecs;
 };
 
 // One request as the client wants it sent.
@@ -81,18 +89,34 @@ public:
 
     [[nodiscard]] const ClientConfig& config() const { return m_config; }
 
+    // Signing time: local clock corrected by the learned offset.
+    [[nodiscard]] QDateTime correctedNow() const;
+
+Q_SIGNALS:
+    // The local clock differs from the server's by offsetSecs; signing has
+    // been corrected (never ask the user to fix their clock).
+    void clockSkewDetected(qint64 offsetSecs);
+
 private:
     struct Call;
 
+    void attempt(const std::shared_ptr<Call>& call);
     void withCredentials(std::function<void(Result<Credentials>)> next);
     void start(const std::shared_ptr<Call>& call, const Credentials& credentials);
     void onFinished(const std::shared_ptr<Call>& call);
+    // Retry / re-sign / re-route a failed attempt; false: give up.
+    bool handleFailure(const std::shared_ptr<Call>& call, const RawResponse& raw, const Error& error);
+    void retryLater(const std::shared_ptr<Call>& call, int delayMs, const QString& why);
+    void learnClockOffset(const QDateTime& serverTime);
+    [[nodiscard]] Endpoint endpointFor(const QString& bucket) const;
     void finish(const std::shared_ptr<Call>& call, Result<RawResponse> result);
     void notifyObserver(const Call& call, const Result<RawResponse>& result, int status,
                         const QByteArray& body, const QByteArray& requestId) const;
     QNetworkAccessManager* nam();
 
     ClientConfig m_config;
+    RetryPolicy m_retry;
+    QHash<QString, QString> m_bucketRegions;   // learned from redirects
     QNetworkAccessManager* m_nam = nullptr;
     std::shared_ptr<Mailbox> m_mailbox;
     std::map<quint64, std::shared_ptr<Call>> m_calls;

@@ -1,6 +1,7 @@
 #include "client/RequestPipeline.h"
 
 #include "core/ErrorMapping.h"
+#include "core/HttpDate.h"
 #include "core/Mailbox.h"
 #include "logging/Redaction.h"
 #include "xml/XmlParsers.h"
@@ -34,13 +35,18 @@ struct RequestPipeline::Call {
     RequestSpec spec;
     Done done;
     QPointer<QNetworkReply> reply;
+    QPointer<QTimer> retryTimer;
     QString redactedUrl;
     QDateTime startedAt;
     QElapsedTimer timer;
     int attempt = 1;
+    int transientFailures = 0;
     bool aborted = false;
     bool tooLarge = false;
     bool finished = false;
+    bool skewRetried = false;
+    bool redirected = false;
+    bool credentialsRetried = false;
 };
 
 namespace {
@@ -74,10 +80,31 @@ bool neverSent(QNetworkReply::NetworkError e)
 RequestPipeline::RequestPipeline(ClientConfig config, QObject* parent)
     : QObject(parent)
     , m_config(std::move(config))
+    , m_retry(m_config.retry)
     , m_mailbox(Mailbox::create())
 {
     Q_ASSERT(m_config.profile);
     Q_ASSERT(m_config.credentials);
+    if (!m_config.clockOffsetSecs)
+        m_config.clockOffsetSecs = std::make_shared<std::atomic<qint64>>(0);
+}
+
+QDateTime RequestPipeline::correctedNow() const
+{
+    return QDateTime::currentDateTimeUtc().addSecs(m_config.clockOffsetSecs->load());
+}
+
+Endpoint RequestPipeline::endpointFor(const QString& bucket) const
+{
+    Endpoint endpoint = m_config.endpoint;
+    const auto it = m_bucketRegions.constFind(bucket);
+    if (!bucket.isEmpty() && it != m_bucketRegions.constEnd()) {
+        endpoint.region = *it;
+        const QUrl regional = m_config.profile->endpointFor(*it);
+        if (regional.isValid())
+            endpoint.url = regional;
+    }
+    return endpoint;
 }
 
 RequestPipeline::~RequestPipeline()
@@ -110,20 +137,23 @@ quint64 RequestPipeline::execute(RequestSpec spec, Done done)
     m_calls.emplace(call->id, call);
 
     // Always asynchronous, also when credentials are cached.
-    QTimer::singleShot(0, this, [this, call] {
+    QTimer::singleShot(0, this, [this, call] { attempt(call); });
+    return call->id;
+}
+
+void RequestPipeline::attempt(const std::shared_ptr<Call>& call)
+{
+    if (call->finished)
+        return;
+    withCredentials([this, call](Result<Credentials> creds) {
         if (call->finished)
             return;
-        withCredentials([this, call](Result<Credentials> creds) {
-            if (call->finished)
-                return;
-            if (!creds) {
-                finish(call, creds.error());
-                return;
-            }
-            start(call, creds.value());
-        });
+        if (!creds) {
+            finish(call, creds.error());
+            return;
+        }
+        start(call, creds.value());
     });
-    return call->id;
 }
 
 void RequestPipeline::withCredentials(std::function<void(Result<Credentials>)> next)
@@ -165,7 +195,7 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
 {
     const RequestSpec& spec = call->spec;
     const ProviderProfile& profile = *m_config.profile;
-    const Endpoint& endpoint = m_config.endpoint;
+    const Endpoint endpoint = endpointFor(spec.bucket);
 
     RequestContext ctx;
     ctx.operation = spec.operation;
@@ -203,7 +233,7 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     SigningContext sctx;
     sctx.credentials = credentials;
     sctx.region = profile.signingRegion(endpoint.region).toUtf8();
-    sctx.time = QDateTime::currentDateTimeUtc();
+    sctx.time = correctedNow();
     const SigningResult signedResult = SigV4Signer::signHeaders(in, sctx, true);
 
     QNetworkRequest req(uri->url());
@@ -318,8 +348,111 @@ void RequestPipeline::onFinished(const std::shared_ptr<Call>& call)
         m_config.credentials->invalidate();
     }
 
+    // Keep presigned URLs right even when nothing failed.
+    if (status != 0 && result)
+        learnClockOffset(parseHttpDate(raw.header("date")));
+
     notifyObserver(*call, result, status, raw.body, requestId);
+    if (!result && !call->aborted && handleFailure(call, raw, result.error()))
+        return;
     finish(call, std::move(result));
+}
+
+void RequestPipeline::learnClockOffset(const QDateTime& serverTime)
+{
+    if (!serverTime.isValid())
+        return;
+    // Date has one-second resolution plus network delay: only real skew counts.
+    const qint64 offset = QDateTime::currentDateTimeUtc().secsTo(serverTime);
+    const qint64 effective = std::abs(offset) <= 60 ? 0 : offset;
+    if (std::abs(effective - m_config.clockOffsetSecs->load()) <= 60)
+        return;
+    m_config.clockOffsetSecs->store(effective);
+    qCWarning(lcSigning) << "clock offset to the server is now" << effective << "s";
+    Q_EMIT clockSkewDetected(effective);
+}
+
+bool RequestPipeline::handleFailure(const std::shared_ptr<Call>& call, const RawResponse& raw,
+                                    const Error& error)
+{
+    const RequestSpec& spec = call->spec;
+
+    // 1. Clock skew: correct from the server's time and re-sign once. The
+    //    server rejected the request before executing it — safe for every
+    //    operation.
+    if (error.category == ErrorCategory::ClockSkew && !call->skewRetried) {
+        QDateTime serverTime;
+        if (const auto body = xml::parseErrorBody(raw.body))
+            serverTime = body->serverTime;
+        if (!serverTime.isValid())
+            serverTime = parseHttpDate(raw.header("date"));
+        if (serverTime.isValid()) {
+            const qint64 offset = QDateTime::currentDateTimeUtc().secsTo(serverTime);
+            m_config.clockOffsetSecs->store(offset);
+            qCWarning(lcSigning) << "RequestTimeTooSkewed: correcting signing time by" << offset << "s";
+            Q_EMIT clockSkewDetected(offset);
+            call->skewRetried = true;
+            retryLater(call, 0, QStringLiteral("clock skew corrected"));
+            return true;
+        }
+    }
+
+    // 2. Wrong region: learn the bucket's region and re-route once. Never
+    //    follow a Location header to an arbitrary host.
+    // HEAD responses have no body: then the region header alone tells.
+    const bool regionHint = error.category == ErrorCategory::Redirect
+        || ((error.httpStatus == 301 || error.httpStatus == 307 || error.httpStatus == 400)
+            && !raw.header("x-amz-bucket-region").isEmpty());
+    if (regionHint && !call->redirected && !spec.bucket.isEmpty()) {
+        QString region = QString::fromLatin1(raw.header("x-amz-bucket-region"));
+        if (region.isEmpty()) {
+            if (const auto body = xml::parseErrorBody(raw.body))
+                region = body->region;
+        }
+        if (!region.isEmpty() && region != endpointFor(spec.bucket).region) {
+            m_bucketRegions.insert(spec.bucket, region);
+            call->redirected = true;
+            retryLater(call, 0, QStringLiteral("bucket is in region ") + region);
+            return true;
+        }
+    }
+
+    // 3. Expired temporary credentials: reload (already invalidated) once.
+    if (error.category == ErrorCategory::Authentication && !call->credentialsRetried
+        && (error.code == QLatin1String("ExpiredToken")
+            || error.code == QLatin1String("TokenRefreshRequired"))) {
+        call->credentialsRetried = true;
+        retryLater(call, 0, QStringLiteral("credentials expired"));
+        return true;
+    }
+
+    // 4. Transient failures, idempotent-only (RetryPolicy).
+    std::optional<int> retryAfter;
+    bool ok = false;
+    const int seconds = raw.header("retry-after").trimmed().toInt(&ok);
+    if (ok)
+        retryAfter = seconds;
+    if (const auto delay = m_retry.nextDelayMs(++call->transientFailures, error, spec.idempotent, retryAfter)) {
+        retryLater(call, *delay, error.toString());
+        return true;
+    }
+    return false;
+}
+
+void RequestPipeline::retryLater(const std::shared_ptr<Call>& call, int delayMs, const QString& why)
+{
+    ++call->attempt;
+    qCInfo(lcRetry).noquote() << operationName(call->spec.operation) << "attempt" << call->attempt
+                              << "in" << delayMs << "ms:" << why;
+    auto* timer = new QTimer(this);
+    timer->setSingleShot(true);
+    connect(timer, &QTimer::timeout, this, [this, call, timer] {
+        timer->deleteLater();
+        call->retryTimer = nullptr;
+        attempt(call);
+    });
+    call->retryTimer = timer;
+    timer->start(delayMs);
 }
 
 void RequestPipeline::notifyObserver(const Call& call, const Result<RawResponse>& result, int status,
@@ -373,6 +506,8 @@ void RequestPipeline::abort(quint64 id)
         return;
     const std::shared_ptr<Call> call = it->second;
     call->aborted = true;
+    if (call->retryTimer)
+        call->retryTimer->deleteLater();
     if (call->reply) {
         call->reply->abort();   // → finished → Cancelled
         return;

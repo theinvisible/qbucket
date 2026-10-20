@@ -63,6 +63,9 @@ public:
     void abort(quint64 operationId);
     void abortAll();
 
+Q_SIGNALS:
+    void clockSkewDetected(qint64 offsetSecs);
+
 private:
     struct Op;
 

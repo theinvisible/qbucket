@@ -368,6 +368,8 @@ struct FakeS3Server::Impl {
                 400, "AuthorizationHeaderMalformed",
                 "the region in the credential scope is wrong; expecting '" + verifyRegion + "'");
             r.body.replace("</Error>", "<Region>" + verifyRegion + "</Region></Error>");
+            // Like S3: HEAD responses carry no body, so the hint is a header too.
+            r.withHeader("x-amz-bucket-region", verifyRegion);
             return r;
         }
 

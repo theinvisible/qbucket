@@ -68,3 +68,8 @@ qbucket_s3_add_test(test_s3client_write
     SOURCES test_s3client_write.cpp
     LIBS    qbucket::s3_testsupport
 )
+qbucket_s3_add_test(test_retry_policy SOURCES test_retry_policy.cpp)
+qbucket_s3_add_test(test_s3client_faults
+    SOURCES test_s3client_faults.cpp
+    LIBS    qbucket::s3_testsupport
+)

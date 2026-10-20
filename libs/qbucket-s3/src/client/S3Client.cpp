@@ -90,6 +90,7 @@ S3Client::S3Client(ClientConfig config, QObject* parent)
     : QObject(parent)
     , m_pipeline(new RequestPipeline(std::move(config), this))
 {
+    connect(m_pipeline, &RequestPipeline::clockSkewDetected, this, &S3Client::clockSkewDetected);
 }
 
 S3Client::~S3Client() = default;

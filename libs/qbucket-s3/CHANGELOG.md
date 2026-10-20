@@ -32,6 +32,15 @@ version bump may break the API.
 
 ### Safety
 
+- Retries only where safe: transient failures of idempotent requests, and
+  non-idempotent ones only when they never reached the server; exponential
+  backoff with full jitter, `Retry-After` honoured.
+- Clock skew is corrected from `<ServerTime>` / `Date` (one re-sign, also for
+  non-idempotent requests, which the server rejected unexecuted); a learned
+  offset is kept for later requests.
+- Region redirects are resolved from `x-amz-bucket-region` / `<Region>` and
+  cached per bucket; a `Location` header is never followed.
+
 - Object keys with `.` / `..` path segments are refused with
   `InvalidRequest`: Qt's network stack normalises them away on the wire, so
   the request would address a different object.

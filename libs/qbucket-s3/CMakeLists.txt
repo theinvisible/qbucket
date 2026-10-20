@@ -59,6 +59,8 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/providers/ProviderProfile.h
     src/client/RequestPipeline.h
     src/client/RequestPipeline.cpp
+    src/client/RetryPolicy.h
+    src/client/RetryPolicy.cpp
     src/client/S3Client.h
     src/client/S3Client.cpp
     src/core/Credentials.cpp
