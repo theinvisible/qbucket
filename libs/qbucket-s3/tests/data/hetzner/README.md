@@ -19,3 +19,8 @@ Captured 2026-10-20 from a real project, location **nbg1**, bucket
   executed it as **DeleteBucket**. The bucket survived only because it held
   objects. Never send subresource writes Hetzner does not list as supported;
   never write-probe a bucket without a guard object in it.
+- `lock-*.xml` — bucket `qbucket-it-lock`, created with object lock (and
+  therefore versioning) via rclone: `?object-lock` (enabled, no default
+  retention), `?versioning` (Enabled), and `?retention` / `?legal-hold` on an
+  object without either — RGW answers 404 `ObjectLockConfigurationNotFoundError`
+  there (AWS: `NoSuchObjectLockConfiguration`).

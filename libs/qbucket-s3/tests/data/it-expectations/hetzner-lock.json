@@ -1,0 +1,30 @@
+{
+    "_comment": "Hetzner Object Storage nbg1, bucket qbucket-it-lock: created 2026-10-20 with object lock (rclone --s3-bucket-object-lock-enabled), so versioning is on as well; holds a guard object. Legal hold and retention probe as supported (404 ObjectLockConfigurationNotFoundError on an object without either).",
+    "bucketState": {
+        "versioning": "Enabled",
+        "objectLockEnabled": true
+    },
+    "capabilities": {
+        "bucket.acl": "Supported",
+        "bucket.cors": "Supported",
+        "bucket.encryption": "Unsupported",
+        "bucket.lifecycle": "Supported",
+        "bucket.logging": "Unsupported",
+        "bucket.multipart-listing": "Supported",
+        "bucket.notifications": "Unsupported",
+        "bucket.object-lock": "Supported",
+        "bucket.ownership-controls": "Unsupported",
+        "bucket.policy": "Supported",
+        "bucket.policy-status": "Supported",
+        "bucket.public-access-block": "Supported",
+        "bucket.replication": "Unsupported",
+        "bucket.tagging": "Unsupported",
+        "bucket.versioning": "Supported",
+        "bucket.versions-listing": "Supported",
+        "bucket.website": "Unsupported",
+        "object.acl": "Supported",
+        "object.legal-hold": "Supported",
+        "object.retention": "Supported",
+        "object.tagging": "Supported"
+    }
+}

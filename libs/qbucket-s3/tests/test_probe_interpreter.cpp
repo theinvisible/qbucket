@@ -1,6 +1,7 @@
 #include "capabilities/ProbeInterpreter.h"
 #include "core/ErrorMapping.h"
 
+#include <QFile>
 #include <QtTest>
 
 using namespace qbucket::s3;
@@ -126,6 +127,27 @@ private Q_SLOTS:
         (void)interpretProbe(specFor(Feature::ObjectLock), fail(404, "ObjectLockConfigurationNotFoundError"),
                              QDateTime::currentDateTimeUtc(), &s);
         QCOMPARE(s.objectLockEnabled, std::optional(false));
+    }
+
+    void hetznerObjectLockFixtures()
+    {
+        const auto fixture = [](const char* name) {
+            QFile f(QStringLiteral(TEST_DATA_DIR "/hetzner/") + QLatin1String(name));
+            return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        };
+        BucketState s;
+        const QDateTime now = QDateTime::currentDateTimeUtc();
+        CapabilityEntry e = interpretProbe(specFor(Feature::ObjectLock), ok(200, fixture("lock-object-lock-200.xml")), now, &s);
+        QCOMPARE(e.state, CapabilityState::Supported);
+        QCOMPARE(s.objectLockEnabled, std::optional(true));
+        e = interpretProbe(specFor(Feature::BucketVersioning), ok(200, fixture("lock-versioning-200.xml")), now, &s);
+        QCOMPARE(s.versioning, QStringLiteral("Enabled"));
+        e = interpretProbe(specFor(Feature::LegalHold),
+                           errorFromResponse(404, fixture("lock-object-legal-hold-404.xml")), now, &s);
+        QCOMPARE(e.state, CapabilityState::Supported);
+        e = interpretProbe(specFor(Feature::Retention),
+                           errorFromResponse(404, fixture("lock-object-retention-404.xml")), now, &s);
+        QCOMPARE(e.state, CapabilityState::Supported);
     }
 
     void fingerprints()

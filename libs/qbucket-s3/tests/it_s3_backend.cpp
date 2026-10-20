@@ -401,6 +401,13 @@ private Q_SLOTS:
             report.append(QStringLiteral("\"%1\": \"%2\"").arg(featureId(f), stateName(e.state)));
         qInfo().noquote() << "probe results:" << report.join(QStringLiteral(", "));
 
+        const QJsonObject state = m_expect.value(QLatin1String("bucketState")).toObject();
+        if (state.contains(QLatin1String("versioning")))
+            QCOMPARE(set->bucketState.versioning, state.value(QLatin1String("versioning")).toString());
+        if (state.contains(QLatin1String("objectLockEnabled")))
+            QCOMPARE(set->bucketState.objectLockEnabled,
+                     std::optional(state.value(QLatin1String("objectLockEnabled")).toBool()));
+
         const QJsonObject expected = m_expect.value(QLatin1String("capabilities")).toObject();
         if (expected.isEmpty())
             QSKIP("no capability expectations for this backend yet");

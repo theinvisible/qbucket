@@ -5,10 +5,18 @@ QBucket's first-class provider (PLAN.md §3.2). Encoded in
 `libs/qbucket-s3/tests/data/hetzner/`, integration expectations in
 `libs/qbucket-s3/tests/data/it-expectations/hetzner.json`.
 
-**Verified:** 2026-10-20 against a real project, location **nbg1**, bucket
-`qbucket-it-test` (no versioning, no object lock, no lifecycle rule) with
-`it_s3_backend` (12/12 passed) and `s3ls probe`. fsn1 and hel1 follow
-Hetzner's documentation and have not been probed.
+**Verified:** 2026-10-20 against a real project, location **nbg1**, with
+`it_s3_backend` (12/12 on each bucket) and `s3ls probe`; fsn1 and hel1
+follow Hetzner's documentation and have not been probed. Test buckets:
+
+| Bucket | Set up | it-expectations |
+|---|---|---|
+| `qbucket-it-test` | console; versioning enabled later (`rclone backend versioning … Enabled`) | `hetzner.json` |
+| `qbucket-it-lock` | `rclone mkdir --s3-bucket-object-lock-enabled` (object lock ⇒ versioning) | `hetzner-lock.json` |
+
+Both hold `guard/DO-NOT-DELETE.txt` (see "Writes to unsupported
+subresources" below). Versioning and object lock work as documented;
+object lock can only be enabled at creation.
 
 ## Basics
 
@@ -39,7 +47,7 @@ Hetzner's documentation and have not been probed.
 | bucket.website | Unsupported | 405 MethodNotAllowed |
 | bucket.replication, logging, notifications, ownership-controls | Unsupported | 501 |
 | **bucket.encryption** | **Unsupported (profile override)** | GET: 404 …NotFoundError from RGW — but writes are intercepted, see below |
-| object.legal-hold, object.retention | Unknown | 400 "bucket object lock not configured" (bucket without object lock) |
+| object.legal-hold, object.retention | Supported on `qbucket-it-lock` (404 ObjectLockConfigurationNotFoundError — RGW's code where AWS says NoSuchObjectLockConfiguration); Unknown on a bucket without object lock (400 "bucket object lock not configured") | |
 
 Profile knowledge for what read probes can't see (from Hetzner's
 "supported actions" page, not yet verified by writing): CopyObject only
@@ -74,6 +82,20 @@ message) **retryable**: idempotent requests are retried with backoff; a
 genuine denial fails again and stays `NotPermitted`. Denials with a message
 and signature errors are not retried.
 
+### Stale reads after switching versioning on
+
+For about 15 minutes after versioning was enabled on `qbucket-it-test`, a
+HEAD right after a successful `DELETE` (204) still found the object in
+roughly one of three round trips, and listings still showed batch-deleted
+keys. 10/10 round trips were clean at 09:56 UTC; the bucket created with
+versioning from the start never showed it. Same pattern as the 403s: bucket
+state changes need a while to reach every gateway.
+
+Consequence for the verify step of plan → execute → verify (PLAN.md §12.2,
+M2/M3): a verification that contradicts a successful response is re-checked
+with a delay before it is reported as a failure — and if it persists, it is
+reported, never assumed away.
+
 ### Writes to unsupported subresources become bucket operations
 
 `PUT /?encryption` (default SSE-S3 encryption) was answered by the front
@@ -97,7 +119,6 @@ Consequences:
 
 ## Open
 
-- Probe fsn1 and hel1; a bucket with versioning and object lock enabled
-  (legal hold / retention, versions listing with content).
+- Probe fsn1 and hel1.
 - Verify CrossBucketCopy and SSE-C by writing (scratch bucket, guard object).
 - Check whether a fresh *access key* shows the same start-up 403s.

@@ -45,6 +45,26 @@ Stage 15 of M1: the library against a real Hetzner Object Storage project
 4. Website 405, bucket tagging / replication / logging / notifications /
    ownership controls 501 — while object tagging works.
 
+## Versioning and object lock (follow-up)
+
+Set up with rclone 1.75.2 in Docker (credentials passed from the env file,
+never printed): `rclone backend versioning hz:qbucket-it-test Enabled`, and
+a second bucket `qbucket-it-lock` created with
+`--s3-bucket-object-lock-enabled` (rclone can only enable object lock at
+creation, like Hetzner). Both buckets got a guard object first thing.
+
+- The prober reads the bucket state correctly: versioning Enabled on both,
+  object lock enabled only on `qbucket-it-lock`, where legal hold and
+  retention probe as supported (RGW answers 404
+  `ObjectLockConfigurationNotFoundError` for an object without them).
+  `it_s3_backend` now also checks the expected bucket state;
+  `it-expectations/hetzner-lock.json` covers the lock bucket.
+- **Stale reads after switching versioning on:** for ~15 minutes a HEAD
+  after a successful DELETE still found the object about one time in three.
+  Clean afterwards (10/10), never seen on the bucket that was versioned from
+  creation. Recorded in `docs/providers/hetzner.md` together with the
+  consequence for the verify step (re-check with delay before reporting).
+
 ## Pitfall in our own test
 
 `VERIFY_OK(put(...))` evaluated its argument up to three times — every
