@@ -19,6 +19,7 @@
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/Session.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
+#include <qbucket/s3/transfer/Copier.h>
 
 #include <QCryptographicHash>
 #include <QFile>
@@ -449,6 +450,41 @@ private Q_SLOTS:
             VERIFY_OK(p2);
             QCOMPARE(p2->md5, md5s[1]);
         }
+    }
+
+    // UploadPartCopy through transfer::Copier: an object copied in two
+    // ranges, content and metadata intact.
+    void multipartCopy()
+    {
+        const QByteArray data = QByteArray("copy in parts 0123456789\n").repeated(260000);   // 6.2 MB
+        const QString src = key(QStringLiteral("partcopy/src.bin"));
+        PutObjectParams p;
+        p.bucket = m_bucket;
+        p.key = src;
+        p.data = data;
+        p.contentType = QStringLiteral("application/x-partcopy");
+        p.metadata.insert(QStringLiteral("origin"), QStringLiteral("it"));
+        const Result<PutObjectResult> put = await<PutObjectResult>([&](auto cb) { m_session->putObject(p, &m_ctx, std::move(cb)); });
+        VERIFY_OK(put);
+
+        transfer::CopyRequest r;
+        r.sourceBucket = m_bucket;
+        r.sourceKey = src;
+        r.bucket = m_bucket;
+        r.key = key(QStringLiteral("partcopy/dst.bin"));
+        r.ifMatch = put->etag;
+        r.partSize = Q_INT64_C(5) * 1024 * 1024;
+        transfer::Copier copier(m_session.get(), r, nullptr);
+        QSignalSpy finished(&copier, &transfer::Copier::finished);
+        copier.start();
+        QVERIFY(finished.wait(120000));
+        VERIFY_OK(copier.result());
+        QCOMPARE(copier.result()->parts, 2);
+        const Result<ObjectData> got = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, r.key, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(got);
+        QCOMPARE(got->data, data);
+        QCOMPARE(got->meta.contentType, QStringLiteral("application/x-partcopy"));
+        QCOMPARE(got->meta.userMetadata.value(QStringLiteral("origin")), QStringLiteral("it"));
     }
 
     // The safety case (PLAN.md §12, Hetzner's proxy once dropped a query

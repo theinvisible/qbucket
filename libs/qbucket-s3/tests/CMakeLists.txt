@@ -110,6 +110,10 @@ qbucket_s3_add_test(test_downloader
     SOURCES test_downloader.cpp
     LIBS    qbucket::s3_transfer qbucket::s3_testsupport
 )
+qbucket_s3_add_test(test_copier
+    SOURCES test_copier.cpp
+    LIBS    qbucket::s3_transfer qbucket::s3_testsupport
+)
 
 # The crash test kills s3cp mid-upload; build it even without the examples.
 if(NOT TARGET s3cp)
@@ -130,6 +134,7 @@ option(QBUCKET_S3_IT_LOCAL "Register it_s3_backend_<backend> for the Docker test
 
 qbucket_s3_add_test(it_s3_backend
     SOURCES it_s3_backend.cpp
+    LIBS    qbucket::s3_transfer
     LABELS  integration
 )
 set_tests_properties(it_s3_backend PROPERTIES TIMEOUT 600)

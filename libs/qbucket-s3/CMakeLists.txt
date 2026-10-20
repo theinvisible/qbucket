@@ -149,6 +149,7 @@ qbucket_s3_apply_build_options(qbucket_s3)
 # adaptive concurrency, resume persistence, uploader / downloader / copier.
 add_library(qbucket_s3_transfer ${_s3_lib_type}
     include/qbucket/s3/transfer/AdaptiveConcurrency.h
+    include/qbucket/s3/transfer/Copier.h
     include/qbucket/s3/transfer/Downloader.h
     include/qbucket/s3/transfer/Hasher.h
     include/qbucket/s3/transfer/JsonFileResumeStore.h
@@ -159,6 +160,7 @@ add_library(qbucket_s3_transfer ${_s3_lib_type}
     src/transfer/Async.h
     src/transfer/Async.cpp
     src/transfer/Common.h
+    src/transfer/Copier.cpp
     src/transfer/Downloader.cpp
     src/transfer/Hasher.cpp
     src/transfer/PartPlanner.cpp

@@ -116,6 +116,12 @@ version bump may break the API.
   With a `ResumeStore` `Downloader::fromStore` continues after a crash:
   same ETag or start over, recorded ranges re-hashed from disk first.
 - `GetObjectToFileParams::createFile` (false: the file must exist).
+- `transfer::Copier`: server-side copy of any size with UploadPartCopy —
+  the source's content type, metadata and storage class carried over,
+  ranges in parallel, each with `x-amz-copy-source-if-match`, the version
+  pinned, a lost Complete resolved with HEAD, the copy's size checked, the
+  upload aborted on failure. Verified against Ceph RGW, VersityGW, Garage and
+  Hetzner (`it_s3_backend multipartCopy`).
 - `examples/s3cp` — resumable uploads and downloads from the command line.
 - `FakeObjectStore::setDelay()`.
 

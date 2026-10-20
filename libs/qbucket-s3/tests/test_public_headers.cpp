@@ -24,6 +24,7 @@
 #include <qbucket/s3/testing/FakeObjectStore.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 #include <qbucket/s3/transfer/AdaptiveConcurrency.h>
+#include <qbucket/s3/transfer/Copier.h>
 #include <qbucket/s3/transfer/Downloader.h>
 #include <qbucket/s3/transfer/Export.h>
 #include <qbucket/s3/transfer/Hasher.h>
