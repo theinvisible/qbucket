@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QLineEdit>
 #include <QStandardPaths>
+#include <QTabBar>
 #include <QToolButton>
 #include <QtTest>
 
@@ -58,6 +59,23 @@ private slots:
 
         QVERIFY(window.findChild<QDockWidget*>(QStringLiteral("transferDock")));
         saveScreenshot(window, QStringLiteral("main-dark.png"));
+    }
+
+    void tabBarsUseThemedSeparator()
+    {
+        // The style's own tab-bar base is a fixed dark line in both themes;
+        // the stylesheet turns it off and draws an @border@ line instead.
+        SettingsController settings;
+        ThemeManager theme;
+        theme.apply(QStringLiteral("Light"));
+        MainWindow window(&settings, &theme);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+
+        const auto bars = window.findChildren<QTabBar*>();
+        QVERIFY(bars.size() >= 2);   // detail pane, transfer dock
+        for (QTabBar* bar : bars)
+            QVERIFY(!bar->drawBase());
     }
 
     void themeToggleRoundTripsThroughSettings()

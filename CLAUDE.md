@@ -44,9 +44,9 @@ convenient):
 
 ## Status
 
-**M0 (skeleton) done** — devlog 001. The full plan — decisions, scope,
-architecture, milestones M0–M8, test strategy, protocol pitfalls — lives in
-**`PLAN.md`**. Start there, and update this section as milestones land.
+**M0 (skeleton) done** — devlog 001; verified on Linux in devlog 002. The
+full plan — decisions, scope, architecture, milestones M0–M8, test
+strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and update this section as milestones land.
 
 What exists:
 
@@ -192,6 +192,11 @@ Each of these cost time there; don't relearn them.
   `ENVIRONMENT` is split as a CMake list).
 - **A `&` in a tab or button label is a mnemonic** — "Headers & Meta"
   rendered as "Headers _Meta". Use `&&` or avoid the character.
+- **The tab-bar base ignores the palette.** With `setDocumentMode(true)`
+  the style paints the tab bar's base line in a fixed `#393e43` in both
+  themes, and `QTabWidget::pane { border-top }` has no effect. The QSS
+  sets `QTabBar { qproperty-drawBase: 0; border-bottom: … @border@ }`;
+  test `tabBarsUseThemedSeparator` guards it. (Same in xyz-profiler.)
 
 ## Production data — safety rules
 

@@ -145,7 +145,9 @@ QLabel#paneTitle { color: @text@; font-weight: 600; padding: 12px 14px 6px 14px;
 
 /* ---- Tabs (detail pane, transfer panel) ---- */
 QTabWidget::pane { border: none; border-top: 1px solid @border@; background: @panel@; }
-QTabBar { background: @panel@; }
+/* The tab bar base (documentMode) is painted by the style in a fixed colour
+   that ignores the palette; draw the separator as a themed border instead. */
+QTabBar { background: @panel@; qproperty-drawBase: 0; border-bottom: 1px solid @border@; }
 QTabBar::tab { background: transparent; color: @text2@; padding: 9px 13px; margin-right: 2px; border: none; border-bottom: 2px solid transparent; font-weight: 500; }
 QTabBar::tab:hover { color: @text@; }
 QTabBar::tab:selected { color: @accent@; border-bottom-color: @accent@; }
