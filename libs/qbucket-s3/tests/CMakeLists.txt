@@ -52,3 +52,4 @@ qbucket_s3_add_test(test_public_headers
 
 # --- Unit tests ----------------------------------------------------------------
 qbucket_s3_add_test(test_result SOURCES test_result.cpp)
+qbucket_s3_add_test(test_s3uri  SOURCES test_s3uri.cpp)

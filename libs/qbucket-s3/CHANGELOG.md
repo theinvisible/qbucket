@@ -13,3 +13,5 @@ version bump may break the API.
   CMake package `QBucketS3`.
 - `Result<T>` / `Result<void>` and `Error` with `ErrorCategory`.
 - `Version.h` with `QBUCKET_S3_VERSION_*` macros.
+- `Endpoint` (URL, signing region, `AddressingStyle`, pinned certificates) and
+  the value types in `Types.h` (`BucketInfo`, `ListPage`, `ObjectMeta`, …).
