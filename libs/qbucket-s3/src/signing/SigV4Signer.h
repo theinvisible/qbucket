@@ -70,6 +70,9 @@ public:
     [[nodiscard]] static QByteArray stringToSign(const QByteArray& canonicalRequest,
                                                  const SigningContext& ctx);
     [[nodiscard]] static QByteArray signingKey(const SigningContext& ctx);
+    // Hex signature of a canonical request (string-to-sign + HMAC chain).
+    [[nodiscard]] static QByteArray signature(const QByteArray& canonicalRequest,
+                                              const SigningContext& ctx);
     [[nodiscard]] static QByteArray amzDate(const QDateTime& time);   // 20130524T000000Z
     [[nodiscard]] static QByteArray sha256Hex(QByteArrayView data);
 };

@@ -115,6 +115,11 @@ QByteArray SigV4Signer::signingKey(const SigningContext& ctx)
     return hmac(kService, "aws4_request");
 }
 
+QByteArray SigV4Signer::signature(const QByteArray& canonicalRequest, const SigningContext& ctx)
+{
+    return hmac(signingKey(ctx), stringToSign(canonicalRequest, ctx)).toHex();
+}
+
 SigningResult SigV4Signer::signHeaders(const SigningInput& input, const SigningContext& ctx,
                                        bool addContentSha256)
 {
@@ -133,7 +138,7 @@ SigningResult SigV4Signer::signHeaders(const SigningInput& input, const SigningC
 
     result.canonicalRequest = canonicalRequest(signedInput);
     result.stringToSign = stringToSign(result.canonicalRequest, ctx);
-    result.signature = hmac(signingKey(ctx), result.stringToSign).toHex();
+    result.signature = signature(result.canonicalRequest, ctx);
 
     const QByteArray authorization = QByteArray(kAlgorithm)
         + " Credential=" + ctx.credentials.accessKeyId.toUtf8() + '/' + credentialScope(ctx)
@@ -183,7 +188,7 @@ SigningResult SigV4Signer::presign(const SigningInput& input, const SigningConte
     SigningResult result;
     result.canonicalRequest = canonicalRequest(signedInput);
     result.stringToSign = stringToSign(result.canonicalRequest, ctx);
-    result.signature = hmac(signingKey(ctx), result.stringToSign).toHex();
+    result.signature = signature(result.canonicalRequest, ctx);
     result.presignedQuery = query + "&X-Amz-Signature=" + result.signature;
     return result;
 }

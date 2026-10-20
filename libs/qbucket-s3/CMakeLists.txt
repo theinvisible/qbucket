@@ -108,6 +108,24 @@ target_include_directories(qbucket_s3
 target_link_libraries(qbucket_s3 PUBLIC Qt6::Core Qt6::Network)
 qbucket_s3_apply_build_options(qbucket_s3)
 
+# --- qbucket::s3_testsupport -------------------------------------------------
+# FakeS3Server for this library's tests and for consumers' own tests. Always
+# static: it is test code, and that spares it an export macro of its own.
+add_library(qbucket_s3_testsupport STATIC
+    include/qbucket/s3/testing/FakeS3Server.h
+    testsupport/FakeS3Server.cpp
+)
+add_library(qbucket::s3_testsupport ALIAS qbucket_s3_testsupport)
+set_target_properties(qbucket_s3_testsupport PROPERTIES
+    EXPORT_NAME s3_testsupport
+    OUTPUT_NAME qbucket-s3-testsupport
+    AUTOMOC ON
+    POSITION_INDEPENDENT_CODE ON
+)
+target_include_directories(qbucket_s3_testsupport PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(qbucket_s3_testsupport PUBLIC qbucket::s3 Qt6::Network)
+qbucket_s3_apply_build_options(qbucket_s3_testsupport)
+
 # --- Tests -------------------------------------------------------------------
 if(QBUCKET_S3_BUILD_TESTS)
     enable_testing()
@@ -118,7 +136,7 @@ endif()
 if(QBUCKET_S3_INSTALL)
     include(CMakePackageConfigHelpers)
 
-    install(TARGETS qbucket_s3
+    install(TARGETS qbucket_s3 qbucket_s3_testsupport
         EXPORT QBucketS3Targets
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -18,3 +18,6 @@ version bump may break the API.
 - `Credentials` value type and `Presigner` (SigV4 query signing, at most 7 days).
 - Logging categories `qbucket.s3.{http,signing,session,retry,capabilities}`
   (`Logging.h`) and the `RequestObserver` audit hook with `RequestRecord`.
+- `qbucket::s3_testsupport` with `testing::FakeS3Server`: scriptable HTTP/1.1
+  test server with fault injection and SigV4 verification (header and
+  presigned form, clock-skew and payload-hash checks).
