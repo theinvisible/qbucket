@@ -66,7 +66,7 @@ private:
     std::shared_ptr<CountingObserver> m_observer;
 
     std::unique_ptr<S3Client> makeClient(const QUrl& url = {}, const QString& region = QStringLiteral("test-1"),
-                                         int transferTimeoutMs = 5000)
+                                         int transferTimeoutMs = 5000, int maxAttempts = 4)
     {
         ClientConfig cfg;
         cfg.endpoint.url = url.isValid() ? url : m_server->endpointUrl();
@@ -75,7 +75,7 @@ private:
         cfg.credentials = std::make_shared<StaticCredentialsProvider>(testCredentials());
         cfg.observer = m_observer;
         cfg.transferTimeoutMs = transferTimeoutMs;
-        cfg.retry.maxAttempts = 4;
+        cfg.retry.maxAttempts = maxAttempts;
         cfg.retry.baseDelayMs = 10;
         cfg.retry.maxDelayMs = 50;
         return std::make_unique<S3Client>(cfg);
@@ -185,14 +185,17 @@ private Q_SLOTS:
         const QUrl dead(QStringLiteral("http://127.0.0.1:%1").arg(probe.serverPort()));
         probe.close();   // nothing listens there now: connection refused
 
-        auto client = makeClient(dead);
+        // Two attempts are enough to show the retry: Windows only reports a
+        // refused localhost connection after its own SYN retries (seconds
+        // per attempt), Linux at once.
+        auto client = makeClient(dead, QStringLiteral("test-1"), 5000, 2);
         CreateBucketParams p;
         p.bucket = QStringLiteral("never-sent");
-        const Result<void> r = await<void>([&](auto cb) { client->createBucket(p, std::move(cb)); });
+        const Result<void> r = await<void>([&](auto cb) { client->createBucket(p, std::move(cb)); }, 60000);
         QCOMPARE(r.error().category, ErrorCategory::Transient);
         QVERIFY(!r.error().outcomeUnknown);
         QMutexLocker lock(&m_observer->mutex);
-        QCOMPARE(m_observer->attempts.size(), 4);
+        QCOMPARE(m_observer->attempts.size(), 2);
     }
 
     void retryAfterIsHonoured()

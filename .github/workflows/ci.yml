@@ -52,6 +52,25 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+      # ctest shows no QtTest output on Windows: rerun what failed with
+      # QtTest's own file logger and print that.
+      - name: Output of failed tests
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $log = "build/Testing/Temporary/LastTestsFailed.log"
+          if (!(Test-Path $log)) { exit 0 }
+          $env:PATH = "$env:QT_ROOT_DIR\bin;$PWD\build;$env:PATH"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          foreach ($line in Get-Content $log) {
+            $name = $line.Split(':')[1]
+            $exe = Get-ChildItem build -Recurse -Filter "$name.exe" | Select-Object -First 1
+            if (!$exe) { continue }
+            & $exe.FullName -o "$name-log.txt,txt"
+            Write-Host "===== $name (exit $LASTEXITCODE)"
+            Get-Content "$name-log.txt" -ErrorAction SilentlyContinue
+          }
+
       # windeployqt already staged the Qt runtime next to qbucket.exe
       # (POST_BUILD in src/CMakeLists.txt).
       - name: Package ZIP
@@ -227,6 +246,25 @@ jobs:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --test-dir build-s3 --output-on-failure
+
+      # ctest shows no QtTest output on Windows: rerun what failed with
+      # QtTest's own file logger and print that.
+      - name: Output of failed tests
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $log = "build-s3/Testing/Temporary/LastTestsFailed.log"
+          if (!(Test-Path $log)) { exit 0 }
+          $env:PATH = "$env:QT_ROOT_DIR\bin;$PWD\build-s3;$env:PATH"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          foreach ($line in Get-Content $log) {
+            $name = $line.Split(':')[1]
+            $exe = Get-ChildItem build-s3 -Recurse -Filter "$name.exe" | Select-Object -First 1
+            if (!$exe) { continue }
+            & $exe.FullName -o "$name-log.txt,txt"
+            Write-Host "===== $name (exit $LASTEXITCODE)"
+            Get-Content "$name-log.txt" -ErrorAction SilentlyContinue
+          }
 
       - name: Install + build a consumer against the package
         if: ${{ !matrix.sanitize }}
