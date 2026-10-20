@@ -65,6 +65,7 @@ private:
     void updateNavigation_();
     void updateStatus_();
     void showCapabilities_();
+    void showIncompleteUploads_();
     void connectOperations_();
     void updateJobStatus_();
     void showJobReport_(Job* job);
@@ -75,6 +76,8 @@ private:
     void chooseUploadFolder_();
     // Uploads local files / folders into the current location.
     void startUpload_(const QStringList& paths, bool alwaysConfirm);
+    void startUploadTo_(const QUuid& account, const QString& bucket, const QString& prefix, const QStringList& paths,
+                        bool alwaysConfirm);
     // Downloads the browser's selection into `folder` (empty: the settings' download folder).
     void downloadSelection_(const QString& folder);
     // Unfinished transfers of the last session: resume or discard them.
@@ -123,6 +126,7 @@ private:
     QAction*      m_actThemeLight   = nullptr;
     QAction*      m_actThemeSystem  = nullptr;
     QAction*      m_actCapabilities = nullptr;
+    QAction*      m_actIncompleteUploads = nullptr;
     QAction*      m_actNewFolder    = nullptr;
     QAction*      m_actUploadFiles  = nullptr;
     QAction*      m_actUploadFolder = nullptr;

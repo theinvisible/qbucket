@@ -8,17 +8,20 @@
 
 #include <QAction>
 #include <QClipboard>
+#include <QDropEvent>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLocale>
 #include <QMenu>
+#include <QMimeData>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QStackedWidget>
 #include <QStyle>
 #include <QTableView>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -90,7 +93,13 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
     m_view->verticalHeader()->setDefaultSectionSize(fontMetrics().height() + 10);
     m_view->horizontalHeader()->setHighlightSections(false);
     m_view->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    m_view->setItemDelegate(new ObjectRowDelegate(m_view));
+    m_delegate = new ObjectRowDelegate(m_view);
+    m_view->setItemDelegate(m_delegate);
+    // Files and folders from the desktop's file manager upload here.
+    m_view->setAcceptDrops(true);
+    m_view->viewport()->setAcceptDrops(true);
+    m_view->setDragDropMode(QAbstractItemView::DropOnly);
+    m_view->setDropIndicatorShown(false);
     m_stack->addWidget(m_view);
     lay->addWidget(m_stack, 1);
     buildActions_();
@@ -350,9 +359,88 @@ void ObjectBrowser::maybePrefetch_()
 
 bool ObjectBrowser::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == m_view->viewport() && event->type() == QEvent::Resize)
-        QMetaObject::invokeMethod(this, &ObjectBrowser::maybePrefetch_, Qt::QueuedConnection);
+    if (watched == m_view->viewport()) {
+        if (event->type() == QEvent::Resize)
+            QMetaObject::invokeMethod(this, &ObjectBrowser::maybePrefetch_, Qt::QueuedConnection);
+        switch (event->type()) {
+        case QEvent::DragEnter:
+        case QEvent::DragMove:
+        case QEvent::DragLeave:
+        case QEvent::Drop:
+            return handleDrop_(event);
+        default:
+            break;
+        }
+    }
     return QWidget::eventFilter(watched, event);
+}
+
+void ObjectBrowser::setUploadsAllowed(bool allowed)
+{
+    m_uploadsAllowed = allowed;
+}
+
+QStringList ObjectBrowser::localPaths(const QMimeData* mime)
+{
+    QStringList paths;
+    if (!mime || !mime->hasUrls())
+        return paths;
+    for (const QUrl& url : mime->urls()) {
+        if (!url.isLocalFile())
+            return {};   // a web link, a remote share URL: not ours to fetch
+        paths.append(url.toLocalFile());
+    }
+    return paths;
+}
+
+QString ObjectBrowser::dropPrefixAt_(const QPoint& pos, int* row) const
+{
+    *row = -1;
+    const Location here = m_nav->current();
+    if (!here.hasBucket())
+        return {};
+    const QModelIndex at = m_view->indexAt(pos);
+    if (at.isValid() && at.data(ObjectTableModel::IsFolderRole).toBool()) {
+        *row = at.row();
+        return at.data(ObjectTableModel::KeyRole).toString();
+    }
+    return here.prefix;
+}
+
+void ObjectBrowser::setDropRow_(int row)
+{
+    if (m_delegate->dropRow() == row)
+        return;
+    m_delegate->setDropRow(row);
+    m_view->viewport()->update();
+}
+
+bool ObjectBrowser::handleDrop_(QEvent* event)
+{
+    if (event->type() == QEvent::DragLeave) {
+        setDropRow_(-1);
+        return true;
+    }
+    auto* drop = static_cast<QDropEvent*>(event);
+    const QStringList paths = localPaths(drop->mimeData());
+    if (!m_uploadsAllowed || paths.isEmpty() || !m_nav->current().hasBucket()) {
+        drop->ignore();
+        setDropRow_(-1);
+        return true;
+    }
+    int row = -1;
+    const QString prefix = dropPrefixAt_(drop->position().toPoint(), &row);
+    if (event->type() == QEvent::Drop) {
+        setDropRow_(-1);
+        drop->setDropAction(Qt::CopyAction);
+        drop->accept();
+        emit filesDropped(paths, prefix);
+        return true;
+    }
+    setDropRow_(row);
+    drop->setDropAction(Qt::CopyAction);
+    drop->accept();
+    return true;
 }
 
 void ObjectBrowser::rememberCurrent_()

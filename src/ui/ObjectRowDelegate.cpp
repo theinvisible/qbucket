@@ -47,11 +47,27 @@ void ObjectRowDelegate::initStyleOption(QStyleOptionViewItem* option, const QMod
     }
 }
 
+void ObjectRowDelegate::paintDropTarget_(QPainter* painter, const QStyleOptionViewItem& option,
+                                         const QModelIndex& index) const
+{
+    if (index.row() != m_dropRow)
+        return;
+    QColor fill = Theme::current().accent;
+    fill.setAlpha(60);
+    painter->save();
+    painter->fillRect(option.rect, fill);
+    painter->setPen(Theme::current().accent);
+    painter->drawLine(option.rect.topLeft(), option.rect.topRight());
+    painter->drawLine(option.rect.bottomLeft(), option.rect.bottomRight());
+    painter->restore();
+}
+
 void ObjectRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (index.column() != ObjectTableModel::StorageClassColumn
         || index.data(ObjectTableModel::IsFolderRole).toBool()) {
         QStyledItemDelegate::paint(painter, option, index);
+        paintDropTarget_(painter, option, index);
         return;
     }
 

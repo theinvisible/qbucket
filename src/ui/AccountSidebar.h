@@ -39,6 +39,11 @@ signals:
     void bucketSelected(const QUuid& account, const QString& bucket);
     void accountSelected(const QUuid& account);
     void statusMessage(const QString& text, int timeoutMs);
+    // Local files and folders dropped onto a bucket: upload into its root.
+    void filesDroppedOnBucket(const QUuid& account, const QString& bucket, const QStringList& paths);
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
     void showContextMenu_(const QPoint& pos);

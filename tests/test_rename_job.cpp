@@ -6,6 +6,9 @@
 #include "controllers/RenameJob.h"
 #include "support/AccountHarness.h"
 #include "support/FakeBucket.h"
+#include "controllers/TransferService.h"
+
+#include <qbucket/s3/testing/FakeObjectStore.h>
 
 #include <QFile>
 #include <QSignalSpy>
@@ -154,15 +157,25 @@ private slots:
         QVERIFY(job->report().failures.first().contains(QLatin1String("does not match")));
     }
 
-    void objectsTooLargeForOneCopyStopThePlan()
+    void objectsAboveFiveGiBAreCopiedInParts()
     {
-        m_bucket.add(QStringLiteral("big/huge.img"), RenameJob::kCopyLimit + 1);
-        m_bucket.add(QStringLiteral("big/small"), 1);
-        m_bucket.sort();
+        // A stateful store for this one: UploadPartCopy, no data needed.
+        FakeObjectStore store(m_h->server.get());
+        store.createBucket(QStringLiteral("bkt"));
+        store.putSyntheticObject(QStringLiteral("bkt"), QStringLiteral("big/huge.img"), RenameJob::kCopyLimit + 1);
+        store.putObject(QStringLiteral("bkt"), QStringLiteral("big/small"), "s");
+        TransferService transfers(m_h->path(QStringLiteral("transfers")), nullptr);
+        m_ops->setTransfers(&transfers);
         Job* job = run(QStringLiteral("big/"), true, QStringLiteral("bigger"));
-        QCOMPARE(job->outcome(), Job::Outcome::Failed);
-        QVERIFY(job->errorText().contains(QLatin1String("5 GiB")));
-        QCOMPARE(m_bucket.copies, 0);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        QCOMPARE(store.keys(QStringLiteral("bkt")),
+                 (QStringList{QStringLiteral("bigger/huge.img"), QStringLiteral("bigger/small")}));
+        QCOMPARE(store.object(QStringLiteral("bkt"), QStringLiteral("bigger/huge.img"))->size, RenameJob::kCopyLimit + 1);
+        QCOMPARE(store.count(QStringLiteral("UploadPartCopy")), 11);   // 512 MiB parts
+        QCOMPARE(store.count(QStringLiteral("CopyObject")), 1);         // the small one
+        QVERIFY(store.uploadIds(QStringLiteral("bkt")).isEmpty());
+        m_ops->setTransfers(nullptr);
     }
 
     void badNames()

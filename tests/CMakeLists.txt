@@ -164,6 +164,12 @@ qbucket_add_test(test_download_job
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_incomplete_uploads
+    test_incomplete_uploads.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_transfer_panel
     test_transfer_panel.cpp
     qbucket_app_ui

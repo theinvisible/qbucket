@@ -18,6 +18,7 @@
 #include "controllers/UploadJob.h"
 #include "ui/AccountSidebar.h"
 #include "ui/CapabilitiesDialog.h"
+#include "ui/IncompleteUploadsDialog.h"
 #include "ui/LogPanel.h"
 #include "ui/OperationPreviewDialog.h"
 #include "ui/DetailPane.h"
@@ -170,6 +171,15 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     connect(m_sidebar, &AccountSidebar::statusMessage, this,
             [this](const QString& text, int timeoutMs) { statusBar()->showMessage(text, timeoutMs); });
     connect(m_sidebar, &AccountSidebar::bucketSelected, m_browser, &ObjectBrowser::openBucket);
+    // Drops always show the preview: a drop is easily an accident.
+    connect(m_sidebar, &AccountSidebar::filesDroppedOnBucket, this,
+            [this](const QUuid& account, const QString& bucket, const QStringList& paths) {
+                startUploadTo_(account, bucket, QString(), paths, true);
+            });
+    connect(m_browser, &ObjectBrowser::filesDropped, this, [this](const QStringList& paths, const QString& prefix) {
+        const Location here = m_browser->navigation()->current();
+        startUploadTo_(here.account, here.bucket, prefix, paths, true);
+    });
     connect(m_sidebar, &AccountSidebar::accountSelected, this, [this](const QUuid& id) {
         m_browser->navigation()->navigate({id, {}, {}});
     });
@@ -275,6 +285,7 @@ void MainWindow::updateMutationActions_()
         a->setToolTip(folder.allowed ? tr("Upload into s3://%1/%2").arg(here.bucket, here.prefix) : folder.reason);
     }
     m_uploadBtn->setEnabled(folder.allowed);
+    m_browser->setUploadsAllowed(folder.allowed);
     m_uploadBtn->setToolTip(folder.allowed ? tr("Upload files or folders to the current location") : folder.reason);
     m_actNewFolder->setToolTip(folder.allowed ? tr("Create a folder here") : folder.reason);
     m_newFolderBtn->setToolTip(folder.allowed ? tr("New folder") : folder.reason);
@@ -353,12 +364,19 @@ void MainWindow::chooseUploadFolder_()
 void MainWindow::startUpload_(const QStringList& paths, bool alwaysConfirm)
 {
     const Location here = m_browser->navigation()->current();
-    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
-    if (!m_operations || !account || !here.hasBucket() || paths.isEmpty())
+    if (here.hasBucket())
+        startUploadTo_(here.account, here.bucket, here.prefix, paths, alwaysConfirm);
+}
+
+void MainWindow::startUploadTo_(const QUuid& accountId, const QString& bucket, const QString& prefix,
+                                const QStringList& paths, bool alwaysConfirm)
+{
+    const std::optional<Account> account = m_accounts ? m_accounts->account(accountId) : std::nullopt;
+    if (!m_operations || !account || bucket.isEmpty() || paths.isEmpty())
         return;
     UploadJob::Options options;
     options.alwaysConfirm = alwaysConfirm;
-    m_operations->start(new UploadJob(*account, here.bucket, here.prefix, paths, m_operations->planDir(), options));
+    m_operations->start(new UploadJob(*account, bucket, prefix, paths, m_operations->planDir(), options));
 }
 
 void MainWindow::downloadSelection_(const QString& folder)
@@ -597,6 +615,14 @@ void MainWindow::updateNavigation_()
     m_actRefresh->setEnabled(here || m_sessions);
     m_actEditPath->setEnabled(nav->current().isValid());
     m_actCapabilities->setEnabled(m_capabilities && nav->current().isValid());
+    if (m_actIncompleteUploads) {
+        OperationController::Check list{false, tr("Open a bucket first.")};
+        if (m_operations && nav->current().hasBucket())
+            list = m_operations->check(nav->current().account, nav->current().bucket, {s3::Feature::MultipartListing},
+                                       false, false);
+        m_actIncompleteUploads->setEnabled(list.allowed);
+        m_actIncompleteUploads->setToolTip(list.allowed ? tr("Unfinished multipart uploads of this bucket") : list.reason);
+    }
     updateMutationActions_();
     m_backBtn->setEnabled(nav->canGoBack());
     m_forwardBtn->setEnabled(nav->canGoForward());
@@ -612,6 +638,16 @@ void MainWindow::showCapabilities_()
     if (!m_capabilities || !account)
         return;
     auto* dlg = new CapabilitiesDialog(m_capabilities, account->id, account->name, here.bucket, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
+}
+
+void MainWindow::showIncompleteUploads_()
+{
+    const Location here = m_browser->navigation()->current();
+    if (!m_operations || !here.hasBucket())
+        return;
+    auto* dlg = new IncompleteUploadsDialog(m_operations, m_transfers, here.account, here.bucket, this);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
     dlg->show();
 }
@@ -730,6 +766,8 @@ void MainWindow::buildMenuBar_()
     auto* tools = mb->addMenu(tr("&Tools"));
     m_actCapabilities = tools->addAction(tr("Server &Capabilities…"), this, &MainWindow::showCapabilities_);
     m_actCapabilities->setEnabled(false);
+    m_actIncompleteUploads = tools->addAction(tr("&Incomplete Uploads…"), this, &MainWindow::showIncompleteUploads_);
+    m_actIncompleteUploads->setEnabled(false);
     tools->addSeparator();
     m_actSettings = tools->addAction(tr("&Settings…"),
                                      this, &MainWindow::showSettingsDialog_);

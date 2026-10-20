@@ -15,8 +15,17 @@ public:
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
+    // The folder row files are dragged onto (-1: none) — drawn highlighted.
+    void setDropRow(int row) { m_dropRow = row; }
+    [[nodiscard]] int dropRow() const { return m_dropRow; }
+
 protected:
     void initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const override;
+
+private:
+    void paintDropTarget_(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+
+    int m_dropRow = -1;
 };
 
 } // namespace qbucket

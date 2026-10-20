@@ -42,6 +42,8 @@ target_link_libraries(qbucket_accounts
 
 # --- Controllers (application logic, no widgets) ---------------------------
 add_library(qbucket_controllers STATIC
+    controllers/AbortUploadsJob.h
+    controllers/AbortUploadsJob.cpp
     controllers/AccountSessions.h
     controllers/AccountSessions.cpp
     controllers/ActivityLog.h
@@ -93,6 +95,8 @@ target_link_libraries(qbucket_controllers
 add_library(qbucket_models STATIC
     models/AccountTreeModel.h
     models/AccountTreeModel.cpp
+    models/MultipartUploadModel.h
+    models/MultipartUploadModel.cpp
     models/ObjectTableModel.h
     models/ObjectTableModel.cpp
     models/TransferModel.h
@@ -153,6 +157,8 @@ add_library(qbucket_app_ui STATIC
     ui/SettingsDialog.cpp
     ui/TransferPanel.h
     ui/TransferPanel.cpp
+    ui/IncompleteUploadsDialog.h
+    ui/IncompleteUploadsDialog.cpp
 )
 target_include_directories(qbucket_app_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(qbucket_app_ui PRIVATE

@@ -13,6 +13,7 @@
 #include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMimeData>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSignalSpy>
@@ -20,6 +21,7 @@
 #include <QTemporaryDir>
 #include <QToolButton>
 #include <QTableView>
+#include <QUrl>
 #include <QtTest>
 
 using namespace qbucket;
@@ -126,6 +128,57 @@ private slots:
 
         browser.navigation()->back();
         QCOMPARE(browser.navigation()->current().prefix, QStringLiteral("photos/"));
+    }
+
+    void localFilesCanBeDroppedOnTheListAndOnFolders()
+    {
+        m_bucket.add(QStringLiteral("photos/a.jpg"), 1);
+        m_bucket.add(QStringLiteral("readme.txt"), 1);
+        m_bucket.sort();
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.resize(700, 400);
+        browser.show();
+        browser.openBucket(m_account, QStringLiteral("bkt"));
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QSignalSpy dropped(&browser, &ObjectBrowser::filesDropped);
+        QWidget* viewport = browser.view()->viewport();
+
+        QMimeData files;
+        files.setUrls({QUrl::fromLocalFile(m_dir.filePath(QStringLiteral("a.txt"))),
+                       QUrl::fromLocalFile(m_dir.path())});
+        const auto dragTo = [&](const QPoint& pos, QMimeData* mime) {
+            QDragEnterEvent enter(pos, Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(viewport, &enter);
+            QDragMoveEvent move(pos, Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(viewport, &move);
+            const bool accepted = move.isAccepted();
+            QDropEvent drop(QPointF(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(viewport, &drop);
+            return accepted;
+        };
+
+        // Not allowed (read-only account, no bucket rights): refused.
+        QVERIFY(!dragTo(QPoint(5, 5), &files));
+        QCOMPARE(dropped.size(), 0);
+
+        browser.setUploadsAllowed(true);
+        // On the folder row: into that folder.
+        const QRect folderRow = browser.view()->visualRect(browser.model()->index(0, 0));
+        QVERIFY(dragTo(folderRow.center(), &files));
+        QCOMPARE(dropped.size(), 1);
+        QCOMPARE(dropped.last().at(0).toStringList().size(), 2);
+        QCOMPARE(dropped.last().at(1).toString(), QStringLiteral("photos/"));
+        // On a file row or empty space: into the current folder.
+        const QRect fileRow = browser.view()->visualRect(browser.model()->index(1, 0));
+        QVERIFY(dragTo(fileRow.center(), &files));
+        QCOMPARE(dropped.last().at(1).toString(), QString());
+
+        // A web link is not a local file: refused as a whole.
+        QMimeData web;
+        web.setUrls({QUrl::fromLocalFile(m_dir.filePath(QStringLiteral("a.txt"))), QUrl(QStringLiteral("https://example.com/x"))});
+        QVERIFY(!dragTo(fileRow.center(), &web));
+        QCOMPARE(dropped.size(), 2);
+        QVERIFY(ObjectBrowser::localPaths(&web).isEmpty());
     }
 
     void anEmptyFolderAndAnErrorSayWhatTheyAre()

@@ -2,6 +2,25 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en" sourcelanguage="en">
 <context>
+    <name>qbucket::AbortUploadsJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/AbortUploadsJob.cpp" line="23"/>
+        <source>Abort %n unfinished upload(s) in s3://%1</source>
+        <translation>
+            <numerusform>Abort %n unfinished upload in s3://%1</numerusform>
+            <numerusform>Abort %n unfinished uploads in s3://%1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/AbortUploadsJob.cpp" line="112"/>
+        <source>%n upload(s) aborted</source>
+        <translation>
+            <numerusform>%n upload aborted</numerusform>
+            <numerusform>%n uploads aborted</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ConnectionTester</name>
     <message numerus="yes">
         <location filename="../../src/controllers/ConnectionTester.cpp" line="81"/>
@@ -119,9 +138,28 @@
     </message>
 </context>
 <context>
+    <name>qbucket::IncompleteUploadsDialog</name>
+    <message numerus="yes">
+        <location filename="../../src/ui/IncompleteUploadsDialog.cpp" line="79"/>
+        <source>The first %n unfinished uploads.</source>
+        <translation>
+            <numerusform>The first unfinished upload.</numerusform>
+            <numerusform>The first %n unfinished uploads.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/IncompleteUploadsDialog.cpp" line="81"/>
+        <source>%n unfinished upload(s).</source>
+        <translation>
+            <numerusform>%n unfinished upload.</numerusform>
+            <numerusform>%n unfinished uploads.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="193"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="203"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -129,7 +167,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="430"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="448"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -140,7 +178,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="483"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="571"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -152,7 +190,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="485"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="573"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -160,7 +198,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="491"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="579"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>
@@ -237,15 +275,7 @@
 <context>
     <name>qbucket::RenameJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/RenameJob.cpp" line="182"/>
-        <source>%n object(s) are larger than 5 GiB; renaming them needs multipart copies, which arrive with the transfer engine (first: %1).</source>
-        <translation>
-            <numerusform>%n object is larger than 5 GiB; renaming it needs a multipart copy, which arrives with the transfer engine (first: %1).</numerusform>
-            <numerusform>%n objects are larger than 5 GiB; renaming them needs multipart copies, which arrive with the transfer engine (first: %1).</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <location filename="../../src/controllers/RenameJob.cpp" line="449"/>
+        <location filename="../../src/controllers/RenameJob.cpp" line="517"/>
         <source>not verified: %n object(s) still under the old name</source>
         <translation>
             <numerusform>not verified: %n object still under the old name</numerusform>

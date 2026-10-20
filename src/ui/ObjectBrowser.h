@@ -6,12 +6,15 @@
 #include <QWidget>
 
 class QAction;
+class QMimeData;
 class QLabel;
 class QPushButton;
 class QStackedWidget;
 class QTableView;
 
 namespace qbucket {
+
+class ObjectRowDelegate;
 
 class AccountSessions;
 class AccountStore;
@@ -58,6 +61,11 @@ public:
     void setMutationsAllowed(bool allowed, const QString& reason);
     // Downloads only read: also on read-only accounts.
     void setDownloadsAllowed(bool allowed, const QString& reason);
+    // Local files may be dropped here (and onto folder rows).
+    void setUploadsAllowed(bool allowed);
+    // The local files of a drag, or empty when it isn't one of only local
+    // files and folders.
+    [[nodiscard]] static QStringList localPaths(const QMimeData* mime);
 
     // Selected rows (column 0), in view order.
     [[nodiscard]] QModelIndexList selectedRows() const;
@@ -72,6 +80,9 @@ signals:
     // Counts, state or selection changed.
     void statusChanged();
     void locationChanged(const qbucket::Location& location);
+    // Local files and folders dropped onto the list (prefix: the folder row
+    // they were dropped on, or the current one).
+    void filesDropped(const QStringList& paths, const QString& prefix);
 
 private:
     void onLocationChanged_(const Location& location);
@@ -86,6 +97,10 @@ private:
     void updateActions_();
     void showContextMenu_(const QPoint& pos);
     void copySelection_(bool asUri);
+    // Drag & drop in: the prefix the files would land in; -1 / "" if none.
+    [[nodiscard]] QString dropPrefixAt_(const QPoint& pos, int* row) const;
+    void setDropRow_(int row);
+    bool handleDrop_(QEvent* event);
 
     AccountStore* m_accounts;
     AccountSessions* m_sessions;
@@ -110,6 +125,8 @@ private:
     QAction* m_actDownload = nullptr;
     QAction* m_actDownloadTo = nullptr;
     bool m_downloadsAllowed = false;
+    bool m_uploadsAllowed = false;
+    ObjectRowDelegate* m_delegate = nullptr;
     QString m_downloadsReason;
     bool m_mutationsAllowed = false;
     QString m_mutationsReason;

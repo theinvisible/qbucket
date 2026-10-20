@@ -1,5 +1,7 @@
 #include "ui/AccountSidebar.h"
 
+#include "ui/ObjectBrowser.h"
+
 #include "accounts/AccountStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
@@ -10,6 +12,7 @@
 #include <QAction>
 #include <QHBoxLayout>
 #include <QInputDialog>
+#include <QDropEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
@@ -62,6 +65,10 @@ AccountSidebar::AccountSidebar(AccountStore* accounts, SecretStore* secrets, Acc
     m_tree->setUniformRowHeights(true);
     m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
     m_tree->setItemDelegate(new AccountTreeDelegate(m_tree));
+    m_tree->setAcceptDrops(true);
+    m_tree->viewport()->setAcceptDrops(true);
+    m_tree->setDragDropMode(QAbstractItemView::DropOnly);
+    m_tree->viewport()->installEventFilter(this);
     lay->addWidget(m_tree, 1);
 
     m_empty = makeEmptyState(tr("No accounts yet."));
@@ -267,6 +274,33 @@ void AccountSidebar::askForSecret_(const QUuid& id)
     });
     connect(dlg, &QDialog::finished, this, [this, id] { m_askingSecret.remove(id); });
     dlg->open();
+}
+
+bool AccountSidebar::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched != m_tree->viewport())
+        return QWidget::eventFilter(watched, event);
+    const QEvent::Type t = event->type();
+    if (t != QEvent::DragEnter && t != QEvent::DragMove && t != QEvent::Drop)
+        return QWidget::eventFilter(watched, event);
+    auto* drop = static_cast<QDropEvent*>(event);
+    const QModelIndex at = m_tree->indexAt(drop->position().toPoint());
+    const QStringList paths = ObjectBrowser::localPaths(drop->mimeData());
+    // Only onto a bucket of an account that may write; the gate checks again.
+    const bool bucket = at.isValid()
+        && at.data(AccountTreeModel::KindRole).toInt() == int(AccountTreeModel::Kind::Bucket)
+        && !at.data(AccountTreeModel::ReadOnlyRole).toBool();
+    if (paths.isEmpty() || (t != QEvent::DragEnter && !bucket)) {
+        drop->ignore();
+        return true;
+    }
+    drop->setDropAction(Qt::CopyAction);
+    drop->accept();
+    if (t == QEvent::Drop && bucket) {
+        emit filesDroppedOnBucket(at.data(AccountTreeModel::AccountIdRole).toUuid(),
+                                  at.data(AccountTreeModel::BucketRole).toString(), paths);
+    }
+    return true;
 }
 
 } // namespace qbucket

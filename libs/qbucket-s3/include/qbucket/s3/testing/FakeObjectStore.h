@@ -62,6 +62,10 @@ public:
     void putObject(const QString& bucket, const QString& key, const QByteArray& data,
                    const QString& contentType = QStringLiteral("application/octet-stream"));
 
+    // An object of `size` bytes without data (for copies and listings of
+    // huge objects; GET answers 501 for it).
+    void putSyntheticObject(const QString& bucket, const QString& key, qint64 size);
+
     // Bodies are hashed, not kept: uploads of any size. GET answers 501.
     void setDiscardData(bool discard);
     // Smallest part except the last (EntityTooSmall); S3: 5 MiB.

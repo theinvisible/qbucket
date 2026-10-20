@@ -378,8 +378,8 @@ struct FakeObjectStore::Impl {
         const QByteArray ifMatch = req.header("if-match");
         if (!ifMatch.isNull() && unquoted(QString::fromLatin1(ifMatch)) != unquoted(o->etag))
             return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
-        if (discard && !head)
-            return error(501, "NotImplemented", "FakeObjectStore discards data");
+        if ((discard || (o->data.isEmpty() && o->size > 0)) && !head)
+            return error(501, "NotImplemented", "FakeObjectStore keeps no data for this object");
 
         qint64 start = 0;
         qint64 end = o->size - 1;
@@ -770,6 +770,16 @@ void FakeObjectStore::putObject(const QString& bucket, const QString& key, const
     o.etag = quoted(o.md5);
     o.lastModified = QDateTime::currentDateTimeUtc();
     o.contentType = contentType;
+    d->buckets[bucket][key.toUtf8()] = o;
+}
+
+void FakeObjectStore::putSyntheticObject(const QString& bucket, const QString& key, qint64 size)
+{
+    Object o;
+    o.size = size;
+    o.etag = quoted(md5(key.toUtf8() + QByteArray::number(size)));
+    o.lastModified = QDateTime::currentDateTimeUtc();
+    o.contentType = QStringLiteral("application/octet-stream");
     d->buckets[bucket][key.toUtf8()] = o;
 }
 

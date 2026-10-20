@@ -15,6 +15,8 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTreeView>
+#include <QMimeData>
+#include <QUrl>
 #include <QtTest>
 
 using namespace qbucket;
@@ -101,6 +103,42 @@ private slots:
         QCOMPARE(selected.first().at(0).toUuid(), a.id);
         QCOMPARE(selected.first().at(1).toString(), QStringLiteral("media"));
         sidebar.view()->viewport()->repaint();   // the delegate paints from roles only
+    }
+
+    void filesDroppedOnABucketUploadThere()
+    {
+        const Account a = addAccount(true);
+        AccountSidebar sidebar(m_accounts.get(), m_secrets.get(), m_sessions.get());
+        sidebar.resize(260, 400);
+        sidebar.show();
+        sidebar.view()->expand(sidebar.model()->accountIndex(a.id));
+        QTRY_VERIFY_WITH_TIMEOUT(sidebar.model()->bucketIndex(a.id, QStringLiteral("media")).isValid(), 10000);
+        QSignalSpy dropped(&sidebar, &AccountSidebar::filesDroppedOnBucket);
+        QMimeData files;
+        files.setUrls({QUrl::fromLocalFile(QDir::tempPath())});
+        const auto dropAt = [&](const QModelIndex& index) {
+            const QPoint pos = sidebar.view()->visualRect(index).center();
+            QDragEnterEvent enter(pos, Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(sidebar.view()->viewport(), &enter);
+            QDropEvent drop(QPointF(pos), Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(sidebar.view()->viewport(), &drop);
+        };
+        dropAt(sidebar.model()->accountIndex(a.id));   // an account row: no
+        QCOMPARE(dropped.size(), 0);
+        dropAt(sidebar.model()->bucketIndex(a.id, QStringLiteral("media")));   // read-only: no
+        QCOMPARE(dropped.size(), 0);
+
+        Account writable = a;
+        writable.readOnly = false;
+        QVERIFY(m_accounts->save(writable));
+        sidebar.view()->expand(sidebar.model()->accountIndex(a.id));
+        QTRY_VERIFY_WITH_TIMEOUT(!sidebar.model()->bucketIndex(a.id, QStringLiteral("media"))
+                                      .data(AccountTreeModel::ReadOnlyRole).toBool(), 10000);
+        dropAt(sidebar.model()->bucketIndex(a.id, QStringLiteral("media")));
+        QCOMPARE(dropped.size(), 1);
+        QCOMPARE(dropped.first().at(0).toUuid(), a.id);
+        QCOMPARE(dropped.first().at(1).toString(), QStringLiteral("media"));
+        QCOMPARE(dropped.first().at(2).toStringList(), QStringList{QDir::tempPath()});
     }
 
     void asksForAMissingSecretOnce()

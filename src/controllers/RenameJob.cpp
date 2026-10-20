@@ -1,5 +1,9 @@
 #include "controllers/RenameJob.h"
 
+#include "controllers/TransferService.h"
+
+#include <qbucket/s3/transfer/Copier.h>
+
 #include "controllers/CapabilityController.h"
 #include "controllers/ConnectionTester.h"
 #include "controllers/CreateFolderJob.h"
@@ -139,11 +143,7 @@ void RenameJob::planSource_()
             fail_(tr("Could not look up “%1”: %2").arg(m_source, ConnectionTester::describe(head.error())));
             return;
         }
-        if (head->size > kCopyLimit) {
-            fail_(tr("“%1” is larger than 5 GiB; renaming it needs a multipart copy, which arrives with the "
-                     "transfer engine.").arg(m_source));
-            return;
-        }
+        m_large = head->size > kCopyLimit;
         m_plan->appendRecords({{m_source, QString::number(head->size), head->etag, head->storageClass}});
         m_bytes = head->size;
         m_samples = {m_source};
@@ -162,10 +162,7 @@ void RenameJob::planFolderPage_()
         }
         QList<QStringList> records;
         for (const s3::ObjectEntry& e : page->objects) {
-            if (e.size > kCopyLimit) {
-                m_tooLarge.append(e.key);
-                continue;
-            }
+            m_large = m_large || e.size > kCopyLimit;
             records.append({e.key, QString::number(e.size), e.etag, e.storageClass});
             m_bytes += e.size;
             if (m_samples.size() < kSamples)
@@ -178,11 +175,6 @@ void RenameJob::planFolderPage_()
             return;
         }
         m_pager.reset();
-        if (!m_tooLarge.isEmpty()) {
-            fail_(tr("%n object(s) are larger than 5 GiB; renaming them needs multipart copies, which arrive with "
-                     "the transfer engine (first: %1).", nullptr, int(m_tooLarge.size())).arg(m_tooLarge.first()));
-            return;
-        }
         planDone_();
     });
 }
@@ -269,6 +261,10 @@ void RenameJob::renameOne_(const Entry& e)
         return;
     }
     const QString target = targetFor_(e.key);
+    if (e.size > kCopyLimit) {
+        copyInParts_(e, target);
+        return;
+    }
     s3::CopyObjectParams params;
     params.sourceBucket = bucket();
     params.sourceKey = e.key;
@@ -303,11 +299,79 @@ void RenameJob::renameOne_(const Entry& e)
         rec.requestId = r->requestId;
         rec.versionId = r->versionId;
         journal_({rec});
-        copied_(e, target);
+        copied_(e, target, false);
     });
 }
 
-void RenameJob::copied_(const Entry& e, const QString& target)
+QList<s3::Feature> RenameJob::requiredFeatures() const
+{
+    if (m_large)
+        return {s3::Feature::MultipartUpload};
+    return {};
+}
+
+// Above CopyObject's limit: UploadPartCopy in ranges, every part with the
+// source's If-Match.
+void RenameJob::copyInParts_(const Entry& e, const QString& target)
+{
+    s3::Session* session = session_();
+    TransferService* transfers = controller_()->transfers();
+    if (!session || !transfers) {
+        addFailure_(e.key, tr("not copied (not connected) — the original is untouched"));
+        setProgress_(progressDone() + 1, progressTotal());
+        pump_();
+        return;
+    }
+    s3::transfer::CopyRequest req;
+    req.sourceBucket = bucket();
+    req.sourceKey = e.key;
+    req.bucket = bucket();
+    req.key = target;
+    req.ifMatch = e.etag;
+    if (!e.storageClass.isEmpty() && e.storageClass != QLatin1String("STANDARD"))
+        req.storageClass = e.storageClass;
+    ++m_inFlight;
+    auto copier = std::make_unique<s3::transfer::Copier>(session, req, transfers->limiter(account().id));
+    s3::transfer::Copier* raw = copier.get();
+    connect(raw, &s3::transfer::Copier::finished, this, [this, raw, e, target] {
+        const s3::Result<s3::transfer::CopyResult>& r = raw->result();
+        Journal::Record rec = record_(QStringLiteral("MultipartCopy"), target);
+        rec.message = QStringLiteral("from %1").arg(e.key);
+        if (r) {
+            rec.httpStatus = 200;
+            rec.versionId = r->versionId;
+            rec.message += QStringLiteral(", %1 parts").arg(r->parts);
+            journal_({rec});
+            copied_(e, target, true);
+        } else {
+            --m_inFlight;
+            const s3::Error& err = r.error();
+            rec.result = Journal::Result::Failed;
+            rec.httpStatus = err.httpStatus;
+            rec.message += QStringLiteral(": ") + err.toString();
+            journal_({rec});
+            if (err.category != s3::ErrorCategory::Cancelled) {
+                addFailure_(e.key, err.category == s3::ErrorCategory::PreconditionFailed
+                                       ? tr("changed since it was planned — not renamed")
+                                       : tr("not copied (%1) — the original is untouched").arg(ConnectionTester::describe(err)));
+            }
+            setProgress_(progressDone() + 1, progressTotal());
+            pump_();
+        }
+        // Not from inside its own signal.
+        for (auto it = m_copiers.begin(); it != m_copiers.end(); ++it) {
+            if (it->get() == raw) {
+                it->release()->deleteLater();
+                m_copiers.erase(it);
+                break;
+            }
+        }
+    });
+    m_copiers.push_back(std::move(copier));
+    raw->start();
+}
+
+void RenameJob::copied_(const Entry& e, const QString& target, bool inParts)
 {
     s3::Session* session = session_();
     if (!session) {
@@ -317,9 +381,11 @@ void RenameJob::copied_(const Entry& e, const QString& target)
         return;
     }
     // Verify the copy before anything is deleted.
-    session->headObject(bucket(), target, QString(), m_run.get(), [this, e, target](const s3::Result<s3::ObjectMeta>& head) {
+    session->headObject(bucket(), target, QString(), m_run.get(), [this, e, target, inParts](const s3::Result<s3::ObjectMeta>& head) {
         const bool sizeOk = head && head->size == e.size;
-        const bool etagOk = !etagIsContentHash(e.etag) || (head && head->etag == e.etag);
+        // A copy in parts has an ETag of its own; the Copier guarded each
+        // part with the source's ETag and checked the size.
+        const bool etagOk = inParts || !etagIsContentHash(e.etag) || (head && head->etag == e.etag);
         if (!sizeOk || !etagOk) {
             --m_inFlight;
             addFailure_(e.key, head ? tr("the copy does not match (size or checksum) — the original is kept, check "
@@ -381,6 +447,8 @@ void RenameJob::onCancel()
         m_pager.reset();
         break;
     case Phase::Executing:
+        for (const auto& c : m_copiers)
+            c->cancel();   // aborts its upload; the source stays
         settled_();
         break;
     case Phase::Verifying:

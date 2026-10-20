@@ -8,8 +8,13 @@
 #include <QSet>
 
 #include <memory>
+#include <vector>
 
 namespace qbucket {
+
+namespace s3::transfer {
+class Copier;
+}
 
 // Renames an object or a folder in place (PLAN.md §12.3: move = copy →
 // verify → delete source; never a blind delete after a copy).
@@ -17,12 +22,13 @@ namespace qbucket {
 //             under the target name (no overwriting in M2); the source is
 //             looked up afresh — a folder listed completely into a
 //             PlanFile with each key's size, ETag and storage class.
-//             Objects above the CopyObject limit (5 GiB) stop the plan.
 //   Execute — per object: CopyObject with x-amz-copy-source-if-match (a
 //             concurrent change aborts instead of being renamed), the
-//             storage class kept; HEAD of the copy (size, and the ETag
-//             where it is the content's MD5); only then DeleteObject of the
-//             source. Failures leave the source alone and are reported.
+//             storage class kept — above CopyObject's 5 GiB a multipart
+//             copy (transfer::Copier, UploadPartCopy, each part guarded the
+//             same way); HEAD of the copy (size, and the ETag where it is
+//             the content's MD5); only then DeleteObject of the source.
+//             Failures leave the source alone and are reported.
 //   Verify  — the old name holds nothing but what failed, the new name
 //             everything that was renamed.
 class RenameJob : public Job {
@@ -39,6 +45,8 @@ public:
     ~RenameJob() override;
 
     [[nodiscard]] QString title() const override;
+    // Objects above 5 GiB are copied in parts.
+    [[nodiscard]] QList<s3::Feature> requiredFeatures() const override;
     [[nodiscard]] QString sourceKey() const { return m_source; }
     [[nodiscard]] QString targetKey() const { return m_target; }
     // Old keys whose rename failed (they are still there).
@@ -63,7 +71,8 @@ private:
     void planDone_();
     void pump_();
     void renameOne_(const Entry& e);
-    void copied_(const Entry& e, const QString& target);
+    void copyInParts_(const Entry& e, const QString& target);
+    void copied_(const Entry& e, const QString& target, bool inParts);
     void settled_();
     void addFailure_(const QString& key, const QString& reason);
     [[nodiscard]] QString targetFor_(const QString& key) const;
@@ -77,10 +86,11 @@ private:
     std::unique_ptr<PlanFile> m_plan;
     std::unique_ptr<QObject> m_run;
     std::unique_ptr<s3::ListObjectsPager> m_pager;
+    std::vector<std::unique_ptr<s3::transfer::Copier>> m_copiers;
+    bool m_large = false;   // something above 5 GiB is in the plan
 
     qint64 m_bytes = 0;
     QStringList m_samples;
-    QStringList m_tooLarge;
 
     int m_inFlight = 0;
     bool m_reading = false;

@@ -57,6 +57,7 @@ public:
     [[nodiscard]] QList<Job*> jobs() const;
 
     [[nodiscard]] AccountSessions* sessions() const { return m_sessions; }
+    [[nodiscard]] AccountStore* accounts() const { return m_accounts; }
     [[nodiscard]] Journal* journal() const { return m_journal; }
     [[nodiscard]] CapabilityController* capabilities() const { return m_capabilities; }
     // Shared by the transfer jobs (limiters, resume store); set by the window.
