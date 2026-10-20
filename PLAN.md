@@ -40,7 +40,8 @@ the robustness work from §12).
 | Theme | Port `Theme`, `DarkFusionStyle`, `IconFactory` from xyz-profiler, namespace `qbucket` | One design language across the user's apps |
 | Namespace / naming | `namespace qbucket`, **no `Q` class prefix** (that looks like Qt API) | Mirrors xyz-profiler's `xyz::` |
 | Binary | target `qbucket`, display name **QBucket** | |
-| License | **MIT** (QtKeychain is BSD-3, compatible; Qt itself used under LGPL-3.0 via dynamic linking) | Lets others reuse `qbucket_s3` freely |
+| License | **MIT** (QtKeychain is BSD-3, compatible; Qt itself used under LGPL-3.0 via dynamic linking) | Lets others reuse the `qbucket-s3` library freely |
+| S3 library | **`libs/qbucket-s3`: standalone, reusable library** (Qt Core/Network only), app consumes its public API only (§3.0) | Usable in other projects; hard boundary keeps the core clean |
 | Provider priority | **Hetzner first**; others via provider profiles | The user's main storage; Ceph-based, so most Ceph quirks come along |
 | Linux packaging | **Flatpak first** (KDE runtime), AppImage optional later | Flathub reach, sandboxed, Qt from the runtime |
 | i18n | English source strings, German `.ts` from day one | Same as xyz-profiler |
@@ -79,54 +80,31 @@ the robustness work from §12).
 
 ## 3. Architecture
 
+The repository holds two things with a hard boundary between them:
+
+1. **`libs/qbucket-s3/`** — a **reusable S3 library** (Qt6 Core + Network
+   only, MIT). Everything that speaks S3: signing, client, provider
+   profiles, threading proxy, transfer engine. Usable from other projects
+   without anything from the app. See §3.0.
+2. **`src/`** — the **QBucket application**: accounts + keychain, safety
+   layer (OperationController, journal), models, widgets.
+
 ```
 qbucket/
-├── CMakeLists.txt            Qt auto-detect (copied from xyz-profiler), FetchContent QtKeychain
-├── src/
-│   ├── domain/               Header-only structs (qbucket_domain INTERFACE, Qt6::Core only)
-│   │   ├── Account.h         id, name, provider preset, endpoint, region, addressing style,
-│   │   │                     TLS options, keychain ref (never the secret itself)
-│   │   ├── BucketInfo.h      name, creationDate, region (lazy)
-│   │   ├── ObjectEntry.h     key, isPrefix, size, lastModified, etag, storageClass,
-│   │   │                     versionId, isLatest, isDeleteMarker, owner
-│   │   ├── ObjectMeta.h      HTTP headers + x-amz-meta-*, tags, retention, legal hold
-│   │   ├── Capabilities.h    feature flags (Versioning, ObjectLock, Lifecycle, Cors, Policy,
-│   │   │                     Acl, Website, Replication, Logging, Encryption, Tagging, …)
-│   │   └── TransferJob.h     direction, local path, bucket/key, size, state, parts done
-│   ├── providers/            Provider profiles (qbucket_providers lib, Core only) — see §3.1
-│   │   ├── ProviderProfile   abstract base: metadata + quirk hooks, generic S3 defaults
-│   │   ├── ProviderRegistry  id → profile; drives the account dialog's preset list
-│   │   ├── GenericS3Profile  plain S3 behaviour, the fallback for "custom endpoint"
-│   │   ├── HetznerProfile    first-class: fsn1/nbg1/hel1 endpoints, capability matrix, quirks
-│   │   └── AwsProfile        regions, virtual-hosted default, full capability set
-│   │                         (later: CephProfile, MinioProfile, R2Profile, B2Profile, WasabiProfile …)
-│   ├── s3/                   Protocol layer (qbucket_s3 lib, Core + Network)
-│   │   ├── SigV4Signer       canonical request, string to sign, signing key, presign
-│   │   ├── S3Uri             path- vs. virtual-hosted URL building, key encoding
-│   │   ├── S3Client          async API on a worker thread; owns that thread's QNAM
-│   │   ├── S3Reply           worker-side: result variant + S3Error, owns the QNetworkReply
-│   │   ├── S3Session         GUI-side proxy: posts calls with a RequestId, delivers results
-│   │   │                     as value types via queued signals, cancellation by RequestId
-│   │   ├── S3WorkerPool      browse thread per account + transfer thread pool
-│   │   ├── S3Error           code, message, requestId, httpStatus, retryable flag
-│   │   ├── XmlParsers        ListAllMyBuckets, ListObjectsV2, ListObjectVersions,
-│   │   │                     ListMultipartUploads, Error, CopyObjectResult, Tagging,
-│   │   │                     Versioning, Lifecycle, CORS, Encryption, ObjectLock, ACL …
-│   │   ├── XmlWriters        the matching request bodies
-│   │   ├── RetryPolicy       backoff for 500/503/SlowDown, clock-skew correction
-│   │   └── FileRangeDevice   QIODevice over [offset, offset+len) of a file (part uploads)
-│   ├── transfer/             Transfer engine (qbucket_transfer lib)
-│   │   ├── TransferQueue     scheduling, file + part concurrency, pause/resume/cancel
-│   │   ├── UploadTask        single PUT ≤ threshold, else multipart
-│   │   ├── DownloadTask      streaming GET to <file>.qbpart, Range resume, atomic rename
-│   │   ├── CopyTask          CopyObject / UploadPartCopy for > 5 GB
-│   │   ├── PartPlanner       part size = max(8 MiB, ceil(size / 10000)), pure + tested
-│   │   └── ResumeStore       JSON per job under AppLocalData (uploadId, part ETags)
+├── CMakeLists.txt            Qt auto-detect (copied from xyz-profiler), add_subdirectory(libs/qbucket-s3),
+│                             FetchContent QtKeychain (app only)
+├── libs/qbucket-s3/          reusable library — layout in §3.0
+├── src/                      the application (consumes the library's public API only)
+│   ├── domain/               App-level header-only structs (qbucket_domain INTERFACE)
+│   │   ├── Account.h         id, name, providerId, endpoint, region, addressing, environment
+│   │   │                     marker, read-only flag, keychain ref (never the secret itself)
+│   │   └── TransferJob.h     UI-facing job state (wraps library transfer progress)
 │   ├── accounts/
 │   │   ├── AccountStore      non-secret account fields in the INI (endpoint, region, key id, …)
-│   │   └── SecretStore       async wrapper over QtKeychain Read/Write/DeletePasswordJob;
-│   │                         service "QBucket", key = account UUID + secret kind
-│   │                         (secretAccessKey, sessionToken, proxyPassword)
+│   │   ├── SecretStore       async wrapper over QtKeychain Read/Write/DeletePasswordJob;
+│   │   │                     service "QBucket", key = account UUID + secret kind
+│   │   │                     (secretAccessKey, sessionToken, proxyPassword)
+│   │   └── KeychainCredentialsProvider   implements s3::CredentialsProvider on top of SecretStore
 │   ├── models/
 │   │   ├── AccountTreeModel  accounts → buckets (lazy) for the sidebar
 │   │   ├── ObjectTableModel  one prefix; canFetchMore/fetchMore pages ListObjectsV2
@@ -134,7 +112,9 @@ qbucket/
 │   │   ├── VersionTableModel ListObjectVersions, same paging pattern
 │   │   └── TransferModel     rows of TransferQueue jobs
 │   ├── controllers/
-│   │   ├── SessionController     one S3Client per account, feature probing cache
+│   │   ├── SessionController     one s3::Session per account, feature probing cache
+│   │   ├── OperationController   the mutation gate (§12): plan/preview/execute/verify/report
+│   │   ├── Journal               JSONL audit log; implements s3::RequestObserver
 │   │   ├── BrowserController     location (account/bucket/prefix), history, view mode
 │   │   ├── TransferController    UI-facing facade over TransferQueue
 │   │   └── SettingsController    QSettings INI (ported, keys renamed)
@@ -151,18 +131,96 @@ qbucket/
 │       ├── JsonEditor / XmlEditor  QPlainTextEdit + QSyntaxHighlighter + validation
 │       ├── PresignDialog        expiry, method, copy URL
 │       └── SettingsDialog       General / Transfers / Network / Appearance
-└── tests/                    test_sigv4, test_s3uri, test_xml_parsers, test_part_planner,
-                              test_object_model, test_resume_store, it_s3_backend (opt-in)
+└── tests/                    app tests: test_object_model, test_operation_controller,
+                              test_journal, test_account_store (library tests live in the library)
 ```
 
-Dependency direction: `domain` ← `providers` ← `s3` ← `transfer` ←
-`controllers`/`models` ← `ui`. `s3` and `transfer` know nothing about
-widgets, so they stay unit-testable and could back a CLI later.
+Dependency direction: **`qbucket-s3` (library) ← app** `domain` ←
+`accounts` ← `controllers`/`models` ← `ui`. The library never includes
+anything from `src/`; the app includes only the library's public headers.
+
+### 3.0 The reusable S3 library (`qbucket-s3`)
+
+Goal: another Qt project can drop the library in via `add_subdirectory`,
+`FetchContent` or `find_package(QBucketS3)` and get a robust, threaded,
+provider-aware S3 client — without QBucket's UI, settings or keychain.
+
+```
+libs/qbucket-s3/
+├── CMakeLists.txt            standalone-capable: project(qbucket-s3 VERSION x.y.z), builds on its own
+├── README.md                 usage, threading rules, provider profiles, versioning policy
+├── CHANGELOG.md              semver, independent of the app version
+├── cmake/QBucketS3Config.cmake.in   install(EXPORT) → find_package(QBucketS3)
+├── include/qbucket/s3/       PUBLIC headers (the API contract)
+│   ├── Result.h              Result<T> (expected-style, no exceptions) + Error
+│   ├── Types.h               BucketInfo, ObjectEntry, ObjectMeta, ListPage, VersionEntry,
+│   │                         MultipartUploadInfo, bucket config structs (Cors, Lifecycle, …)
+│   ├── Endpoint.h            URL, region, addressing style, TLS options (pinned certificate)
+│   ├── Credentials.h         CredentialsProvider interface + StaticCredentials,
+│   │                         EnvCredentials, AwsSharedFileCredentials
+│   ├── Client.h              S3Client — async, lives on one thread with its own QNAM
+│   ├── Session.h             thread-safe proxy: worker threads, RequestId, value-type results
+│   ├── Presigner.h           presigned URLs without a network round-trip
+│   ├── RequestObserver.h     hook: every request/response (redacted) → e.g. an app's journal
+│   ├── Capabilities.h        Feature enum, CapabilityState, CapabilitySet (server + bucket scope)
+│   ├── CapabilityProber.h    read-only probes, optional deep probe, response interpretation
+│   ├── Logging.h             Q_LOGGING_CATEGORY qbucket.s3.* (redaction built in)
+│   ├── providers/            ProviderProfile, ProviderRegistry, Capabilities,
+│   │                         GenericS3Profile, HetznerProfile, AwsProfile, …
+│   └── transfer/             Uploader, Downloader, Copier, PartPlanner, TransferQueue,
+│                             ResumeStore (interface) + JsonFileResumeStore
+├── src/                      PRIVATE: SigV4, Uri, XmlParsers, XmlWriters, RetryPolicy,
+│                             AdaptiveConcurrency, FileRangeDevice, profile implementations
+├── tests/                    all protocol/transfer/provider tests + fixtures per provider
+│   └── support/FakeS3Server  fault-injecting test server (exported as qbucket::s3_testsupport)
+└── examples/s3ls/            tiny CLI over the public API — documentation that compiles
+```
+
+**CMake targets**
+
+| Target | Contents | Depends on |
+|---|---|---|
+| `qbucket::s3` | types, SigV4, client, session, presigner, providers | Qt6::Core, Qt6::Network |
+| `qbucket::s3_transfer` | multipart upload/download/copy, queue, resume | `qbucket::s3`, Qt6::Concurrent |
+| `qbucket::s3_testsupport` | `FakeS3Server` for consumers' own tests | `qbucket::s3`, Qt6::Network |
+
+**Rules that keep it reusable**
+
+- **Dependencies:** Qt6 Core / Network / Concurrent only. No Widgets, no
+  QtKeychain, no `QSettings`, no app types, no hard-coded paths.
+- **Public vs. private:** only `include/qbucket/s3/**` is API. Public
+  `QObject` classes use **PIMPL** so QNAM/parser details stay private and
+  the ABI can evolve. Export macro via `generate_export_header`; static by
+  default, shared on request (`QBUCKET_S3_BUILD_SHARED`).
+- **Namespace** `qbucket::s3` (transfer: `qbucket::s3::transfer`).
+- **Inversion points instead of app knowledge:**
+  - credentials → `CredentialsProvider` (QBucket plugs in its keychain-backed one),
+  - auditing → `RequestObserver` (QBucket's journal),
+  - resume persistence → `ResumeStore` interface (QBucket: JSON under AppLocalData),
+  - logging → Qt logging categories, consumers filter as they like.
+- **Safety lives in the library where it is protocol-level** (Content-MD5,
+  200-with-error parsing, idempotent-only retries, listing loop detection,
+  redaction, integrity verification) — so every consumer gets it. **Policy
+  lives in the app** (read-only accounts, confirmations, plan/preview,
+  environment markers).
+- **Thread-safety documented per class** in the headers: `S3Client` is
+  thread-affine; `Session`, `Presigner`, `ProviderRegistry` are thread-safe.
+- **Versioning:** own semver + CHANGELOG; breaking API changes bump the
+  major version. Pre-1.0 while QBucket is pre-parity.
+- **Standalone CI job** configures and builds `libs/qbucket-s3` on its own
+  (no app, no QtKeychain) and runs its tests + the example — that is what
+  enforces the boundary.
+- Kept in this repo (monorepo) for now; can be split into its own
+  repository later with `git subtree split` without changes.
 
 ### 3.1 Provider profiles (quirk isolation)
 
+Provider profiles are part of the library (`include/qbucket/s3/providers/`),
+so every consumer gets the quirk handling.
+
 Rule: **the protocol core never checks which provider it talks to.** No
-`if (endpoint.contains("hetzner"))` anywhere in `s3/`, `transfer/` or `ui/`.
+`if (endpoint.contains("hetzner"))` anywhere in the library's client /
+transfer code or in the app.
 Every deviation from plain S3 is a profile hook or a capability flag.
 
 `ProviderProfile` (abstract; `GenericS3Profile` implements the S3 defaults,
@@ -179,13 +237,12 @@ concrete profiles override only what differs):
 
 How the pieces fit:
 
-- `Account` stores a `providerId`; `SessionController` resolves it through
-  `ProviderRegistry` and hands the profile to `S3Client`. The client calls
+- The app's `Account` stores a `providerId`; `SessionController` resolves
+  it through `ProviderRegistry` and hands the profile to the `Session`. The client calls
   the hooks at fixed points (before signing, after parsing, on error).
-- **Static capabilities** from the profile are the starting point;
-  **runtime probing** (a 501/`NotImplemented` reply) can only *narrow* them
-  and is cached per account. The UI greys out features from the merged
-  result.
+- **Static capabilities** from the profile are only the fallback; the
+  **dynamic capability safeguard** (§3.3) probes the server on connect and
+  its definitive results win.
 - A user-entered custom endpoint gets `GenericS3Profile`, plus per-account
   overrides (addressing style, region, "disable feature X") stored on the
   account — the escape hatch for providers without a profile.
@@ -208,6 +265,170 @@ How the pieces fit:
 - Hetzner is the default integration-test target (§7) and the default
   preset in the account dialog.
 
+**Preliminary findings** from Hetzner's "supported actions" page
+(2026-10-20, to be confirmed by probing in M1):
+
+- **CopyObject only within the same bucket** → cross-bucket copy/move must
+  fall back to a streamed download + upload through the transfer engine
+  (`HetznerProfile` capability `CrossBucketCopy = false`).
+- Encryption: **SSE-C only** (no SSE-S3 / SSE-KMS); SSE-C objects cannot be
+  copied.
+- ACLs: only canned `private` / `public-read`, set at bucket creation.
+- Object lock: enabled via header at bucket creation; legal hold + retention
+  supported.
+- Lifecycle: only `NoncurrentVersionExpiration` with `NoncurrentDays`
+  (plus object expiry per the product page).
+- Bucket policy supported except the `NotAction` element.
+- Conditional PUT/DELETE on versioned buckets listed as an exception →
+  `ConditionalWrites` must be probed, not assumed.
+- Listed as exceptions with unclear status: website, replication, logging,
+  tagging, notifications, inventory, GetObjectAttributes. CORS and storage
+  classes not mentioned → probe.
+
+### 3.3 Dynamic capability safeguard
+
+On connect, QBucket **asks the server what it can do** and makes
+unsupported actions impossible — not just greyed out, but refused by the
+mutation gate. Static profile knowledge (§3.1) is only the fallback.
+
+**Model** (library: `include/qbucket/s3/Capabilities.h`)
+
+- `Feature` enum — one entry per S3 feature the app can use (versioning,
+  object lock, legal hold, retention, lifecycle, CORS, policy, ACL, tagging,
+  bucket encryption, SSE-C, website, replication, logging, notifications,
+  multipart listing, object versions listing, conditional writes,
+  cross-bucket copy, batch delete, presign, …).
+- Per feature a `CapabilityState`:
+
+  | State | Meaning | Effect |
+  |---|---|---|
+  | `Supported` | probe got a valid answer (incl. "supported, not configured") | action allowed |
+  | `Unsupported` | server said no (501, 405, provider-specific "not implemented") | **action impossible** |
+  | `NotPermitted` | 403 — server may support it, these credentials may not use it | action disabled, reason "no permission" |
+  | `Unknown` | not probeable read-only, or probe failed (5xx, timeout) | see resolution rules below |
+
+  plus `source` (probed / profile / learned) and `checkedAt`.
+- Two scopes: **server/account** capabilities (probed once per connect) and
+  **bucket** capabilities + **bucket state** (probed when a bucket is opened:
+  versioning enabled/suspended, object lock enabled, default encryption, …).
+  Bucket state matters as much as server support: legal hold is only
+  offered in buckets created with object lock.
+
+**Prober** (library: `CapabilityProber`, runs on the browse thread)
+
+- **Read-only probes only by default** — safe on production. Bucket probes
+  are the GET subresources: `?versioning`, `?object-lock`, `?lifecycle`,
+  `?cors`, `?policy`, `?policyStatus`, `?acl`, `?tagging`, `?encryption`,
+  `?website`, `?replication`, `?logging`, `?notification`, `?uploads`,
+  `?versions&max-keys=1`, `?publicAccessBlock`, `?ownershipControls`;
+  on one existing object (if any): `?tagging`, `?acl`, `?retention`,
+  `?legal-hold`, GetObjectAttributes.
+- Fast: probes run in parallel (bounded), a bucket open costs ~1 s once,
+  then the result is cached (per account + bucket, persisted with
+  timestamp, re-probed in the background on the next connect; manual
+  "Re-check" anytime).
+- **Response interpretation** (with `ProviderProfile::mapError` hooks):
+
+  | Response | Result |
+  |---|---|
+  | 200 with the **expected root element** | `Supported` (+ parsed state) |
+  | 404 `NoSuch…Configuration`, `NoSuchTagSet`, `ObjectLockConfigurationNotFoundError`, … | `Supported`, not configured |
+  | 501 `NotImplemented`, 405, provider-mapped "unsupported" codes | `Unsupported` |
+  | 403 `AccessDenied` | `NotPermitted` |
+  | 5xx, timeout, connection error | `Unknown` — **never** flipped to `Unsupported` |
+  | 200 with an **unexpected** root element (server ignored the subresource and returned e.g. a listing) | `Unsupported` |
+
+  The last row is a real pitfall: some servers silently ignore unknown
+  subresources. Checking the root element catches it.
+- **Write-only features** (conditional writes, cross-bucket copy, SSE-C,
+  object lock at creation, multipart minimum part size) cannot be probed
+  read-only. Optional **deep probe**: creates a temporary
+  `qbucket-probe-<random>` bucket, tests there, deletes it, reports
+  loudly if cleanup fails. Off by default; on accounts marked
+  *Production* it needs an explicit confirmation.
+
+**Resolution rules** (effective state per feature)
+
+1. A definitive probe result (`Supported` / `Unsupported` / `NotPermitted`)
+   wins.
+2. Otherwise the provider profile's static value (§3.1/§3.2).
+3. Otherwise (`GenericS3Profile`, not probeable): the action is allowed but
+   marked **"not verified on this server"**; the first real call's outcome
+   is **learned** into the cache (a 501 makes it `Unsupported` from then on).
+4. **Robustness first:** for destructive or irreversible operations, rule 3
+   does not apply — `Unknown` blocks them until a probe (or deep probe)
+   has confirmed support.
+
+**Enforcement — three layers**
+
+1. **Library:** every `Session` call maps to `Feature`s; with a
+   `CapabilitySet` attached, a call on an `Unsupported` feature returns
+   `Error::Unsupported` immediately, without sending a request.
+2. **App gate:** every operation declares `requires()` (e.g. *move across
+   buckets* → `CrossBucketCopy` or the streamed fallback's `GetObject` +
+   `PutObject` + `DeleteObject`). `OperationController` refuses anything
+   whose requirements aren't met — this is the binding check.
+3. **UI:** actions, menu entries, detail tabs and bucket-property
+   categories are hidden or disabled with the **reason** as tooltip
+   ("Not supported by this server", "No permission", "Bucket created
+   without object lock", "Checking…"). While a probe is still running,
+   mutating actions that depend on it show "Checking…" and stay disabled.
+
+Where a fallback exists, the operation switches to it instead of failing
+and says so in the preview ("Server can't copy across buckets — will
+download and re-upload, 12.4 GB").
+
+**Re-validation — capabilities are never "known forever"**
+
+Servers change: a provider upgrades its RGW and gains features, or
+disables one. QBucket picks that up on its own.
+
+- **Two time scales**, both configurable in Settings → Network:
+
+  | Scope | Changes when | Default re-check |
+  |---|---|---|
+  | Server / account features | provider upgrades, config changes | every **24 h**, and on every new connect when older than that |
+  | Bucket state (versioning, object lock, policy, lifecycle, …) | any time, by anyone with access | on bucket open when older than **10 min**, and **always** while planning a destructive operation (§12.2) |
+  | `Unknown` results | transient errors | sooner, with backoff: 5 min → 30 min → 2 h |
+
+- **Background re-probe in long-running sessions:** a timer re-checks
+  connected accounts whose results have expired — low priority on the
+  browse thread, rate-limited, never blocks the UI, skipped while the
+  account is idle/offline.
+- **Change triggers that force an immediate re-probe:**
+  - **server fingerprint changed** — the `Server` header, the set and
+    format of response headers (`x-amz-request-id` / `x-amz-id-2`
+    patterns), error-body format; stored with each probe result,
+  - a feature marked `Supported` suddenly answers 501 / "not implemented"
+    → narrowed to `Unsupported` at once, then a full re-probe,
+  - the user presses "Re-check".
+- **Asymmetric application** (robustness first):
+  - **Downgrade** (`Supported` → `Unsupported` / `NotPermitted`) takes
+    effect **immediately** — locking is the safe direction. Operations
+    already running finish per item and report the failures.
+  - **Upgrade** (`Unsupported` → `Supported`) takes effect after one
+    definitive, root-element-validated answer — the newly available
+    actions simply appear.
+- **The user is told what changed:** a non-intrusive notification
+  ("Hetzner fsn1 now supports: Website, Bucket logging" / "No longer
+  available: …"), an entry in the journal/log, and a **change history**
+  on the "Server capabilities" page (old → new, timestamp, fingerprint).
+- **Profile drift detection:** when probe results contradict the static
+  provider profile (e.g. `HetznerProfile` says no cross-bucket copy, a deep
+  probe says yes), the capabilities page flags "profile outdated" and the
+  export includes it — that's the signal to update the profile in a
+  release.
+
+**Visibility:** each account gets a **"Server capabilities"** page: every
+feature with state, source, time checked, and the raw response code —
+exportable as text for bug reports and for maintaining the provider
+profiles.
+
+**Rule for all future work:** a new feature or operation is only complete
+with its `Feature` entry, its probe (or a documented reason why it's
+write-only), its `requires()` declaration, and tests against a backend that
+supports it (Ceph/VersityGW) **and** one that doesn't (Garage).
+
 ### Threading model — the UI never blocks
 
 **Hard rule: no action, on any data size, may block or freeze the UI.**
@@ -225,7 +446,8 @@ Rules:
 
 - `QNetworkAccessManager` is thread-affine: each S3 worker thread owns its
   own QNAM and `S3Client`; no QNAM is shared across threads.
-- The GUI talks to the workers through a thin **`S3Session` proxy**: each
+- The GUI talks to the workers through the library's thin **`s3::Session`
+  proxy**: each
   call posts a request (queued invocation) with a `RequestId` and returns
   immediately; the result arrives as a **value type** (implicitly shared
   Qt containers, cheap to pass) via a queued signal. Cancellation by
@@ -345,8 +567,23 @@ theme switches live, CI is green.
 - Error parsing, `RetryPolicy` (exponential backoff + jitter; 500/503/
   SlowDown/RequestTimeout), clock-skew correction from the `Date` header on
   `RequestTimeTooSkewed`, region redirect handling (301/`x-amz-bucket-region`)
-- `providers/`: `ProviderProfile`, `ProviderRegistry`, `GenericS3Profile`,
+- **Library skeleton first** (§3.0): `libs/qbucket-s3` with its own
+  standalone-capable CMake project, public/private header split, PIMPL,
+  export macro, `install(EXPORT)` + `QBucketS3Config.cmake`, the
+  `examples/s3ls` CLI, and the **standalone CI job** (library alone, no app,
+  no QtKeychain). Everything below in this milestone lands in the library,
+  except accounts/keychain/dialog.
+- `CredentialsProvider` interface + Static/Env/AwsSharedFile providers;
+  `RequestObserver` hook; logging categories with redaction
+- Providers: `ProviderProfile`, `ProviderRegistry`, `GenericS3Profile`,
   `HetznerProfile`, `AwsProfile`; `S3Client` calls the hooks (§3.1)
+- **Capability safeguard (library part, §3.3):** `Feature`/`CapabilitySet`,
+  `CapabilityProber` with the full response-interpretation table,
+  persisted cache with expiry + fingerprint, change detection (diff of two
+  `CapabilitySet`s), library-level `Error::Unsupported` short-circuit; tests
+  against Ceph RGW, VersityGW **and** Garage (the "unsupported" side), plus
+  `FakeS3Server` cases for 403 / 5xx / ignored-subresource responses. The
+  Hetzner capability matrix below is produced by this prober.
 - **Hetzner capability matrix**: docs + probing against a real Hetzner
   project → `docs/providers/hetzner.md` + `HetznerProfile::capabilities()`;
   capture Hetzner response fixtures for the parser tests
@@ -357,15 +594,21 @@ theme switches live, CI is green.
   available (e.g. a Linux box without Secret Service), the account works
   in **"ask once per session"** mode (secret held in memory only) and the
   UI says why — never a silent plaintext fallback. Deleting an account
-  deletes its keychain entries.
+  deletes its keychain entries. The app hands secrets to the library
+  through `KeychainCredentialsProvider`.
 - `AccountDialog` with the provider preset
   list from `ProviderRegistry` (Hetzner preselected, region dropdown fills
   the endpoint) and a "Test connection" button (ListBuckets, falls back to
   HeadBucket for external buckets)
-- Integration test harness (opt-in, see §7)
+- Integration test harness (opt-in, see §7) + `tests/docker/compose.yml`
+  with the single-node Ceph RGW image (own Containerfile; a community image
+  as stop-gap until it's ready), VersityGW and Garage
 
-**Done when:** listing a bucket works against Hetzner (all three regions),
-all unit tests green, the Hetzner capability matrix is checked in.
+**Done when:** the Docker backends come up healthy with one command and the
+integration suite passes against Ceph RGW; listing a bucket works against
+Hetzner (all three regions),
+all unit tests green, the Hetzner capability matrix is checked in, and
+`s3ls` lists a Hetzner bucket from a standalone library build.
 
 ### M2 — Browser UI — **L** (1 week)
 
@@ -434,9 +677,10 @@ transfers don't block browsing.
 ### M6 — Bucket management — **L** (1.5 weeks)
 
 `BucketPropertiesDialog` with the xyz-profiler preferences-sidebar look.
-Categories the provider profile marks unsupported are greyed out up front;
-the rest load lazily and still degrade to "Not supported by this provider"
-on `NotImplemented`/501 instead of an error. Order of work follows the
+Each category is driven by the capability safeguard (§3.3): unsupported
+categories are disabled with the reason, `NotPermitted` ones read-only
+with "no permission", and every write is checked against `requires()` in
+`OperationController`. Order of work follows the
 Hetzner capability matrix — what Hetzner supports gets built first:
 
 | Category | API | Editor |
@@ -492,7 +736,8 @@ probe results (§3.1).
 
 Folder compare/sync (dry-run diff first), bandwidth limit, tabs, STS
 AssumeRole / SSO, Glacier restore, requester pays, a `qbucket-cli` on top of
-`qbucket_s3` + `qbucket_transfer`.
+`qbucket::s3` + `qbucket::s3_transfer` (grown from `examples/s3ls`),
+splitting `qbucket-s3` into its own repository once its API is stable.
 
 ### Timeline
 
@@ -513,6 +758,10 @@ above excludes the robustness work from §12 — with it, add ~2 weeks
 (daily driver ≈ 6 weeks, parity ≈ 11 weeks; see §13.5).
 
 ## 7. Testing strategy
+
+Protocol, provider and transfer tests live in `libs/qbucket-s3/tests/`
+(fixtures in `libs/qbucket-s3/tests/data/<provider>/`); app tests (models,
+OperationController, journal, accounts) in `tests/`.
 
 **Unit (always run, no network):**
 
@@ -541,10 +790,44 @@ above excludes the robustness work from §12 — with it, add ~2 weeks
 - Use a dedicated Hetzner test bucket with versioning + object lock enabled
   and a lifecycle rule that expires everything after a day, so a crashed
   test run cleans itself up.
-- Local backend: no Docker on the dev machine — options are a MinIO server
-  binary (check current community-binary availability first; MinIO moved its
-  community edition towards source-only distribution in 2025), SeaweedFS
-  (Windows binaries) or Ceph/MinIO in a Linux VM. To be settled in M1.
+- **Local backends: Docker on Linux** (main development and test platform
+  early on), via `tests/docker/compose.yml`. Each backend has a role:
+
+  | Backend | Image | Role |
+  |---|---|---|
+  | **Ceph RGW (real single-node cluster)** | own image `tests/docker/ceph/Containerfile`, built on the **official `quay.io/ceph/ceph`** (pinned version + digest) | closest to Hetzner (Hetzner runs RGW): listing, errors, multipart, versioning, object lock, lifecycle, policy, SSE-C |
+  | **VersityGW** | `versity/versitygw` (POSIX backend, versioning dir) | broad, actively maintained S3 implementation: versioning, object lock, policies, multipart |
+  | **Garage** | `dxflrs/garage` | deliberately limited (no versioning/ACL/object lock …): exercises the "not supported by this provider" and capability-narrowing paths |
+  | `FakeS3Server` | in-process | fault injection (§12.6) |
+
+  Not used: **MinIO** (community repo archived 2026, no official images
+  anymore; Chainguard rebuilds exist but are a frozen codebase),
+  **LocalStack** (needs an auth token since 2026.03), **zgw-posix** (RGW
+  front-end on a POSIX backend, small project — not the real thing).
+
+  **Ceph test image** (`tests/docker/ceph/`):
+  - Base: official `quay.io/ceph/ceph`, Squid v19.2.x pinned by digest; a
+    Tentacle v20 build arg for a second matrix entry. Which RGW version
+    Hetzner runs is unknown — the image version is a build arg so it can
+    follow once we know more.
+  - One container, supervised processes: `ceph-mon`, `ceph-mgr`, one
+    `ceph-osd` (BlueStore on a file-backed device in a volume), `radosgw`
+    (beast frontend, HTTP 8080 + HTTPS 8443 with a generated test cert —
+    SSE-C needs HTTPS).
+  - Bootstrap script: create the cluster, pool defaults sized for one OSD
+    (`osd_pool_default_size = 1`, `mon_allow_pool_size_one = true`), RGW
+    zone, a test user with fixed access/secret keys from env vars, and a
+    second, restricted user for permission-denied tests.
+  - Docker `HEALTHCHECK` (`ceph health` + an S3 `ListBuckets` against RGW),
+    so `docker compose up --wait` blocks until it's usable.
+  - Resources: plan ~2–4 GB RAM and ~10 GB disk for the volume.
+  - Prior art to borrow from (both Apache-2.0, both on the official image):
+    `benemon/ceph-aio` (weekly CI, healthcheck, dated tags) and
+    `teran/ceph-container` (`ghcr.io/teran/ceph-container/ceph:v19.2.6`,
+    `v20.2.4`). Either can serve as a stop-gap image in M1 until our own
+    image exists; attribution kept if code is reused.
+- Hetzner stays the reference: anything green locally but red on Hetzner
+  means a missing profile quirk, not a test to relax.
 
 ## 8. Known protocol pitfalls (to handle by design)
 
@@ -598,6 +881,25 @@ release time:
 - 2026-10-19 — **Production-data rule:** robustness first (one mutation
   gate, plan → preview → execute → verify → report, journal, integrity
   checks), performance on very large buckets second (§12, §13).
+- 2026-10-20 — **S3 layer as a reusable library** `libs/qbucket-s3`
+  (targets `qbucket::s3`, `qbucket::s3_transfer`, `qbucket::s3_testsupport`;
+  Qt Core/Network/Concurrent only; credentials, auditing, resume storage
+  via interfaces; protocol safety in the library, policy in the app) (§3.0).
+  Library stays Qt-based (Core/Network): a Qt-free variant would cost
+  ~2–3 weeks (curl/TLS/proxy/async layer + adapter) for little real reuse.
+- 2026-10-20 — **Dynamic capability safeguard:** features are probed
+  (read-only) on connect / bucket open; unsupported actions are impossible,
+  enforced in library, `OperationController` and UI; `Unknown` never
+  unlocks destructive operations (§3.3).
+- 2026-10-20 — **Capabilities are re-validated automatically:** server
+  features every 24 h, bucket state after 10 min and before every
+  destructive operation, immediate re-probe on server fingerprint change;
+  downgrades apply at once, upgrades after a validated answer; the user is
+  notified of every change (§3.3).
+- 2026-10-20 — Early development and testing on **Linux with Docker**:
+  a **real single-node Ceph cluster with RGW** (own image on the official
+  `quay.io/ceph/ceph`, Hetzner-like), VersityGW (broad features), Garage
+  (limited provider), then Hetzner as the reference (§7).
 - 2026-10-19 — **Multithreaded, UI never blocks:** S3 clients with their own
   QNAM on worker threads (browse thread per account, transfer pool), I/O
   pool for hashing/disk/sorting, GUI thread only paints (§3 threading
@@ -608,9 +910,7 @@ release time:
 
 ## 11. Open questions
 
-1. **Local test backend** — which S3 server to run locally without Docker
-   (see §7)? With Hetzner as the primary target this is a nice-to-have for
-   an offline loop, not a blocker.
+*(none at the moment)*
 
 ## 12. Data safety & robustness (cross-cutting, non-negotiable)
 
@@ -625,8 +925,9 @@ this section.
   writes, deletes, copies, metadata/ACL/policy changes go through
   `controllers/OperationController`, which enforces read-only mode,
   confirmation, planning, journaling and verification in one place.
-  `S3Client`'s mutating API is only reachable from `controllers/` and
-  `transfer/` — enforced by code review and a grep check in CI.
+  In the app, the library's mutating API (`Session` writes, `transfer`
+  classes) is only used from `controllers/` — enforced by code review and
+  a grep check in CI. The library itself stays policy-free (§3.0).
 - **Read-only accounts:** an account flag that disables every mutation at
   the controller level (not just greyed-out buttons). Recommended default
   for newly added production accounts; switching it off needs a
@@ -724,7 +1025,8 @@ config change) runs in five steps:
 
 ### 12.6 Testing for robustness
 
-- **Fault-injection test server** (`tests/support/FakeS3Server`, a
+- **Fault-injection test server** (`libs/qbucket-s3/tests/support/FakeS3Server`,
+  exported as `qbucket::s3_testsupport`, a
   `QTcpServer`): 500/503/SlowDown, connection reset mid-body, truncated
   XML, 200-with-error, slow/stalled responses, repeated continuation
   tokens, clock skew, wrong Content-Length. Every client/transfer path is
@@ -806,8 +1108,8 @@ regressions show up.
 | Milestone | Robustness / performance work added |
 |---|---|
 | M0 | Warnings-as-errors, Qt strictness defines, ASan/UBSan + clang-tidy CI jobs, stall watchdog |
-| M1 | Worker-thread `S3Client` + `S3Session` proxy (TSan job on Linux CI), `FakeS3Server` fault injection, 200-with-error handling, safe-retry rules, listing loop detection, log redaction |
-| M2 | `OperationController` skeleton, read-only + environment marker, plan/preview/verify for delete/rename, compact model, paging budgets, `bench/` |
+| M1 | Library skeleton + standalone CI job, worker-thread `S3Client` + `s3::Session` proxy (TSan job on Linux CI), `FakeS3Server` fault injection, 200-with-error handling, safe-retry rules, listing loop detection, log redaction |
+| M2 | Capability enforcement in `OperationController` (`requires()`) + UI reasons/tooltips + "Server capabilities" page with change history, background re-validation timer + change notifications, `OperationController` skeleton, read-only + environment marker, plan/preview/verify for delete/rename, compact model, paging budgets, `bench/` |
 | M3 | Content-MD5 per part, download verification, `.qbpart` atomic finalize, conflict dialog, journal + crash/resume tests, QNAM pool, adaptive concurrency |
 | M4 | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
 | M5 | Versioning-aware confirmations, separate permanent-delete flow |

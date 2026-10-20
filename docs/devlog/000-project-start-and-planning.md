@@ -31,6 +31,17 @@ our control.
 
 ## Ground rules
 
+- **The S3 layer is a reusable library**, `libs/qbucket-s3` (Qt Core/Network only, MIT,
+  own semver), so other projects can use it. Credentials, auditing and resume storage plug in
+  through interfaces; protocol-level safety lives in the library, policy (read-only,
+  confirmations) in the app. A standalone CI job enforces the boundary.
+- **Dynamic capability safeguard:** on connect / bucket open the server's features are probed
+  read-only (GET subresources, response root element checked); unsupported features make the
+  action impossible — enforced in the library, the `OperationController` and the UI, with the
+  reason shown. Unknown state never unlocks destructive operations. Results expire and are
+  re-checked automatically (server features daily, bucket state after 10 minutes, immediately
+  when the server fingerprint changes), so a provider upgrade that adds features is picked up
+  on its own and reported to the user.
 - **Design** ported 1:1 from xyz-profiler: `Theme` palette (accent `#2563EB`),
   `DarkFusionStyle` QSS, `IconFactory` line icons, Dark / Light / System.
 - **Hetzner Object Storage first.** Other providers come in exclusively through
@@ -67,7 +78,15 @@ Milestones M0–M8, details in [PLAN.md](../../PLAN.md):
 Estimate: about **6 weeks** to a daily-driver build (M0–M3) and about **11 weeks** to parity,
 roughly 2 weeks of which go into the robustness work.
 
-## Open
+## Test backends
 
-- Local S3 test backend without Docker (MinIO binary, SeaweedFS or a VM). Not a blocker —
-  Hetzner is the primary test target.
+Early development and testing happen on **Linux with Docker**: a real single-node Ceph cluster
+with RGW in our own image on top of the official `quay.io/ceph/ceph` (closest to Hetzner, which
+runs RGW), VersityGW (broad S3 features) and Garage (deliberately limited, to exercise
+the "not supported" paths). Hetzner follows as the reference. MinIO is out (community repo
+archived in 2026, no official images), LocalStack too (auth token required since 2026.03).
+
+Hetzner's "supported actions" page already shows quirks the plan must handle, most notably
+**CopyObject only within the same bucket**, so cross-bucket copies fall back to download +
+upload. Other limits: SSE-C only, canned ACLs `private` / `public-read` only, a narrow
+lifecycle subset (details in `PLAN.md` §3.2).

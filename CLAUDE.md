@@ -11,8 +11,36 @@ first. Stay platform-neutral outside `src/platform/`.
 License: **MIT**.
 
 Provider priority: **Hetzner Object Storage first.** Everything
-provider-specific goes through a provider profile in `src/providers/` —
-see "Provider profiles" below.
+provider-specific goes through a provider profile in the library
+(`libs/qbucket-s3/include/qbucket/s3/providers/`) — see "Provider profiles"
+below.
+
+## Repository split: library + app
+
+- **`libs/qbucket-s3/`** — reusable S3 library, meant for use in other
+  projects too (`PLAN.md` §3.0). Targets `qbucket::s3`,
+  `qbucket::s3_transfer`, `qbucket::s3_testsupport`; namespace
+  `qbucket::s3`; own semver + `CHANGELOG.md`.
+- **`src/`** — the QBucket app. Uses **only** the library's public headers
+  (`#include <qbucket/s3/...>`).
+
+Library rules (a change that breaks one of these is wrong, however
+convenient):
+
+- Depends on Qt6 Core / Network / Concurrent only — no Widgets, no
+  QtKeychain, no `QSettings`, no app types, no hard-coded paths.
+- Never includes anything from `src/`. Public API = `include/qbucket/s3/**`;
+  everything else is private. Public `QObject` classes use PIMPL.
+- App knowledge enters only through interfaces: `CredentialsProvider`,
+  `RequestObserver`, `ResumeStore`, logging categories.
+- Protocol-level safety (Content-MD5, 200-with-error, idempotent retries,
+  listing loop detection, redaction, integrity checks) lives in the
+  library; policy (read-only, confirmations, plan/preview, environments)
+  lives in the app.
+- Thread-safety is documented per public class.
+- The library must build and pass its tests standalone
+  (`cmake -S libs/qbucket-s3 -B build-s3`); a CI job enforces it.
+- API changes go into the library's `CHANGELOG.md`.
 
 ## Status
 
@@ -66,16 +94,16 @@ addressing style) and are skipped when unset.
 Inherited from xyz-profiler — keep both projects consistent.
 
 - `namespace qbucket`. **No `Q` class prefix** — that reads as Qt API.
-- Layering: `domain` ← `providers` ← `s3` ← `transfer` ← `controllers` /
-  `models` ← `ui`. `providers`, `s3` and `transfer` must not include widget
+- Layering: library `qbucket-s3` ← app `domain` ← `accounts` ←
+  `controllers` / `models` ← `ui`. Nothing below `models` includes widget
   headers.
 - Business logic in `QObject` controllers; the UI connects to signals and
   calls public methods. Dialogs are `QDialog` subclasses.
 - **The UI never blocks, on any action or data size.** The GUI thread only
   paints, handles widgets and appends finished batches to models.
   `S3Client` + its own QNAM live on worker threads (browse thread per
-  account, transfer pool); the GUI talks to them only via the `S3Session`
-  proxy (queued calls, value-type results, `RequestId` cancellation).
+  account, transfer pool); the GUI talks to them only via the library's
+  `s3::Session` proxy (queued calls, value-type results, `RequestId` cancellation).
   Hashing, directory walks, plan/journal I/O and large sorts run in the I/O
   pool. Never share a QNAM across threads; workers never touch widgets or
   models. No `QDialog::exec()` around long work, no `QEventLoop::exec()`,
@@ -87,8 +115,9 @@ Inherited from xyz-profiler — keep both projects consistent.
   `QString`.
 - Headers under `src/<module>/`, included as `"module/Header.h"`. One class
   per file, filename = class name.
-- Tests: QtTest, one binary per module under `tests/`, `QTEST_GUILESS_MAIN`
-  for non-UI tests, fixtures under `tests/data/` via `TEST_DATA_DIR`.
+- Tests: QtTest, one binary per module, `QTEST_GUILESS_MAIN` for non-UI
+  tests, fixtures via `TEST_DATA_DIR`. Library tests + fixtures in
+  `libs/qbucket-s3/tests/`, app tests in `tests/`.
 - New UI strings: run `lupdate` and add the German entry to
   `translations/qbucket_de.ts`.
 - Commits: Conventional Commits; feature branches `feat/<slug>`.
@@ -124,8 +153,19 @@ little.** Full rules in `PLAN.md` §12; the ones every change must respect:
 
 - **One mutation gate:** every write/delete/copy/config change goes through
   `OperationController` (read-only accounts, environment marker,
-  confirmation, journal, verification). The UI never calls mutating
-  `S3Client` methods directly.
+  confirmation, journal, verification). The UI never calls the library's
+  mutating API directly.
+- **Dynamic capability safeguard** (`PLAN.md` §3.3): features are probed
+  read-only on connect / bucket open; an `Unsupported` feature makes the
+  action impossible (library short-circuit, `OperationController`
+  `requires()`, UI with reason). `Unknown` never unlocks a destructive
+  operation; a 5xx/timeout never flips a feature to `Unsupported`.
+  Results expire and are re-probed automatically (server 24 h, bucket
+  state 10 min + before destructive ops, immediately on a server
+  fingerprint change); downgrades apply at once, upgrades after a
+  validated answer, every change is shown to the user. **A new
+  feature is only done with its `Feature` entry, probe, `requires()` and
+  tests against a supporting backend and Garage.**
 - **Plan → preview → execute → verify → report** for every bulk or
   destructive operation. Scope comes from a fresh listing, never from what
   the view shows.
@@ -161,16 +201,18 @@ Second priority after safety, but mandatory with millions of objects
 ## Provider profiles
 
 - **The protocol core never checks which provider it talks to.** No
-  endpoint/hostname sniffing in `s3/`, `transfer/`, `models/` or `ui/`.
+  endpoint/hostname sniffing in the library's client/transfer code or
+  anywhere in the app.
   Every deviation from plain S3 is a `ProviderProfile` hook or a
   `Capabilities` flag (`PLAN.md` §3.1).
 - `GenericS3Profile` holds the S3 defaults; concrete profiles override only
   what differs. `HetznerProfile` is first-class; others are added as
   needed.
-- Profile capabilities are the baseline; runtime probing (501 /
-  `NotImplemented`) can only narrow them, cached per account.
+- Profile capabilities are only the fallback; definitive results of the
+  capability prober win (§3.3).
 - A new provider = one profile class + fixtures under
-  `tests/data/<provider>/` + `test_provider_<id>.cpp` + one registry line.
+  `libs/qbucket-s3/tests/data/<provider>/` + `test_provider_<id>.cpp` + one
+  registry line.
 - Hetzner is the primary integration-test target; a change touching the
   protocol must pass the Hetzner integration run.
 
