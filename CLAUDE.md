@@ -286,6 +286,14 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
   `%2E%2E`, and although `QUrl::path()` still shows them. A key
   `a/../b` would address `b`. `S3Uri::build` refuses such keys
   (`InvalidRequest`); never work around it by sending them anyway.
+- **No `deleteLater()` while a worker thread tears down.** Objects
+  destroyed in a thread's final deferred-delete pass (after
+  `QThread::finished`) must `delete` their own-thread children directly; a
+  `deleteLater()` posted then never runs and leaks the whole thread data
+  (`Mailbox` did this; LeakSanitizer found it).
+- **TSan needs a TSan-instrumented Qt.** With a stock Qt every queued
+  hand-off is reported as a race and the TSan runtime even aborts on
+  thread creation — not a usable signal.
 - **moc mis-reads raw string literals** containing quotes in files with
   `Q_OBJECT` (empty `.moc`, "undefined vtable"). Keep XML fixtures in
   `tests/data/`, not in `R"(…)"` literals in test sources.

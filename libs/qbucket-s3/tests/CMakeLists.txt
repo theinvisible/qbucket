@@ -73,3 +73,7 @@ qbucket_s3_add_test(test_s3client_faults
     SOURCES test_s3client_faults.cpp
     LIBS    qbucket::s3_testsupport
 )
+qbucket_s3_add_test(test_session
+    SOURCES test_session.cpp
+    LIBS    qbucket::s3_testsupport
+)

@@ -475,6 +475,44 @@ quint64 S3Client::deleteObjects(const QString& bucket, const QList<ObjectIdentif
     });
 }
 
+// --- Presigning ---------------------------------------------------------------------
+
+quint64 S3Client::presign(const PresignRequest& request, Done<QUrl> done)
+{
+    const ProviderProfile& profile = *config().profile;
+    if (request.expiresSeconds > profile.maxPresignExpirySeconds()) {
+        return failLater(std::move(done),
+                         invalid(QStringLiteral("%1 allows presigned URLs for at most %2 seconds")
+                                     .arg(profile.displayName())
+                                     .arg(profile.maxPresignExpirySeconds())));
+    }
+
+    const auto op = newOp();
+    auto sign = [this, op, request, done = std::move(done)](Result<Credentials> creds) {
+        endOp(op);
+        if (op->cancelled) {
+            done(cancelledError());
+            return;
+        }
+        if (!creds) {
+            done(creds.error());
+            return;
+        }
+        const ProviderProfile& profile = *config().profile;
+        Endpoint endpoint = m_pipeline->endpointFor(request.bucket);
+        const AddressingStyle style = endpoint.addressing == AddressingStyle::Auto
+            ? profile.defaultAddressing()
+            : endpoint.addressing;
+        endpoint.region = profile.signingRegion(endpoint.region);
+        done(Presigner::presign(endpoint, style, creds.value(), request, m_pipeline->correctedNow()));
+    };
+    // Through the event loop: cached credentials would answer synchronously.
+    QTimer::singleShot(0, this, [this, sign = std::move(sign)]() mutable {
+        m_pipeline->withCredentials(std::move(sign));
+    });
+    return op->id;
+}
+
 // --- Buckets -----------------------------------------------------------------------
 
 quint64 S3Client::createBucket(const CreateBucketParams& params, Done<void> done)

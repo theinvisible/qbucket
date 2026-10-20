@@ -92,6 +92,13 @@ public:
     // Signing time: local clock corrected by the learned offset.
     [[nodiscard]] QDateTime correctedNow() const;
 
+    // Current credentials (cached, or fetched from the provider). Never
+    // invokes `next` synchronously from a provider on another thread.
+    void withCredentials(std::function<void(Result<Credentials>)> next);
+
+    // Endpoint for a bucket, with a learned region applied.
+    [[nodiscard]] Endpoint endpointFor(const QString& bucket) const;
+
 Q_SIGNALS:
     // The local clock differs from the server's by offsetSecs; signing has
     // been corrected (never ask the user to fix their clock).
@@ -101,14 +108,12 @@ private:
     struct Call;
 
     void attempt(const std::shared_ptr<Call>& call);
-    void withCredentials(std::function<void(Result<Credentials>)> next);
     void start(const std::shared_ptr<Call>& call, const Credentials& credentials);
     void onFinished(const std::shared_ptr<Call>& call);
     // Retry / re-sign / re-route a failed attempt; false: give up.
     bool handleFailure(const std::shared_ptr<Call>& call, const RawResponse& raw, const Error& error);
     void retryLater(const std::shared_ptr<Call>& call, int delayMs, const QString& why);
     void learnClockOffset(const QDateTime& serverTime);
-    [[nodiscard]] Endpoint endpointFor(const QString& bucket) const;
     void finish(const std::shared_ptr<Call>& call, Result<RawResponse> result);
     void notifyObserver(const Call& call, const Result<RawResponse>& result, int status,
                         const QByteArray& body, const QByteArray& requestId) const;
@@ -118,7 +123,7 @@ private:
     RetryPolicy m_retry;
     QHash<QString, QString> m_bucketRegions;   // learned from redirects
     QNetworkAccessManager* m_nam = nullptr;
-    std::shared_ptr<Mailbox> m_mailbox;
+    std::shared_ptr<Mailbox> m_mailbox;   // created on first use, in our thread
     std::map<quint64, std::shared_ptr<Call>> m_calls;
     quint64 m_nextId = 1;
 

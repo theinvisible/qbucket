@@ -167,6 +167,15 @@ jobs:
             shared: 'ON'
             qt_host: linux
             qt_arch: linux_gcc_64
+          # With leak detection (the app's sanitizer job has it off because
+          # of fontconfig / platform-plugin noise; the library has none).
+          - name: Linux, ASan + UBSan + LSan
+            os: ubuntu-24.04
+            shared: 'OFF'
+            qt_host: linux
+            qt_arch: linux_gcc_64
+            build_type: Debug
+            sanitize: address,undefined
           # Shared on Windows catches missing QBUCKET_S3_EXPORTs.
           - name: Windows, shared
             os: windows-2022
@@ -203,16 +212,22 @@ jobs:
 
       - name: Configure
         run: >
-          cmake -S libs/qbucket-s3 -B build-s3 -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S libs/qbucket-s3 -B build-s3 -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type || 'Release' }}
           -DQBUCKET_S3_WARNINGS_AS_ERRORS=ON -DQBUCKET_S3_BUILD_SHARED=${{ matrix.shared }}
+          -DQBUCKET_S3_SANITIZE=${{ matrix.sanitize }}
 
       - name: Build
         run: cmake --build build-s3 -j
 
       - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: ctest --test-dir build-s3 --output-on-failure
 
       - name: Install + build a consumer against the package
+        if: ${{ !matrix.sanitize }}
         shell: bash
         run: |
           qt="$QT_ROOT_DIR"

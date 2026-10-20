@@ -81,7 +81,6 @@ RequestPipeline::RequestPipeline(ClientConfig config, QObject* parent)
     : QObject(parent)
     , m_config(std::move(config))
     , m_retry(m_config.retry)
-    , m_mailbox(Mailbox::create())
 {
     Q_ASSERT(m_config.profile);
     Q_ASSERT(m_config.credentials);
@@ -168,7 +167,11 @@ void RequestPipeline::withCredentials(std::function<void(Result<Credentials>)> n
         return;
     m_fetchingCredentials = true;
 
-    // The provider may answer from any thread; continue on ours.
+    // The provider may answer from any thread; continue on ours. Created
+    // here, not in the constructor: the pipeline may have been moved to a
+    // worker thread since.
+    if (!m_mailbox)
+        m_mailbox = Mailbox::create();
     const std::weak_ptr<Mailbox> box = m_mailbox;
     const QPointer<RequestPipeline> self = this;
     m_config.credentials->fetch([box, self](Result<Credentials> result) {
@@ -393,6 +396,22 @@ bool RequestPipeline::handleFailure(const std::shared_ptr<Call>& call, const Raw
             Q_EMIT clockSkewDetected(offset);
             call->skewRetried = true;
             retryLater(call, 0, QStringLiteral("clock skew corrected"));
+            return true;
+        }
+    }
+
+    // 1b. HEAD responses carry no body: a skewed clock shows up as a bare
+    //     403. If the server's Date is far off our corrected time, that is
+    //     the likelier cause — re-sign once with the server's time.
+    if (error.httpStatus == 403 && error.code.isEmpty() && raw.body.isEmpty() && !call->skewRetried) {
+        const QDateTime serverTime = parseHttpDate(raw.header("date"));
+        if (serverTime.isValid() && std::abs(correctedNow().secsTo(serverTime)) > 5 * 60) {
+            const qint64 offset = QDateTime::currentDateTimeUtc().secsTo(serverTime);
+            m_config.clockOffsetSecs->store(offset);
+            qCWarning(lcSigning) << "bare 403 with a server clock" << offset << "s off: re-signing";
+            Q_EMIT clockSkewDetected(offset);
+            call->skewRetried = true;
+            retryLater(call, 0, QStringLiteral("probable clock skew"));
             return true;
         }
     }

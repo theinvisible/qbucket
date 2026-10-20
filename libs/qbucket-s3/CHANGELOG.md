@@ -30,6 +30,13 @@ version bump may break the API.
   `PutObjectParams` / `PutObjectResult`, `DeleteObjectResult`,
   `CreateBucketParams`; `ProviderProfile::locationConstraintFor()`.
 
+- `Session` — the library's entry point: worker thread with its own
+  QNetworkAccessManager; callback + context API (`RequestId`, exactly-once
+  queued delivery on the context's thread, dropped when the context dies),
+  `cancel()`, `cancelAll()`, non-blocking `shutdown()`; presigning with the
+  learned clock offset and region; `clockSkewDetected` signal.
+- `ListObjectsPager` — page-by-page listing with loop detection across pages.
+
 ### Safety
 
 - Retries only where safe: transient failures of idempotent requests, and

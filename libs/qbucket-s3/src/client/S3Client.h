@@ -3,6 +3,7 @@
 #include "client/RequestPipeline.h"
 
 #include <qbucket/s3/Export.h>
+#include <qbucket/s3/Presigner.h>
 #include <qbucket/s3/Result.h>
 #include <qbucket/s3/Types.h>
 
@@ -59,6 +60,10 @@ public:
     // these behind their own confirmation/policy layer.
     quint64 createBucket(const CreateBucketParams& params, Done<void> done);
     quint64 deleteBucket(const QString& bucket, Done<void> done);
+
+    // Presigned URL with the current credentials, the clock-skew-corrected
+    // time and the bucket's learned region; expiry capped by the profile.
+    quint64 presign(const PresignRequest& request, Done<QUrl> done);
 
     void abort(quint64 operationId);
     void abortAll();
