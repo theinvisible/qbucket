@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Name>bkt</Name><Prefix>photos/</Prefix><KeyCount>2</KeyCount><MaxKeys>2</MaxKeys>
+  <Delimiter>/</Delimiter><IsTruncated>true</IsTruncated>
+  <Contents>
+    <Key>photos/a.jpg</Key><LastModified>2026-10-20T08:00:01.000Z</LastModified>
+    <ETag>&quot;9b2cf535f27731c974343645a3985328&quot;</ETag><Size>5368709120</Size>
+    <StorageClass>STANDARD</StorageClass>
+    <Owner><ID>o</ID><DisplayName>d</DisplayName></Owner>
+  </Contents>
+  <CommonPrefixes><Prefix>photos/2026/</Prefix></CommonPrefixes>
+  <NextContinuationToken>1ueGcxLPRx1Tr/XYExHnhbYLgveDs2J/wm36Hy4vbOwM=</NextContinuationToken>
+</ListBucketResult>

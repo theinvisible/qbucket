@@ -1,0 +1,9 @@
+<ListAllMyBucketsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+            <Owner><ID>abc</ID><DisplayName>me</DisplayName></Owner>
+            <Buckets>
+              <Bucket><Name>one</Name><CreationDate>2026-01-02T03:04:05.000Z</CreationDate></Bucket>
+              <Bucket><Name>two</Name><CreationDate>2026-01-02T03:04:05Z</CreationDate>
+                      <BucketRegion>fsn1</BucketRegion></Bucket>
+            </Buckets>
+            <ContinuationToken>next</ContinuationToken>
+          </ListAllMyBucketsResult>

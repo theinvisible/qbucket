@@ -16,3 +16,5 @@ version bump may break the API.
 - `Endpoint` (URL, signing region, `AddressingStyle`, pinned certificates) and
   the value types in `Types.h` (`BucketInfo`, `ListPage`, `ObjectMeta`, …).
 - `Credentials` value type and `Presigner` (SigV4 query signing, at most 7 days).
+- Logging categories `qbucket.s3.{http,signing,session,retry,capabilities}`
+  (`Logging.h`) and the `RequestObserver` audit hook with `RequestRecord`.

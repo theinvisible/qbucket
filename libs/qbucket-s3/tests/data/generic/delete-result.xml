@@ -1,0 +1,6 @@
+<DeleteResult>
+            <Deleted><Key>a</Key></Deleted>
+            <Deleted><Key>b</Key><VersionId>v1</VersionId><DeleteMarker>true</DeleteMarker>
+                     <DeleteMarkerVersionId>dm</DeleteMarkerVersionId></Deleted>
+            <Error><Key>c</Key><Code>AccessDenied</Code><Message>Access Denied</Message></Error>
+          </DeleteResult>

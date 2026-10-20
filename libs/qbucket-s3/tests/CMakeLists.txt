@@ -54,3 +54,5 @@ qbucket_s3_add_test(test_public_headers
 qbucket_s3_add_test(test_result SOURCES test_result.cpp)
 qbucket_s3_add_test(test_s3uri  SOURCES test_s3uri.cpp)
 qbucket_s3_add_test(test_sigv4  SOURCES test_sigv4.cpp)
+qbucket_s3_add_test(test_xml_parsers SOURCES test_xml_parsers.cpp)
+qbucket_s3_add_test(test_redaction   SOURCES test_redaction.cpp)

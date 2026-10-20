@@ -1,0 +1,9 @@
+<!-- encoding-type=url: EncodingType after the entries, %2B / %20 / %0A in keys, no namespace. -->
+<ListBucketResult>
+  <Name>bkt</Name><Prefix>a%20dir%2F</Prefix><Delimiter>%2F</Delimiter>
+  <IsTruncated>false</IsTruncated>
+  <Contents><Key>a%20dir/c%2B%2B%0Afile</Key><Size>1</Size>
+    <LastModified>2026-10-20T08:00:01Z</LastModified><ETag>"x"</ETag></Contents>
+  <CommonPrefixes><Prefix>a%20dir/%E2%9C%93/</Prefix></CommonPrefixes>
+  <EncodingType>url</EncodingType>
+</ListBucketResult>
