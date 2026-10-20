@@ -5,9 +5,9 @@
 #include <qbucket/s3/transfer/Hasher.h>
 
 #include "transfer/Async.h"
+#include "transfer/Common.h"
 
 #include <QElapsedTimer>
-#include <QFileInfo>
 #include <QPointer>
 #include <QTimer>
 
@@ -21,44 +21,13 @@ namespace qbucket::s3::transfer {
 namespace {
 
 constexpr int kMaxHashing = 2;        // parallel hash tasks per upload
-constexpr int kPartRetries = 5;       // after the Session's own attempts
-constexpr int kRetryDelaysMs[kPartRetries] = {1000, 3000, 10000, 30000, 60000};
 
-Error localError(const QString& message)
-{
-    return Error::make(ErrorCategory::LocalIo, message);
-}
-
-bool isThrottle(const Error& e)
-{
-    return e.httpStatus == 503 || e.code == QLatin1String("SlowDown");
-}
-
-// Worth another attempt of the same part later.
-bool retryable(const Error& e)
-{
-    return e.isTransient() || e.retryable;
-}
-
-struct FileStamp {
-    bool exists = false;
-    qint64 size = -1;
-    QDateTime modified;
-
-    static FileStamp of(const QString& path)
-    {
-        const QFileInfo info(path);
-        FileStamp s;
-        s.exists = info.exists() && info.isFile();
-        s.size = info.size();
-        s.modified = info.lastModified(QTimeZone::UTC);
-        return s;
-    }
-    [[nodiscard]] bool sameAs(qint64 size_, const QDateTime& modified_) const
-    {
-        return exists && size == size_ && modified == modified_;
-    }
-};
+using detail::FileStamp;
+using detail::isThrottle;
+using detail::kPartRetries;
+using detail::kRetryDelaysMs;
+using detail::localError;
+using detail::retryable;
 
 } // namespace
 

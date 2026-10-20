@@ -1,6 +1,6 @@
 // A transfer survives the death of its process (PLAN.md §12.6): s3cp is
-// killed mid-upload — no cleanup, no flush — and a second s3cp continues
-// from the resume store. FakeObjectStore runs in this process.
+// killed mid-upload / mid-download — no cleanup, no flush — and a second
+// s3cp continues from the resume store. FakeObjectStore runs in this process.
 
 #include <qbucket/s3/testing/FakeObjectStore.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
@@ -151,6 +151,47 @@ private Q_SLOTS:
         for (auto it = hits.cbegin(); it != hits.cend(); ++it)
             QCOMPARE(it.value(), 1);
         transfer::JsonFileResumeStore store(m_dir.filePath(QStringLiteral("resume")));
+        QVERIFY(store.ids().isEmpty());
+    }
+
+    void killedDownloadResumes()
+    {
+        const QByteArray data = pattern(70 * kMiB + 77);
+        m_store->putObject(kBucket, QStringLiteral("big.bin"), data);
+        m_store->setDelay(QStringLiteral("GetObject"), 150);
+        const QString target = m_dir.filePath(QStringLiteral("download/big.bin"));
+
+        auto first = s3cp({QStringLiteral("--id"), QStringLiteral("crash2"), QStringLiteral("download"), kBucket,
+                           QStringLiteral("big.bin"), target});
+        QVERIFY(first->waitForStarted(10000));
+        QTRY_VERIFY_WITH_TIMEOUT(m_store->count(QStringLiteral("GetObject")) >= 4, 30000);
+        QTest::qWait(200);   // a range or two lands
+        first->kill();
+        QVERIFY(waitForExit(*first, 10000));
+        QCOMPARE(first->exitStatus(), QProcess::CrashExit);
+        QVERIFY(!QFile::exists(target));
+        QVERIFY(QFile::exists(target + QStringLiteral(".qbpart")));
+        transfer::JsonFileResumeStore store(m_dir.filePath(QStringLiteral("resume")));
+        const auto recorded = store.load(QStringLiteral("crash2"));
+        QVERIFY(recorded);
+        const qsizetype have = recorded->parts.size();
+
+        m_store->setDelay(QStringLiteral("GetObject"), 0);
+        QTest::qWait(300);   // stray requests of the killed process
+        const int before = m_store->count(QStringLiteral("GetObject"));
+        auto second = s3cp({QStringLiteral("resume"), QStringLiteral("crash2")});
+        QVERIFY(waitForExit(*second, 60000));
+        const QString output = QString::fromUtf8(second->readAllStandardOutput());
+        QVERIFY2(second->exitCode() == 0, qPrintable(output + QString::fromUtf8(second->readAllStandardError())));
+        QVERIFY2(output.contains(QStringLiteral("(resumed)")), qPrintable(output));
+        QVERIFY2(output.contains(QStringLiteral("md5-verified")), qPrintable(output));
+        QCOMPARE(m_store->count(QStringLiteral("GetObject")) - before, 9 - int(have));
+
+        QFile f(target);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        QCOMPARE(QCryptographicHash::hash(f.readAll(), QCryptographicHash::Md5),
+                 QCryptographicHash::hash(data, QCryptographicHash::Md5));
+        QVERIFY(!QFile::exists(target + QStringLiteral(".qbpart")));
         QVERIFY(store.ids().isEmpty());
     }
 };

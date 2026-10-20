@@ -66,6 +66,7 @@ struct RequestSpec {
     // still read into memory. Reopened and rewritten on every attempt.
     QString sinkPath;
     qint64 sinkOffset = 0;
+    bool sinkCreate = true;      // false: the sink file must exist
     // Bytes sent (file bodies) or received (sinks) by the current attempt,
     // and the total (-1 if unknown). Called on the pipeline's thread.
     std::function<void(qint64 done, qint64 total)> progress;

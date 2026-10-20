@@ -492,6 +492,7 @@ quint64 S3Client::getObjectToFile(const GetObjectToFileParams& params, Done<Down
         spec.headers.append({"If-Match", params.ifMatch.toLatin1()});
     spec.sinkPath = params.filePath;
     spec.sinkOffset = params.fileOffset;
+    spec.sinkCreate = params.createFile;
     spec.progress = std::move(progress);
 
     return single(std::move(spec), std::move(done), [params, ranged](const RawResponse& r) -> Result<DownloadResult> {

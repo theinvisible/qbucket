@@ -24,11 +24,13 @@
 #include <qbucket/s3/testing/FakeObjectStore.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 #include <qbucket/s3/transfer/AdaptiveConcurrency.h>
+#include <qbucket/s3/transfer/Downloader.h>
 #include <qbucket/s3/transfer/Export.h>
 #include <qbucket/s3/transfer/Hasher.h>
 #include <qbucket/s3/transfer/JsonFileResumeStore.h>
 #include <qbucket/s3/transfer/PartPlanner.h>
 #include <qbucket/s3/transfer/ResumeStore.h>
+#include <qbucket/s3/transfer/Uploader.h>
 
 #include <QtTest>
 

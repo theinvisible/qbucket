@@ -319,7 +319,9 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
         auto file = std::make_unique<QFile>(spec.sinkPath);
         // ReadWrite: created if missing, never truncated (other ranges of
         // the same file may already be there).
-        if (!file->open(QIODevice::ReadWrite) || !file->seek(spec.sinkOffset)) {
+        const QIODevice::OpenMode mode = spec.sinkCreate ? QIODevice::ReadWrite
+                                                         : QIODevice::ReadWrite | QIODevice::ExistingOnly;
+        if (!file->open(mode) || !file->seek(spec.sinkOffset)) {
             delete upload;
             Error e = Error::make(ErrorCategory::LocalIo,
                                   QStringLiteral("%1: %2").arg(spec.sinkPath, file->errorString()));

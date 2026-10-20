@@ -40,6 +40,8 @@ struct TransferRecord {
     QString storageClass;
     QMap<QString, QString> metadata;
     bool ifNoneMatch = false;
+    // Downloads: replace an existing target file.
+    bool overwrite = false;
     QJsonObject extra;          // free for the application
 };
 

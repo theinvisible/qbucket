@@ -80,6 +80,7 @@ QJsonObject toJson(const TransferRecord& r)
         meta.insert(it.key(), it.value());
     o.insert(QStringLiteral("metadata"), meta);
     o.insert(QStringLiteral("ifNoneMatch"), r.ifNoneMatch);
+    o.insert(QStringLiteral("overwrite"), r.overwrite);
     o.insert(QStringLiteral("extra"), r.extra);
     return o;
 }
@@ -109,6 +110,7 @@ TransferRecord recordFrom(const QJsonObject& o)
     for (auto it = meta.begin(); it != meta.end(); ++it)
         r.metadata.insert(it.key(), it.value().toString());
     r.ifNoneMatch = o.value(QStringLiteral("ifNoneMatch")).toBool();
+    r.overwrite = o.value(QStringLiteral("overwrite")).toBool();
     r.extra = o.value(QStringLiteral("extra")).toObject();
     return r;
 }

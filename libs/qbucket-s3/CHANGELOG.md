@@ -106,7 +106,17 @@ version bump may break the API.
   to their ETag; a vanished upload starts over). `flushResumeWrites()`.
   `TransferRecord` gained content type, storage class, metadata and
   If-None-Match. Logging category `qbucket.s3.transfer`.
-- `examples/s3cp` — resumable uploads from the command line.
+- `transfer::Downloader`: one object into `<target>.qbpart` — a single GET
+  or ranges in parallel (the object's own part layout from HEAD
+  `?partNumber=1` where it has one), every request with If-Match on the
+  ETag and the version pinned — then verified (MD5 for single-part objects,
+  also over ranges; MD5-of-MD5s for multipart ones; else honestly size
+  only), renamed onto the target atomically (an existing one only with
+  `overwrite`), mtime from Last-Modified. A failed check keeps the .qbpart.
+  With a `ResumeStore` `Downloader::fromStore` continues after a crash:
+  same ETag or start over, recorded ranges re-hashed from disk first.
+- `GetObjectToFileParams::createFile` (false: the file must exist).
+- `examples/s3cp` — resumable uploads and downloads from the command line.
 - `FakeObjectStore::setDelay()`.
 
 ### Fixed

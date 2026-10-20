@@ -131,16 +131,19 @@ struct PutObjectResult {
     bool throttled = false;
 };
 
-// GetObject streamed into a local file. The file is created if missing and
-// never truncated: the bytes land at fileOffset onwards (several ranges of
-// one object can be downloaded into one preallocated file in parallel). A
-// retry writes the same range again from its start.
+// GetObject streamed into a local file. The file is never truncated: the
+// bytes land at fileOffset onwards (several ranges of one object can be
+// downloaded into one preallocated file in parallel). A retry writes the
+// same range again from its start.
 struct GetObjectToFileParams {
     QString bucket;
     QString key;
     QString versionId;                    // empty: the current version
     QString filePath;
     qint64 fileOffset = 0;
+    // false: the file must exist already (a LocalIo error otherwise) — a
+    // request still under way never re-creates a file its caller removed.
+    bool createFile = true;
     // Byte range of the object; rangeLength < 0: the whole object. Mutually
     // exclusive with partNumber.
     qint64 rangeStart = 0;
