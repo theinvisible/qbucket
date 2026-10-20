@@ -67,3 +67,15 @@ qbucket_add_test(test_keychain_credentials_provider
     test_keychain_credentials_provider.cpp
     qbucket_accounts
 )
+
+qbucket_add_test(test_connection_tester
+    test_connection_tester.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
+qbucket_add_test(test_account_dialog
+    test_account_dialog.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)

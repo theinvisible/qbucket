@@ -1,6 +1,9 @@
 #include "ui/MainWindow.h"
 
+#include "accounts/AccountStore.h"
+#include "accounts/SecretStore.h"
 #include "controllers/SettingsController.h"
+#include "ui/AccountDialog.h"
 #include "ui/IconFactory.h"
 #include "ui/SettingsDialog.h"
 #include "ui/Theme.h"
@@ -89,10 +92,12 @@ constexpr int kDetailWidth  = 400;
 } // namespace
 
 MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
-                       QWidget* parent)
+                       AccountStore* accounts, SecretStore* secrets, QWidget* parent)
     : QMainWindow(parent),
       m_settings(settings),
-      m_theme(theme)
+      m_theme(theme),
+      m_accounts(accounts),
+      m_secrets(secrets)
 {
     setWindowTitle(QStringLiteral("QBucket"));
 
@@ -107,6 +112,21 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     applyBrowseMode_();
     applyThemeChoice_();
     refreshIcons_();
+
+    const bool accountsAvailable = m_accounts && m_secrets;
+    m_actAddAccount->setEnabled(accountsAvailable);
+    m_addAccountBtn->setEnabled(accountsAvailable);
+    m_addAccountBtn->setToolTip(QString());
+    if (accountsAvailable) {
+        connect(m_actAddAccount, &QAction::triggered, this, &MainWindow::showAddAccountDialog_);
+        connect(m_addAccountBtn, &QPushButton::clicked, this, &MainWindow::showAddAccountDialog_);
+        connect(m_accounts, &AccountStore::accountsChanged, this, &MainWindow::refreshAccountSummary_);
+        connect(m_secrets, &SecretStore::sessionOnlyModeEntered, this, [this](const QString& reason) {
+            statusBar()->showMessage(
+                tr("No system keychain available — secrets are kept for this session only (%1).").arg(reason));
+        });
+    }
+    refreshAccountSummary_();
 }
 
 // ---------------------------------------------------------------------------
@@ -362,15 +382,16 @@ QWidget* MainWindow::buildSidebar_()
     lay->addWidget(m_accountTree, 1);
 
     auto* empty = makeEmptyState(tr("No accounts yet."));
+    m_accountSummary = empty;
     lay->addWidget(empty, 1);
 
-    auto* addBtn = new QPushButton(tr("Add Account…"));
-    addBtn->setObjectName(QStringLiteral("ghost"));
-    addBtn->setEnabled(false);
-    addBtn->setToolTip(tr("Not available yet"));
+    m_addAccountBtn = new QPushButton(tr("Add Account…"));
+    m_addAccountBtn->setObjectName(QStringLiteral("ghost"));
+    m_addAccountBtn->setEnabled(false);
+    m_addAccountBtn->setToolTip(tr("Not available yet"));
     auto* btnRow = new QHBoxLayout;
     btnRow->setContentsMargins(10, 6, 10, 12);
-    btnRow->addWidget(addBtn);
+    btnRow->addWidget(m_addAccountBtn);
     lay->addLayout(btnRow);
 
     return sidebar;
@@ -548,6 +569,28 @@ void MainWindow::showSettingsDialog_()
 {
     SettingsDialog dlg(m_settings, this);
     dlg.exec();
+}
+
+void MainWindow::showAddAccountDialog_()
+{
+    // Non-modal-safe: open(), never exec() — the dialog does asynchronous
+    // keychain work and connection tests.
+    auto* dlg = new AccountDialog(m_accounts, m_secrets, std::nullopt, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &AccountDialog::accountSaved, this, [this](const Account& a, bool sessionOnly) {
+        statusBar()->showMessage(sessionOnly
+            ? tr("Account “%1” saved — its secret is kept for this session only.").arg(a.name)
+            : tr("Account “%1” saved.").arg(a.name), 8000);
+    });
+    dlg->open();
+}
+
+void MainWindow::refreshAccountSummary_()
+{
+    const qsizetype n = m_accounts ? m_accounts->accounts().size() : 0;
+    // The account tree arrives with browsing (M2); until then, a count.
+    m_accountSummary->setText(n == 0 ? tr("No accounts yet.")
+                                     : tr("%n account(s) configured.", nullptr, int(n)));
 }
 
 void MainWindow::showAbout_()

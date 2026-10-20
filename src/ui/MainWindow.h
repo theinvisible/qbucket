@@ -9,6 +9,7 @@ class QDockWidget;
 class QLabel;
 class QLineEdit;
 class QMenu;
+class QPushButton;
 class QSplitter;
 class QStackedWidget;
 class QToolButton;
@@ -16,6 +17,8 @@ class QTreeView;
 
 namespace qbucket {
 
+class AccountStore;
+class SecretStore;
 class SettingsController;
 class ThemeManager;
 
@@ -27,7 +30,9 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
+    // Without account / secret stores (tests) account management is off.
     MainWindow(SettingsController* settings, ThemeManager* theme,
+               AccountStore* accounts = nullptr, SecretStore* secrets = nullptr,
                QWidget* parent = nullptr);
 
 protected:
@@ -50,10 +55,14 @@ private:
     void applyBrowseMode_();
     void applyThemeChoice_();
     void showSettingsDialog_();
+    void showAddAccountDialog_();
+    void refreshAccountSummary_();
     void showAbout_();
 
     SettingsController* m_settings;
     ThemeManager*       m_theme;
+    AccountStore*       m_accounts;
+    SecretStore*        m_secrets;
 
     // Menu actions
     QMenu*        m_viewMenu        = nullptr;
@@ -89,6 +98,8 @@ private:
     // Central
     QSplitter*      m_splitter      = nullptr;
     QTreeView*      m_accountTree   = nullptr;
+    QLabel*         m_accountSummary = nullptr;
+    QPushButton*    m_addAccountBtn  = nullptr;
     QStackedWidget* m_objectStack   = nullptr;
     QTreeView*      m_objectView    = nullptr;
     QLabel*         m_pathText      = nullptr;

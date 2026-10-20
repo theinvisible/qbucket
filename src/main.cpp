@@ -1,3 +1,6 @@
+#include "accounts/AccountStore.h"
+#include "accounts/QtKeychainBackend.h"
+#include "accounts/SecretStore.h"
 #include "controllers/SettingsController.h"
 #include "diagnostics/Logging.h"
 #include "diagnostics/StallWatchdog.h"
@@ -9,6 +12,8 @@
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QTranslator>
+
+#include <memory>
 
 namespace {
 
@@ -70,7 +75,10 @@ int main(int argc, char* argv[])
                       << watchdog.thresholdMs() << "ms";
     }
 
-    qbucket::MainWindow window(&settings, &theme);
+    qbucket::AccountStore accounts;
+    qbucket::SecretStore secrets{std::make_unique<qbucket::QtKeychainBackend>()};
+
+    qbucket::MainWindow window(&settings, &theme, &accounts, &secrets);
     window.show();
 
     return app.exec();

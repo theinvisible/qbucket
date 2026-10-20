@@ -37,12 +37,14 @@ target_link_libraries(qbucket_accounts
 
 # --- Controllers (application logic, no widgets) ---------------------------
 add_library(qbucket_controllers STATIC
+    controllers/ConnectionTester.h
+    controllers/ConnectionTester.cpp
     controllers/SettingsController.h
     controllers/SettingsController.cpp
 )
 target_include_directories(qbucket_controllers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_controllers
-    PUBLIC  Qt6::Core
+    PUBLIC  qbucket_domain qbucket::s3 Qt6::Core
     PRIVATE qbucket::compile_options
 )
 
@@ -69,6 +71,8 @@ target_link_libraries(qbucket_ui_foundation
 # A library rather than part of the executable so the window smoke test can
 # build the real MainWindow.
 add_library(qbucket_app_ui STATIC
+    ui/AccountDialog.h
+    ui/AccountDialog.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
     ui/SettingsDialog.h
@@ -79,7 +83,7 @@ target_compile_definitions(qbucket_app_ui PRIVATE
     QBUCKET_VERSION_STRING="${PROJECT_VERSION}"
 )
 target_link_libraries(qbucket_app_ui
-    PUBLIC  qbucket_controllers qbucket_ui_foundation Qt6::Widgets
+    PUBLIC  qbucket_accounts qbucket_controllers qbucket_ui_foundation Qt6::Widgets
     PRIVATE qbucket::compile_options
 )
 
