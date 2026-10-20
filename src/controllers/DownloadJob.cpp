@@ -70,6 +70,15 @@ DownloadJob::DownloadJob(const Account& account, const QString& bucket, const QL
 {
 }
 
+DownloadJob::DownloadJob(const Account& account, const TransferJobStore::Record& record, QObject* parent)
+    : Job(account, record.bucket, parent),
+      m_target(record.target),
+      m_resuming(true),
+      m_record(record)
+{
+    setConflictPolicy(record.policy);
+}
+
 DownloadJob::~DownloadJob()
 {
     if (m_checkCancel)
@@ -79,6 +88,8 @@ DownloadJob::~DownloadJob()
 
 QString DownloadJob::title() const
 {
+    if (m_resuming)
+        return m_record.title;
     if (m_items.size() == 1)
         return tr("Download “%1” to %2").arg(lastSegment(m_items.first().key), QDir::toNativeSeparators(m_target));
     return tr("Download %n item(s) to %1", nullptr, int(m_items.size()))
@@ -87,6 +98,8 @@ QString DownloadJob::title() const
 
 bool DownloadJob::needsConfirmation() const
 {
+    if (m_resuming)
+        return false;
     return m_options.alwaysConfirm || m_check.conflicts > 0 || m_check.skipped > 0 || m_check.renamed > 0
         || m_check.files + m_check.folders != 1 || account().environment == Environment::Production;
 }
@@ -117,6 +130,7 @@ DownloadJob::LocalCheck DownloadJob::checkLocal(const QString& rawPath, const QS
         c.error = in.errorString();
         return c;
     }
+    QDir().mkpath(QFileInfo(finalPath).absolutePath());
     if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         c.error = out.errorString();
         return c;
@@ -231,9 +245,64 @@ DownloadJob::LocalCheck DownloadJob::checkLocal(const QString& rawPath, const QS
 
 // --- plan -----------------------------------------------------------------------
 
+TransferJobStore* DownloadJob::jobStore_() const
+{
+    TransferService* t = controller_() ? controller_()->transfers() : nullptr;
+    return t ? t->jobs() : nullptr;
+}
+
+QString DownloadJob::transferId_(const Record& r) const
+{
+    return QStringLiteral("%1-%2").arg(m_record.id.isEmpty() ? id() : m_record.id).arg(r.ordinal);
+}
+
+void DownloadJob::resumePlan_()
+{
+    TransferJobStore* jobs = jobStore_();
+    TransferService* transfers = controller_()->transfers();
+    if (!jobs || !transfers) {
+        fail_(tr("Nothing to resume."));
+        return;
+    }
+    if (!QFile::exists(jobs->planPath(m_record.id))) {
+        fail_(tr("The plan of this download is gone; it can't be continued."));
+        return;
+    }
+    jobs->loadDone(m_record.id, m_run.get(), [this, transfers](const QSet<qint64>& done) {
+        if (phase() != Phase::Planning)
+            return;
+        m_doneOrdinals = done;
+        auto store = transfers->resumeStore();
+        auto* relay = new QObject;
+        relay->moveToThread(thread());
+        const QPointer<DownloadJob> self(this);
+        QThreadPool::globalInstance()->start([relay, self, store] {
+            const QStringList ids = store->ids();
+            QMetaObject::invokeMethod(relay, [relay, self, ids] {
+                if (self && self->phase() == Phase::Planning) {
+                    self->m_storedTransfers = QSet<QString>(ids.begin(), ids.end());
+                    self->m_check.files = self->m_record.items;
+                    self->m_check.bytes = self->m_record.bytes;
+                    self->m_processed = self->m_doneOrdinals.size();
+                    Preview p;
+                    p.action = tr("Resume");
+                    p.scope = QStringLiteral("s3://%1 → %2").arg(self->bucket(), QDir::toNativeSeparators(self->m_target));
+                    p.objects = std::max<qint64>(0, self->m_record.items - self->m_doneOrdinals.size());
+                    self->setPreview_(p);
+                }
+                relay->deleteLater();
+            }, Qt::QueuedConnection);
+        });
+    });
+}
+
 void DownloadJob::plan()
 {
     m_run = std::make_unique<QObject>();
+    if (m_resuming) {
+        resumePlan_();
+        return;
+    }
     m_raw = std::make_unique<PlanFile>(m_planDir + u'/' + id() + QStringLiteral(".list"));
     m_planIndex = 0;
     planNext_();
@@ -334,9 +403,10 @@ void DownloadJob::planDone_()
         const QPointer<DownloadJob> self(this);
         auto* relay = new QObject;
         relay->moveToThread(thread());
+        TransferJobStore* jobs = jobStore_();
         QThreadPool::globalInstance()->start([relay, self, raw = m_raw->path(),
-                                              out = m_planDir + u'/' + id() + QStringLiteral(".plan"), target = m_target,
-                                              cancel = m_checkCancel] {
+                                              out = jobs ? jobs->planPath(id()) : m_planDir + u'/' + id() + QStringLiteral(".plan"),
+                                              target = m_target, cancel = m_checkCancel] {
             const LocalCheck c = checkLocal(raw, out, target, LocalPathMapper::nativeRules(), *cancel);
             QMetaObject::invokeMethod(relay, [relay, self, c] {
                 if (self)
@@ -358,8 +428,9 @@ void DownloadJob::checked_(const LocalCheck& check)
     m_check = check;
     m_raw.reset();
     m_notes = check.notes;
-    m_plan = std::make_unique<PlanFile>(m_planDir + u'/' + id() + QStringLiteral(".plan"), PlanFile::Mode::Existing,
-                                        check.files + check.folders);
+    TransferJobStore* jobs = jobStore_();
+    m_plan = std::make_unique<PlanFile>(jobs ? jobs->planPath(id()) : m_planDir + u'/' + id() + QStringLiteral(".plan"),
+                                        PlanFile::Mode::Existing, check.files + check.folders);
     if (check.files + check.folders == 0) {
         finish_(report_());
         return;
@@ -401,6 +472,24 @@ void DownloadJob::checked_(const LocalCheck& check)
 
 void DownloadJob::execute()
 {
+    TransferJobStore* jobs = jobStore_();
+    if (m_resuming) {
+        m_plan = std::make_unique<PlanFile>(jobs->planPath(m_record.id), PlanFile::Mode::Existing, m_record.items);
+        m_plan->setKeepFile(true);
+    } else if (jobs) {
+        m_plan->setKeepFile(true);
+        m_record.id = id();
+        m_record.kind = TransferKind::Download;
+        m_record.account = account().id;
+        m_record.bucket = bucket();
+        m_record.title = title();
+        m_record.target = m_target;
+        m_record.policy = conflictPolicy();
+        m_record.items = m_check.files + m_check.folders;
+        m_record.bytes = m_check.bytes;
+        m_record.started = QDateTime::currentDateTimeUtc();
+        jobs->save(m_record);
+    }
     m_progressClock.start();
     setProgress_(0, m_check.files + m_check.folders);
     setBytes_(0, m_check.bytes);
@@ -428,12 +517,48 @@ void DownloadJob::pump_()
                 return;
             if (records.isEmpty())
                 m_planExhausted = true;
-            for (const QStringList& f : records)
-                m_queue.push_back(Record::from(f));
+            for (const QStringList& f : records) {
+                Record r = Record::from(f);
+                r.ordinal = m_readOrdinal++;
+                if (m_doneOrdinals.contains(r.ordinal)) {
+                    m_doneBytes += r.size;
+                    continue;
+                }
+                m_queue.push_back(r);
+            }
             pump_();
         });
     }
     maybeExecuted_();
+}
+
+void DownloadJob::markDone_(const Record& r)
+{
+    if (TransferJobStore* jobs = jobStore_(); jobs && r.ordinal >= 0 && !m_record.id.isEmpty())
+        jobs->markDone(m_record.id, r.ordinal);
+}
+
+void DownloadJob::end_()
+{
+    if (TransferJobStore* jobs = jobStore_(); jobs && !m_record.id.isEmpty()) {
+        if (isSuspended()) {
+            m_record.suspended = true;
+            jobs->save(m_record);
+        } else {
+            jobs->remove(m_record.id);
+        }
+    }
+    finish_(report_());
+}
+
+void DownloadJob::suspend()
+{
+    if (phase() != Phase::Executing) {
+        cancel();
+        return;
+    }
+    markSuspended_();
+    cancel();
 }
 
 void DownloadJob::maybeExecuted_()
@@ -442,7 +567,7 @@ void DownloadJob::maybeExecuted_()
         return;
     if (isCancelled()) {
         updateProgress_(true);
-        finish_(report_());
+        end_();
         return;
     }
     if (isPaused())
@@ -460,11 +585,31 @@ void DownloadJob::startItem_(const Record& r)
         if (QDir().mkpath(absolute_(r.path))) {
             ++m_succeeded;
             ++m_processed;
+            markDone_(r);
         } else {
             itemFailed_(r, tr("the folder could not be created"));
         }
         updateProgress_(false);
         return;
+    }
+    if (m_resuming && m_storedTransfers.contains(transferId_(r))) {
+        s3::Session* session = session_();
+        TransferService* transfers = controller_()->transfers();
+        if (session && transfers) {
+            auto item = std::make_shared<Active>();
+            item->record = r;
+            item->path = r.path;
+            item->downloader = s3::transfer::Downloader::fromStore(session, transfers->resumeStore(), transferId_(r),
+                                                                   transfers->limiter(account().id));
+            m_active.append(item);
+            Active* raw = item.get();
+            connect(item->downloader.get(), &s3::transfer::Downloader::finished, this, [this, raw] { itemDone_(raw); });
+            connect(item->downloader.get(), &s3::transfer::Downloader::progress, this, [this] { updateProgress_(false); });
+            item->downloader->start();
+            if (isPaused())
+                item->downloader->pause();
+            return;
+        }
     }
     auto item = std::make_shared<Active>();
     item->record = r;
@@ -473,6 +618,7 @@ void DownloadJob::startItem_(const Record& r)
         switch (conflictPolicy()) {
         case ConflictPolicy::Skip:
             itemSkipped_(r.key, tr("exists here already"));
+            markDone_(r);
             return;
         case ConflictPolicy::Overwrite:
             m_active.append(item);
@@ -507,9 +653,9 @@ void DownloadJob::download_(const std::shared_ptr<Active>& item, bool overwrite)
     req.targetPath = absolute_(item->path);
     req.overwrite = overwrite;
     req.expectEtag = item->record.etag;   // what the plan saw
-    req.transferId = QStringLiteral("%1-%2").arg(id()).arg(++m_nextTransfer);
+    req.transferId = transferId_(item->record);
     req.account = account().id.toString(QUuid::WithoutBraces);
-    req.extra.insert(QStringLiteral("job"), id());
+    req.extra.insert(QStringLiteral("job"), m_record.id.isEmpty() ? id() : m_record.id);
     item->downloader = std::make_unique<s3::transfer::Downloader>(session, req, transfers->limiter(account().id),
                                                                   transfers->resumeStore());
     Active* raw = item.get();
@@ -542,6 +688,7 @@ void DownloadJob::itemDone_(Active* raw)
         journal_({rec});
         ++m_succeeded;
         ++m_processed;
+        markDone_(item->record);
         m_doneBytes += item->record.size;
         if (r->integrity == s3::Integrity::Md5Verified)
             ++m_md5Verified;
@@ -567,6 +714,7 @@ void DownloadJob::itemDone_(Active* raw)
                 return;
             }
             itemSkipped_(item->record.key, tr("appeared here meanwhile"));
+            markDone_(item->record);
         } else {
             rec.result = Journal::Result::Failed;
             rec.httpStatus = e.httpStatus;
@@ -596,6 +744,7 @@ void DownloadJob::itemFailed_(const Record& r, const QString& reason)
 {
     ++m_failed;
     ++m_processed;
+    markDone_(r);
     if (m_failures.size() < kMaxListed)
         m_failures.append(QStringLiteral("%1: %2").arg(r.key, reason));
     if (!r.path.endsWith(u'/'))
@@ -649,15 +798,16 @@ void DownloadJob::onCancel()
     m_planExhausted = true;
     const auto active = m_active;
     for (const auto& a : active) {
+        // Suspended: the .qbpart and its records stay for the next session.
         if (a->downloader)
-            a->downloader->cancel();   // removes the .qbpart; finished follows
+            a->downloader->cancel(isSuspended());
     }
     maybeExecuted_();
 }
 
 void DownloadJob::verify()
 {
-    finish_(report_());
+    end_();
 }
 
 Job::Report DownloadJob::report_() const

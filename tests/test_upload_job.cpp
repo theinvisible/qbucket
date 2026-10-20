@@ -7,6 +7,7 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/TransferJobStore.h"
 #include "controllers/TransferService.h"
 #include "controllers/UploadJob.h"
 #include "support/AccountHarness.h"
@@ -22,6 +23,8 @@
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QtTest>
+
+#include <optional>
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
@@ -356,6 +359,92 @@ private slots:
         QVERIFY(done.wait(20000));
         QCOMPARE(job->conflictPolicy(), Job::ConflictPolicy::Overwrite);
         QCOMPARE(m_objects->object(kBucket, QStringLiteral("backup/c.txt"))->data, QByteArray("new"));
+    }
+
+    void suspendedUploadContinuesInTheNextSession()
+    {
+        // 20 small files and one multipart file; the app quits midway.
+        for (int i = 0; i < 20; ++i)
+            writeLocal(QStringLiteral("trip/f%1.txt").arg(i, 2, 10, QLatin1Char('0')), content(i));
+        const QByteArray big(70 * 1024 * 1024 + 9, 'b');
+        writeLocal(QStringLiteral("trip/big.bin"), big);
+        m_objects->setDelay(QStringLiteral("PutObject"), 60);
+        m_objects->setDelay(QStringLiteral("UploadPart"), 60);
+        auto* job = make({m_local + QStringLiteral("/trip")});
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        QSignalSpy done(job, &Job::finished);
+        m_ops->start(job);
+        QVERIFY(preview.wait(20000));
+        job->confirm();
+        QTRY_VERIFY_WITH_TIMEOUT(m_objects->count(QStringLiteral("UploadPart")) >= 3
+                                     && m_objects->count(QStringLiteral("PutObject")) >= 4,
+                                 20000);
+        job->suspend();
+        QVERIFY(done.wait(20000));
+        QCOMPARE(job->outcome(), Job::Outcome::Cancelled);
+        QVERIFY(job->isSuspended());
+        QVERIFY(m_objects->keys(kBucket).size() < 21);
+        QCOMPARE(m_objects->uploadIds(kBucket).size(), 1);   // the big file's upload stays open
+        QVERIFY(s3::transfer::flushResumeWrites(5000));
+        QVERIFY(m_transfers->jobs()->waitForWrites(5000));
+
+        // The next session: a fresh TransferService over the same directory.
+        m_ops->setTransfers(nullptr);
+        m_transfers = std::make_unique<TransferService>(m_h->path(QStringLiteral("transfers")), nullptr);
+        m_ops->setTransfers(m_transfers.get());
+        std::optional<QList<TransferJobStore::Record>> records;
+        QObject ctx;
+        m_transfers->jobs()->load(&ctx, [&](const QList<TransferJobStore::Record>& r) { records = r; });
+        QTRY_VERIFY(records.has_value());
+        QCOMPARE(records->size(), 1);
+        QVERIFY(records->first().suspended);
+        QCOMPARE(records->first().items, 21);
+
+        QTest::qWait(300);   // requests of the first session still in this thread's queue
+        QMap<QString, int> putsBefore;
+        for (const RecordedRequest& r : m_h->server->requests())
+            if (r.method == "PUT" && !r.hasQueryItem("partNumber"))
+                ++putsBefore[QString::fromLatin1(r.path)];
+        const QStringList finishedBefore = m_objects->keys(kBucket);
+        QVERIFY(!finishedBefore.isEmpty());
+
+        m_objects->setDelay(QStringLiteral("PutObject"), 0);
+        m_objects->setDelay(QStringLiteral("UploadPart"), 0);
+        auto* resumed = new UploadJob(m_h->account, records->first());
+        QSignalSpy resumedDone(resumed, &Job::finished);
+        m_ops->start(resumed);
+        QVERIFY(resumedDone.wait(60000));
+        QCOMPARE(resumed->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(m_objects->keys(kBucket).size(), 21);
+        QCOMPARE(m_objects->object(kBucket, QStringLiteral("backup/trip/big.bin"))->size, big.size());
+        QCOMPARE(m_objects->object(kBucket, QStringLiteral("backup/trip/f07.txt"))->data, content(7));
+        QVERIFY(m_objects->uploadIds(kBucket).isEmpty());
+        // Files finished before the quit were not sent again …
+        QMap<QString, int> putsAfter;
+        for (const RecordedRequest& r : m_h->server->requests())
+            if (r.method == "PUT" && !r.hasQueryItem("partNumber"))
+                ++putsAfter[QString::fromLatin1(r.path)];
+        for (const QString& key : finishedBefore) {
+            const QString path = QStringLiteral("/bkt/") + QString::fromLatin1(QUrl::toPercentEncoding(key, "/"));
+            if (key.endsWith(QLatin1String("big.bin")))
+                continue;   // multipart: checked by its parts below
+            QVERIFY2(putsBefore.value(path) >= 1, qPrintable(path));
+            QVERIFY2(putsAfter.value(path) == putsBefore.value(path), qPrintable(key));
+        }
+        // … and the big file's parts that reached the server neither.
+        QMap<int, int> parts;
+        for (const auto& [id, n] : m_objects->partUploads())
+            ++parts[n];
+        QCOMPARE(parts.size(), 9);
+        for (auto it = parts.cbegin(); it != parts.cend(); ++it)
+            QCOMPARE(it.value(), 1);
+        QVERIFY(s3::transfer::flushResumeWrites(5000));
+        QVERIFY(m_transfers->jobs()->waitForWrites(5000));
+        QVERIFY(m_transfers->resumeStore()->ids().isEmpty());
+        std::optional<QList<TransferJobStore::Record>> after;
+        m_transfers->jobs()->load(&ctx, [&](const QList<TransferJobStore::Record>& r) { after = r; });
+        QTRY_VERIFY(after.has_value());
+        QVERIFY(after->isEmpty());
     }
 
     void emptySelectionUploadsNothing()

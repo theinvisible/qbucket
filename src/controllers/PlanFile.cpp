@@ -62,7 +62,8 @@ QStringList PlanFile::decodeRecord(const QByteArray& line)
 PlanFile::~PlanFile()
 {
     m_io.waitForDone();
-    QFile::remove(m_path);
+    if (!m_keep)
+        QFile::remove(m_path);
 }
 
 void PlanFile::append(const QStringList& keys)

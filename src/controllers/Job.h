@@ -33,6 +33,8 @@ public:
     // What a transfer does with a target that exists already.
     enum class ConflictPolicy { Skip, Overwrite, KeepBoth };
     Q_ENUM(ConflictPolicy)
+    enum class TransferKind { None, Upload, Download };
+    Q_ENUM(TransferKind)
 
     // What the confirmation shows: the exact scope, from a fresh plan.
     struct Preview {
@@ -95,6 +97,12 @@ public:
     [[nodiscard]] virtual bool isMutating() const { return true; }
     // Transfers can pause while executing; everything is kept for resume().
     [[nodiscard]] virtual bool canPause() const { return false; }
+    // Uploads and downloads show in the transfer panel.
+    [[nodiscard]] virtual TransferKind transferKind() const { return TransferKind::None; }
+    // The application quits: stop, but keep what is needed to continue in
+    // the next session (transfers). Others are cancelled.
+    virtual void suspend() { cancel(); }
+    [[nodiscard]] bool isSuspended() const { return m_suspended; }
     // False: confirmed by starting it (e.g. creating a folder) — the plan
     // still runs, the preview isn't shown.
     [[nodiscard]] virtual bool needsConfirmation() const { return true; }
@@ -131,6 +139,8 @@ protected:
     void setPreview_(const Preview& preview);
     void setProgress_(qint64 done, qint64 total);
     void setBytes_(qint64 done, qint64 total);
+    // For suspend(): the job stops as cancelled, its resume data stays.
+    void markSuspended_() { m_suspended = true; }
     void executed_();
     void finish_(const Report& report);
     void fail_(const QString& error);
@@ -160,6 +170,7 @@ private:
     qint64 m_bytesTotal = -1;
     bool m_cancelled = false;
     bool m_paused = false;
+    bool m_suspended = false;
     ConflictPolicy m_conflictPolicy = ConflictPolicy::Skip;
     bool m_confirmed = false;
     OperationController* m_controller = nullptr;

@@ -1,5 +1,6 @@
 #include "controllers/BrowseController.h"
 #include "controllers/SettingsController.h"
+#include "controllers/TransferJobStore.h"
 #include "support/AccountHarness.h"
 #include "support/FakeBucket.h"
 #include "ui/MainWindow.h"
@@ -9,7 +10,10 @@
 
 #include <QAction>
 #include <QCheckBox>
+#include <QDir>
+#include <QFile>
 #include <QInputDialog>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QTableView>
@@ -156,6 +160,48 @@ private slots:
         QAction* del = m_browser->deleteAction();
         QVERIFY(!del->isEnabled());
         QVERIFY(del->toolTip().contains(QLatin1String("read-only")));
+        // Reading stays possible.
+        QVERIFY(m_browser->downloadAction()->isEnabled());
+    }
+
+    void unfinishedTransfersAreOfferedAtStart()
+    {
+        // The last session left an upload behind.
+        m_window.reset();
+        const QString jobs = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+                           + QStringLiteral("/transfers/jobs");
+        QDir(jobs).removeRecursively();
+        {
+            TransferJobStore store(jobs);
+            TransferJobStore::Record r;
+            r.id = QStringLiteral("deadbeef");
+            r.kind = Job::TransferKind::Upload;
+            r.account = m_h->account.id;
+            r.bucket = QStringLiteral("bkt");
+            r.title = QStringLiteral("Upload “trip” to s3://bkt/");
+            r.items = 3;
+            store.save(r);
+            QVERIFY(store.waitForWrites(5000));
+            QFile plan(store.planPath(r.id));
+            QVERIFY(plan.open(QIODevice::WriteOnly));
+            plan.write("x\n");
+        }
+        m_window = std::make_unique<MainWindow>(m_settings.get(), m_theme.get(), m_h->accounts.get(), m_h->secrets.get());
+        m_window->show();
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<QMessageBox*>() != nullptr, 10000);
+        QMessageBox* box = m_window->findChild<QMessageBox*>();
+        QVERIFY(box->text().contains(QLatin1String("1 transfer")));
+        QVERIFY(box->detailedText().contains(QLatin1String("trip")));
+        QAbstractButton* discard = nullptr;
+        for (QAbstractButton* b : box->buttons()) {
+            if (b->text() == QLatin1String("Discard"))
+                discard = b;
+        }
+        QVERIFY(discard);
+        discard->click();
+        QTRY_VERIFY_WITH_TIMEOUT(!QFile::exists(jobs + QStringLiteral("/deadbeef.json")), 10000);
+        QTRY_VERIFY(!QFile::exists(jobs + QStringLiteral("/deadbeef.plan")));
+        QDir(jobs).removeRecursively();
     }
 
 private:

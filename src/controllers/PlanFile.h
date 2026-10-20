@@ -36,6 +36,8 @@ public:
     [[nodiscard]] static QStringList decodeRecord(const QByteArray& line);
 
     [[nodiscard]] QString path() const { return m_path; }
+    // true: the file stays when the PlanFile goes (a resumable job's plan).
+    void setKeepFile(bool keep) { m_keep = keep; }
     [[nodiscard]] qint64 count() const { return m_count; }
     [[nodiscard]] bool failed() const { return !m_error.isEmpty(); }
     [[nodiscard]] QString errorText() const { return m_error; }
@@ -55,6 +57,7 @@ private:
     qint64 m_count = 0;
     qint64 m_ioOffset = 0;   // bytes read so far — touched on the I/O thread only
     QString m_error;
+    bool m_keep = false;
     QThreadPool m_io;
 };
 

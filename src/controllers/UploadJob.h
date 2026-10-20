@@ -3,12 +3,14 @@
 #include "controllers/Job.h"
 #include "controllers/LocalScanner.h"
 #include "controllers/PlanFile.h"
+#include "controllers/TransferJobStore.h"
 
 #include <qbucket/s3/ListObjectsPager.h>
 
 #include <QElapsedTimer>
 #include <QHash>
 #include <QPointer>
+#include <QSet>
 
 #include <atomic>
 #include <deque>
@@ -65,6 +67,9 @@ public:
               const QString& planDir, Options options, QObject* parent = nullptr);
     UploadJob(const Account& account, const QString& bucket, const QList<Item>& items, const QString& planDir,
               QObject* parent = nullptr);
+    // Continues a job of an earlier session (TransferJobStore): the items
+    // not done yet; files under way continue from their part records.
+    UploadJob(const Account& account, const TransferJobStore::Record& record, QObject* parent = nullptr);
     ~UploadJob() override;
 
     [[nodiscard]] QString title() const override;
@@ -73,7 +78,10 @@ public:
     [[nodiscard]] bool isDestructive() const override;
     [[nodiscard]] bool needsConfirmation() const override;
     [[nodiscard]] bool canPause() const override { return true; }
+    [[nodiscard]] TransferKind transferKind() const override { return TransferKind::Upload; }
+    void suspend() override;
     [[nodiscard]] QList<ActiveItem> activeItems() const override;
+    [[nodiscard]] bool isResumed() const { return m_resuming; }
 
     [[nodiscard]] QList<Item> failedItems() const { return m_failedItems; }
     [[nodiscard]] qint64 md5Verified() const { return m_md5Verified; }
@@ -102,6 +110,7 @@ private:
         qint64 remoteSize = -1;
         qint64 remoteMtimeMs = 0;
         QString remoteEtag;
+        qint64 ordinal = -1;      // position in the plan (for the done list)
 
         [[nodiscard]] QStringList fields() const;
         static Record from(const QStringList& fields);
@@ -115,6 +124,7 @@ private:
     };
 
     // plan
+    void resumePlan_();
     void scanned_(const LocalScanner::Result& result);
     void mergeNext_();
     void mergeHead_(const Record& r);
@@ -133,6 +143,11 @@ private:
     void itemFailed_(const Record& r, const QString& key, const QString& reason);
     void updateProgress_(bool force);
     void maybeExecuted_();
+    void markDone_(const Record& r);
+    // Ends the job: its resume record stays when suspended, goes otherwise.
+    void end_();
+    [[nodiscard]] TransferJobStore* jobStore_() const;
+    [[nodiscard]] QString transferId_(const Record& r) const;
     [[nodiscard]] Report report_() const;
 
     QString m_prefix;
@@ -186,7 +201,12 @@ private:
     QStringList m_failures;
     QStringList m_notes;
     QList<Item> m_failedItems;
-    qint64 m_nextTransfer = 0;
+    qint64 m_readOrdinal = 0;
+    // resuming
+    bool m_resuming = false;
+    TransferJobStore::Record m_record;
+    QSet<qint64> m_doneOrdinals;
+    QSet<QString> m_storedTransfers;   // part records of files under way
     QElapsedTimer m_progressClock;
 };
 

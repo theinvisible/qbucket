@@ -70,7 +70,7 @@
 <context>
     <name>qbucket::DownloadJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="84"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="95"/>
         <source>Download %n item(s) to %1</source>
         <translation>
             <numerusform>Download %n item to %1</numerusform>
@@ -78,7 +78,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="372"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="442"/>
         <source>s3://%1 — %n selected item(s) → %2</source>
         <translation>
             <numerusform>s3://%1 — %n selected item → %2</numerusform>
@@ -86,7 +86,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="379"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="449"/>
         <source>%n selected object(s) no longer exist and are skipped.</source>
         <translation>
             <numerusform>%n selected object no longer exists and is skipped.</numerusform>
@@ -94,7 +94,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="382"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="452"/>
         <source>%n name(s) contain characters this system does not allow and are saved under another name, e.g. %1</source>
         <translation>
             <numerusform>%n name contains characters this system does not allow and is saved under another name, e.g. %1</numerusform>
@@ -102,15 +102,15 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="388"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="458"/>
         <source>%n object(s) can&apos;t be saved here and are left out — first: %1</source>
         <translation>
-            <numerusform>%n object can't be saved here and is left out — first: %1</numerusform>
-            <numerusform>%n objects can't be saved here and are left out — first: %1</numerusform>
+            <numerusform>%n object can&apos;t be saved here and is left out — first: %1</numerusform>
+            <numerusform>%n objects can&apos;t be saved here and are left out — first: %1</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="677"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="826"/>
         <source>%n file(s) verified by MD5</source>
         <translation>
             <numerusform>%n file verified by MD5</numerusform>
@@ -121,7 +121,15 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="381"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="193"/>
+        <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
+        <translation>
+            <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
+            <numerusform>%n transfers did not finish in the last session. Continue where they stopped?</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/MainWindow.cpp" line="430"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -246,9 +254,28 @@
     </message>
 </context>
 <context>
+    <name>qbucket::TransferModel</name>
+    <message numerus="yes">
+        <location filename="../../src/models/TransferModel.cpp" line="57"/>
+        <source>%n s</source>
+        <translation>
+            <numerusform>%n s</numerusform>
+            <numerusform>%n s</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/models/TransferModel.cpp" line="59"/>
+        <source>%n min</source>
+        <translation>
+            <numerusform>%n min</numerusform>
+            <numerusform>%n min</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::UploadJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/UploadJob.cpp" line="96"/>
+        <location filename="../../src/controllers/UploadJob.cpp" line="108"/>
         <source>Upload %n file(s) to s3://%1</source>
         <translation>
             <numerusform>Upload %n file to s3://%1</numerusform>
@@ -256,7 +283,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/UploadJob.cpp" line="99"/>
+        <location filename="../../src/controllers/UploadJob.cpp" line="111"/>
         <source>Upload %n item(s) to s3://%1/%2</source>
         <translation>
             <numerusform>Upload %n item to s3://%1/%2</numerusform>
@@ -264,7 +291,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/UploadJob.cpp" line="379"/>
+        <location filename="../../src/controllers/UploadJob.cpp" line="455"/>
         <source>%n empty folder(s) become folder markers.</source>
         <translation>
             <numerusform>%n empty folder becomes a folder marker.</numerusform>
@@ -272,7 +299,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/UploadJob.cpp" line="381"/>
+        <location filename="../../src/controllers/UploadJob.cpp" line="457"/>
         <source>%n file(s) or folder(s) are left out (links to folders, unreadable or special files, names too long) — first: %1</source>
         <translation>
             <numerusform>%n file or folder is left out (links to folders, unreadable or special files, names too long) — first: %1</numerusform>
@@ -280,7 +307,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/UploadJob.cpp" line="795"/>
+        <location filename="../../src/controllers/UploadJob.cpp" line="952"/>
         <source>%n file(s) verified by MD5</source>
         <translation>
             <numerusform>%n file verified by MD5</numerusform>

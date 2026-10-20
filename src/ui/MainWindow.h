@@ -12,6 +12,7 @@ class QMenu;
 class QPushButton;
 class QSplitter;
 class QStackedWidget;
+class QTabWidget;
 class QToolButton;
 class QTreeView;
 
@@ -25,6 +26,7 @@ class Job;
 class Journal;
 class OperationController;
 class TransferService;
+class TransferModel;
 class AccountSidebar;
 class DetailPane;
 class ObjectBrowser;
@@ -75,6 +77,8 @@ private:
     void startUpload_(const QStringList& paths, bool alwaysConfirm);
     // Downloads the browser's selection into `folder` (empty: the settings' download folder).
     void downloadSelection_(const QString& folder);
+    // Unfinished transfers of the last session: resume or discard them.
+    void offerResume_();
     void renameSelection_();
     void restoreWindowState_();
     void saveWindowState_();
@@ -97,6 +101,8 @@ private:
     Journal*            m_journal = nullptr;
     OperationController* m_operations = nullptr;
     TransferService* m_transfers = nullptr;
+    TransferModel* m_transferModel = nullptr;
+    QTabWidget* m_dockTabs = nullptr;
 
     // Menu actions
     QMenu*        m_editMenu        = nullptr;

@@ -68,12 +68,16 @@ add_library(qbucket_controllers STATIC
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h
     controllers/DeleteJob.cpp
+    controllers/DiscardTransfersJob.h
+    controllers/DiscardTransfersJob.cpp
     controllers/DownloadJob.h
     controllers/DownloadJob.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h
     controllers/SettingsController.cpp
+    controllers/TransferJobStore.h
+    controllers/TransferJobStore.cpp
     controllers/TransferService.h
     controllers/TransferService.cpp
     controllers/UploadJob.h
@@ -91,6 +95,8 @@ add_library(qbucket_models STATIC
     models/AccountTreeModel.cpp
     models/ObjectTableModel.h
     models/ObjectTableModel.cpp
+    models/TransferModel.h
+    models/TransferModel.cpp
 )
 target_include_directories(qbucket_models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_models
@@ -145,6 +151,8 @@ add_library(qbucket_app_ui STATIC
     ui/PathBar.cpp
     ui/SettingsDialog.h
     ui/SettingsDialog.cpp
+    ui/TransferPanel.h
+    ui/TransferPanel.cpp
 )
 target_include_directories(qbucket_app_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(qbucket_app_ui PRIVATE

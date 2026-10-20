@@ -9,6 +9,7 @@
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "controllers/PlanFile.h"
+#include "controllers/TransferJobStore.h"
 #include "controllers/TransferService.h"
 #include "support/AccountHarness.h"
 
@@ -20,6 +21,8 @@
 #include <QFileInfo>
 #include <QSignalSpy>
 #include <QtTest>
+
+#include <optional>
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
@@ -294,6 +297,59 @@ private slots:
         QVERIFY(m_objects->count(QStringLiteral("GetObject")) >= 9);
         QVERIFY(s3::transfer::flushResumeWrites(5000));
         QVERIFY(m_transfers->resumeStore()->ids().isEmpty());
+    }
+
+    void suspendedDownloadContinuesInTheNextSession()
+    {
+        for (int i = 0; i < 15; ++i)
+            m_objects->putObject(kBucket, QStringLiteral("trip/f%1").arg(i, 2, 10, QLatin1Char('0')), QByteArray(500, char('a' + i)));
+        const QByteArray big(70 * 1024 * 1024 + 1, 'g');
+        m_objects->putObject(kBucket, QStringLiteral("trip/big.bin"), big);
+        m_objects->setDelay(QStringLiteral("GetObject"), 80);
+        auto* job = make({{QStringLiteral("trip/"), true, {}}});
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        QSignalSpy done(job, &Job::finished);
+        m_ops->start(job);
+        QVERIFY(preview.wait(20000));
+        job->confirm();
+        QTRY_VERIFY_WITH_TIMEOUT(m_objects->count(QStringLiteral("GetObject")) >= 8, 20000);
+        job->suspend();
+        QVERIFY(done.wait(20000));
+        QVERIFY(job->isSuspended());
+        QVERIFY(QFile::exists(local(QStringLiteral("trip/big.bin.qbpart"))));   // kept for later
+        QVERIFY(s3::transfer::flushResumeWrites(5000));
+        QVERIFY(m_transfers->jobs()->waitForWrites(5000));
+
+        m_ops->setTransfers(nullptr);
+        m_transfers = std::make_unique<TransferService>(m_h->path(QStringLiteral("transfers")), nullptr);
+        m_ops->setTransfers(m_transfers.get());
+        std::optional<QList<TransferJobStore::Record>> records;
+        QObject ctx;
+        m_transfers->jobs()->load(&ctx, [&](const QList<TransferJobStore::Record>& r) { records = r; });
+        QTRY_VERIFY(records.has_value());
+        QCOMPARE(records->size(), 1);
+        QCOMPARE(records->first().kind, Job::TransferKind::Download);
+
+        QTest::qWait(300);
+        const int getsBefore = m_objects->count(QStringLiteral("GetObject"));
+        m_objects->setDelay(QStringLiteral("GetObject"), 0);
+        auto* resumed = new DownloadJob(m_h->account, records->first());
+        QSignalSpy resumedDone(resumed, &Job::finished);
+        m_ops->start(resumed);
+        QVERIFY(resumedDone.wait(60000));
+        QCOMPARE(resumed->outcome(), Job::Outcome::Succeeded);
+        for (int i = 0; i < 15; ++i)
+            QCOMPARE(readFile(local(QStringLiteral("trip/f%1").arg(i, 2, 10, QLatin1Char('0')))), QByteArray(500, char('a' + i)));
+        QCOMPARE(QFileInfo(local(QStringLiteral("trip/big.bin"))).size(), big.size());
+        QVERIFY(!QFile::exists(local(QStringLiteral("trip/big.bin.qbpart"))));
+        // Less than a full second pass: what was done stayed done.
+        QVERIFY(m_objects->count(QStringLiteral("GetObject")) - getsBefore < 15 + 9);
+        QVERIFY(s3::transfer::flushResumeWrites(5000));
+        QVERIFY(m_transfers->jobs()->waitForWrites(5000));
+        std::optional<QList<TransferJobStore::Record>> after;
+        m_transfers->jobs()->load(&ctx, [&](const QList<TransferJobStore::Record>& r) { after = r; });
+        QTRY_VERIFY(after.has_value());
+        QVERIFY(after->isEmpty());
     }
 
     void cancelRemovesWhatWasHalfDone()

@@ -9,6 +9,7 @@
 #include <qbucket/s3/transfer/Uploader.h>
 
 #include <QDateTime>
+#include <QFile>
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
@@ -83,6 +84,15 @@ UploadJob::UploadJob(const Account& account, const QString& bucket, const QList<
 {
 }
 
+UploadJob::UploadJob(const Account& account, const TransferJobStore::Record& record, QObject* parent)
+    : Job(account, record.bucket, parent),
+      m_prefix(record.prefix),
+      m_resuming(true),
+      m_record(record)
+{
+    setConflictPolicy(record.policy);
+}
+
 UploadJob::~UploadJob()
 {
     if (m_scanCancel)
@@ -92,6 +102,8 @@ UploadJob::~UploadJob()
 
 QString UploadJob::title() const
 {
+    if (m_resuming)
+        return m_record.title;
     if (m_explicitMode)
         return tr("Upload %n file(s) to s3://%1", nullptr, int(m_explicit.size())).arg(bucket());
     if (m_sources.size() == 1)
@@ -101,11 +113,14 @@ QString UploadJob::title() const
 
 bool UploadJob::isDestructive() const
 {
-    return conflictPolicy() == ConflictPolicy::Overwrite && m_conflicts > 0;
+    // A resumed job doesn't know its conflicts any more: assume some.
+    return conflictPolicy() == ConflictPolicy::Overwrite && (m_conflicts > 0 || m_resuming);
 }
 
 bool UploadJob::needsConfirmation() const
 {
+    if (m_resuming)
+        return false;   // confirmed in the resume dialog
     return m_options.alwaysConfirm || m_explicitMode || m_conflicts > 0 || m_files + m_markers != 1
         || m_scan.skippedCount > 0 || account().environment == Environment::Production;
 }
@@ -136,9 +151,25 @@ QString UploadJob::keepBothName(const QString& key, int n)
 
 // --- plan -----------------------------------------------------------------------
 
+TransferJobStore* UploadJob::jobStore_() const
+{
+    TransferService* t = controller_() ? controller_()->transfers() : nullptr;
+    return t ? t->jobs() : nullptr;
+}
+
+QString UploadJob::transferId_(const Record& r) const
+{
+    // Stable across sessions: the job's first id and the item's place in the plan.
+    return QStringLiteral("%1-%2").arg(m_record.id.isEmpty() ? id() : m_record.id).arg(r.ordinal);
+}
+
 void UploadJob::plan()
 {
     m_run = std::make_unique<QObject>();
+    if (m_resuming) {
+        resumePlan_();
+        return;
+    }
     const QString rawPath = m_planDir + u'/' + id() + QStringLiteral(".scan");
     if (m_explicitMode) {
         // Retry: exactly these files; each target looked up by HEAD.
@@ -165,7 +196,8 @@ void UploadJob::plan()
                 fail_(tr("The plan could not be written: %1").arg(m_raw->errorText()));
                 return;
             }
-            m_plan = std::make_unique<PlanFile>(m_planDir + u'/' + id() + QStringLiteral(".plan"));
+            TransferJobStore* jobs = jobStore_();
+            m_plan = std::make_unique<PlanFile>(jobs ? jobs->planPath(id()) : m_planDir + u'/' + id() + QStringLiteral(".plan"));
             mergeNext_();
         });
         return;
@@ -206,8 +238,52 @@ void UploadJob::scanned_(const LocalScanner::Result& result)
     setProgress_(result.files + result.folders, 0);
     m_raw = std::make_unique<PlanFile>(m_planDir + u'/' + id() + QStringLiteral(".scan"), PlanFile::Mode::Existing,
                                        result.files + result.folders);
-    m_plan = std::make_unique<PlanFile>(m_planDir + u'/' + id() + QStringLiteral(".plan"));
+    TransferJobStore* jobs = jobStore_();
+    m_plan = std::make_unique<PlanFile>(jobs ? jobs->planPath(id()) : m_planDir + u'/' + id() + QStringLiteral(".plan"));
     mergeNext_();
+}
+
+// An earlier session's job: its plan is on disk, with what is done already
+// and which files have part records.
+void UploadJob::resumePlan_()
+{
+    TransferJobStore* jobs = jobStore_();
+    TransferService* transfers = controller_()->transfers();
+    if (!jobs || !transfers) {
+        fail_(tr("Nothing to resume."));
+        return;
+    }
+    if (!QFile::exists(jobs->planPath(m_record.id))) {
+        fail_(tr("The plan of this upload is gone; it can't be continued."));
+        return;
+    }
+    jobs->loadDone(m_record.id, m_run.get(), [this, transfers](const QSet<qint64>& done) {
+        if (phase() != Phase::Planning)
+            return;
+        m_doneOrdinals = done;
+        auto store = transfers->resumeStore();
+        auto* relay = new QObject;
+        relay->moveToThread(thread());
+        const QPointer<UploadJob> self(this);
+        QThreadPool::globalInstance()->start([relay, self, store] {
+            const QStringList ids = store->ids();
+            QMetaObject::invokeMethod(relay, [relay, self, ids] {
+                if (self && self->phase() == Phase::Planning) {
+                    self->m_storedTransfers = QSet<QString>(ids.begin(), ids.end());
+                    Preview p;
+                    p.action = tr("Resume");
+                    p.scope = QStringLiteral("s3://%1/%2").arg(self->bucket(), self->m_prefix);
+                    p.objects = std::max<qint64>(0, self->m_record.items - self->m_doneOrdinals.size());
+                    p.bytes = -1;
+                    self->m_files = self->m_record.items;
+                    self->m_bytes = self->m_record.bytes;
+                    self->m_processed = self->m_doneOrdinals.size();
+                    self->setPreview_(p);
+                }
+                relay->deleteLater();
+            }, Qt::QueuedConnection);
+        });
+    });
 }
 
 QString UploadJob::groupOf_(const QString& key) const
@@ -407,6 +483,25 @@ void UploadJob::execute()
     // server is known to honour it (Hetzner and Garage ignore it).
     m_conditional = controller_()->capabilities()->decide(account().id, bucket(), s3::Feature::ConditionalWrites,
                                                           false) == s3::Decision::Allowed;
+    TransferJobStore* jobs = jobStore_();
+    if (m_resuming) {
+        m_plan = std::make_unique<PlanFile>(jobs->planPath(m_record.id), PlanFile::Mode::Existing, m_record.items);
+        m_plan->setKeepFile(true);
+    } else if (jobs) {
+        // From now on the job can continue in a later session.
+        m_plan->setKeepFile(true);
+        m_record.id = id();
+        m_record.kind = TransferKind::Upload;
+        m_record.account = account().id;
+        m_record.bucket = bucket();
+        m_record.title = title();
+        m_record.prefix = m_prefix;
+        m_record.policy = conflictPolicy();
+        m_record.items = m_files + m_markers;
+        m_record.bytes = m_bytes;
+        m_record.started = QDateTime::currentDateTimeUtc();
+        jobs->save(m_record);
+    }
     m_plan->rewind();
     m_progressClock.start();
     setProgress_(0, m_files + m_markers);
@@ -423,9 +518,9 @@ void UploadJob::pump_()
         return;
     }
     while (m_active.size() + m_inFlightMisc < kParallelFiles && !m_queue.empty()) {
-        Record r = std::move(m_queue.front());
+        const Record r = m_queue.front();
         m_queue.pop_front();
-        startItem_(std::move(r));
+        startItem_(r);
     }
     if (m_queue.size() < kParallelFiles && !m_readingPlan && !m_planExhausted) {
         m_readingPlan = true;
@@ -435,12 +530,48 @@ void UploadJob::pump_()
                 return;
             if (records.isEmpty())
                 m_planExhausted = true;
-            for (const QStringList& f : records)
-                m_queue.push_back(Record::from(f));
+            for (const QStringList& f : records) {
+                Record r = Record::from(f);
+                r.ordinal = m_readOrdinal++;
+                if (m_doneOrdinals.contains(r.ordinal)) {
+                    m_doneBytes += r.size;   // finished in an earlier session
+                    continue;
+                }
+                m_queue.push_back(r);
+            }
             pump_();
         });
     }
     maybeExecuted_();
+}
+
+void UploadJob::markDone_(const Record& r)
+{
+    if (TransferJobStore* jobs = jobStore_(); jobs && r.ordinal >= 0 && !m_record.id.isEmpty())
+        jobs->markDone(m_record.id, r.ordinal);
+}
+
+void UploadJob::end_()
+{
+    if (TransferJobStore* jobs = jobStore_(); jobs && !m_record.id.isEmpty()) {
+        if (isSuspended()) {
+            m_record.suspended = true;
+            jobs->save(m_record);
+        } else {
+            jobs->remove(m_record.id);
+        }
+    }
+    finish_(report_());
+}
+
+void UploadJob::suspend()
+{
+    if (phase() != Phase::Executing) {
+        cancel();
+        return;
+    }
+    markSuspended_();
+    cancel();   // onCancel keeps every part record
 }
 
 void UploadJob::maybeExecuted_()
@@ -449,7 +580,7 @@ void UploadJob::maybeExecuted_()
         return;
     if (isCancelled()) {
         updateProgress_(true);
-        finish_(report_());
+        end_();
         return;
     }
     if (isPaused())
@@ -465,6 +596,26 @@ void UploadJob::startItem_(const Record& r)
     if (r.marker) {
         putMarker_(r);
         return;
+    }
+    if (m_resuming && m_storedTransfers.contains(transferId_(r))) {
+        // Under way when the last session ended: continue its parts.
+        s3::Session* session = session_();
+        TransferService* transfers = controller_()->transfers();
+        if (session && transfers) {
+            auto item = std::make_shared<Active>();
+            item->record = r;
+            item->key = r.key;
+            item->uploader = s3::transfer::Uploader::fromStore(session, transfers->resumeStore(), transferId_(r),
+                                                               transfers->limiter(account().id));
+            m_active.append(item);
+            Active* raw = item.get();
+            connect(item->uploader.get(), &s3::transfer::Uploader::finished, this, [this, raw] { itemDone_(raw); });
+            connect(item->uploader.get(), &s3::transfer::Uploader::progress, this, [this] { updateProgress_(false); });
+            item->uploader->start();
+            if (isPaused())
+                item->uploader->pause();
+            return;
+        }
     }
     if (r.exists) {
         switch (conflictPolicy()) {
@@ -555,9 +706,9 @@ void UploadJob::upload_(const std::shared_ptr<Active>& item)
     req.localPath = item->record.path;
     req.contentType = contentTypeFor(item->record.path);
     req.ifNoneMatch = item->conditional;
-    req.transferId = QStringLiteral("%1-%2").arg(id()).arg(++m_nextTransfer);
+    req.transferId = transferId_(item->record);
     req.account = account().id.toString(QUuid::WithoutBraces);
-    req.extra.insert(QStringLiteral("job"), id());
+    req.extra.insert(QStringLiteral("job"), m_record.id.isEmpty() ? id() : m_record.id);
     item->uploader = std::make_unique<s3::transfer::Uploader>(session, req, transfers->limiter(account().id),
                                                               transfers->resumeStore());
     Active* raw = item.get();
@@ -594,6 +745,7 @@ void UploadJob::putMarker_(const Record& r)
                 journal_({rec});
                 ++m_succeeded;
                 ++m_processed;
+                markDone_(r);
             } else if (put.error().category == s3::ErrorCategory::PreconditionFailed) {
                 itemSkipped_(r, tr("exists already"));
             } else {
@@ -650,6 +802,7 @@ void UploadJob::itemDone_(Active* raw)
         journal_({rec});
         ++m_succeeded;
         ++m_processed;
+        markDone_(item->record);
         m_doneBytes += item->record.size;
         if (r->integrity == s3::Integrity::Md5Verified)
             ++m_md5Verified;
@@ -697,6 +850,7 @@ void UploadJob::itemSkipped_(const Record& r, const QString& why)
 {
     ++m_skipped;
     ++m_processed;
+    markDone_(r);
     if (m_notes.size() < kMaxListed)
         m_notes.append(QStringLiteral("%1: %2").arg(r.key, why));
     updateProgress_(false);
@@ -706,6 +860,7 @@ void UploadJob::itemFailed_(const Record& r, const QString& key, const QString& 
 {
     ++m_failed;
     ++m_processed;
+    markDone_(r);
     if (m_failures.size() < kMaxListed)
         m_failures.append(QStringLiteral("%1: %2").arg(key, reason));
     if (!r.marker)
@@ -759,8 +914,10 @@ void UploadJob::onCancel()
     m_planExhausted = true;
     const auto active = m_active;
     for (const auto& a : active) {
+        // Suspended: the part records stay for the next session; otherwise
+        // the multipart upload is aborted. finished follows either way.
         if (a->uploader)
-            a->uploader->cancel();   // aborts the multipart upload; finished follows
+            a->uploader->cancel(isSuspended());
     }
     // HEADs / marker PUTs in flight answer later; uploads that had not
     // started yet are simply dropped.
@@ -774,7 +931,7 @@ void UploadJob::onCancel()
 void UploadJob::verify()
 {
     // Every upload was checked by its Uploader already.
-    finish_(report_());
+    end_();
 }
 
 Job::Report UploadJob::report_() const

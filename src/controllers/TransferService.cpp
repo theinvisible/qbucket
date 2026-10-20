@@ -26,7 +26,8 @@ TransferService::TransferService(QObject* parent)
 TransferService::TransferService(const QString& directory, QObject* parent)
     : QObject(parent),
       m_dir(directory),
-      m_store(std::make_shared<s3::transfer::JsonFileResumeStore>(QDir(directory).filePath(QStringLiteral("parts"))))
+      m_store(std::make_shared<s3::transfer::JsonFileResumeStore>(QDir(directory).filePath(QStringLiteral("parts")))),
+      m_jobs(new TransferJobStore(QDir(directory).filePath(QStringLiteral("jobs")), this))
 {
 }
 

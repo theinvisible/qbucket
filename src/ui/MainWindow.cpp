@@ -12,6 +12,7 @@
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/DiscardTransfersJob.h"
 #include "controllers/DownloadJob.h"
 #include "controllers/TransferService.h"
 #include "controllers/UploadJob.h"
@@ -26,8 +27,12 @@
 #include "ui/AccountDialog.h"
 #include "ui/IconFactory.h"
 #include "ui/SettingsDialog.h"
+#include "ui/TransferPanel.h"
+#include "models/TransferModel.h"
 #include "ui/Theme.h"
 #include "ui/ThemeManager.h"
+
+#include <qbucket/s3/transfer/ResumeStore.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -170,6 +175,50 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     });
     connectBrowser_();
     connectOperations_();
+    if (m_transfers)
+        QTimer::singleShot(0, this, &MainWindow::offerResume_);
+}
+
+void MainWindow::offerResume_()
+{
+    m_transfers->jobs()->load(this, [this](const QList<TransferJobStore::Record>& records) {
+        if (records.isEmpty() || !m_operations)
+            return;
+        QStringList lines;
+        for (const TransferJobStore::Record& r : records) {
+            const std::optional<Account> a = m_accounts->account(r.account);
+            lines.append(QStringLiteral("%1 (%2)").arg(r.title, a ? a->name : tr("account removed")));
+        }
+        auto* box = new QMessageBox(QMessageBox::Question, tr("Unfinished Transfers"),
+                                    tr("%n transfer(s) did not finish in the last session. Continue where they stopped?",
+                                       nullptr, int(records.size())),
+                                    QMessageBox::NoButton, this);
+        box->setDetailedText(lines.join(u'\n'));
+        QPushButton* resume = box->addButton(tr("Resume"), QMessageBox::AcceptRole);
+        QPushButton* discard = box->addButton(tr("Discard"), QMessageBox::DestructiveRole);
+        box->addButton(tr("Later"), QMessageBox::RejectRole);
+        box->setDefaultButton(resume);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        connect(box, &QMessageBox::buttonClicked, this, [this, records, resume, discard](QAbstractButton* b) {
+            for (const TransferJobStore::Record& r : records) {
+                const std::optional<Account> a = m_accounts->account(r.account);
+                if (!a) {
+                    if (b == discard)
+                        m_transfers->jobs()->remove(r.id);
+                    continue;
+                }
+                if (b == resume) {
+                    if (r.kind == Job::TransferKind::Upload)
+                        m_operations->start(new UploadJob(*a, r));
+                    else
+                        m_operations->start(new DownloadJob(*a, r));
+                } else if (b == discard) {
+                    m_operations->start(new DiscardTransfersJob(*a, r));
+                }
+            }
+        });
+        box->open();
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -887,8 +936,19 @@ void MainWindow::buildTransferDock_()
     m_transferDock->setFeatures(QDockWidget::DockWidgetClosable);
 
     auto* tabs = new QTabWidget;
+    m_dockTabs = tabs;
     tabs->setDocumentMode(true);
-    tabs->addTab(makeEmptyState(tr("No transfers.")), tr("Transfers"));
+    if (m_operations) {
+        m_transferModel = new TransferModel(m_operations, this);
+        tabs->addTab(new TransferPanel(m_transferModel), tr("Transfers"));
+        // A transfer starts: show where it runs.
+        connect(m_transferModel, &TransferModel::transferStarted, this, [this] {
+            m_transferDock->show();
+            m_dockTabs->setCurrentIndex(0);
+        });
+    } else {
+        tabs->addTab(makeEmptyState(tr("No transfers.")), tr("Transfers"));
+    }
     tabs->addTab(new LogPanel(m_activity), tr("Log"));
     tabs->setMinimumHeight(120);
     m_transferDock->setWidget(tabs);
@@ -1042,6 +1102,12 @@ void MainWindow::closeEvent(QCloseEvent* event)
     if (m_sessions && !m_sessions->isShutDown()) {
         event->ignore();
         saveWindowState_();
+        // Transfers stop but keep everything to continue next time; the
+        // other jobs are cancelled.
+        if (m_operations) {
+            for (Job* job : m_operations->jobs())
+                job->suspend();
+        }
         connect(m_sessions, &AccountSessions::allStopped, this, &QWidget::close, Qt::QueuedConnection);
         // A worker that doesn't end in time is left to ~AccountSessions.
         QTimer::singleShot(3000, this, &QWidget::close);
@@ -1050,6 +1116,11 @@ void MainWindow::closeEvent(QCloseEvent* event)
     }
     if (!m_sessions)
         saveWindowState_();
+    if (m_transfers) {
+        // What the suspended transfers wrote must be on disk.
+        s3::transfer::flushResumeWrites(2000);
+        m_transfers->jobs()->waitForWrites(2000);
+    }
     QMainWindow::closeEvent(event);
 }
 

@@ -148,6 +148,11 @@ qbucket_add_test(test_local_scanner
     qbucket_controllers
 )
 
+qbucket_add_test(test_transfer_job_store
+    test_transfer_job_store.cpp
+    qbucket_controllers
+)
+
 qbucket_add_test(test_transfer_service
     test_transfer_service.cpp
     qbucket_controllers
@@ -156,6 +161,12 @@ qbucket_add_test(test_transfer_service
 qbucket_add_test(test_download_job
     test_download_job.cpp
     qbucket_controllers
+    qbucket::s3_testsupport
+)
+
+qbucket_add_test(test_transfer_panel
+    test_transfer_panel.cpp
+    qbucket_app_ui
     qbucket::s3_testsupport
 )
 
