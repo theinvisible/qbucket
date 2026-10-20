@@ -6,9 +6,13 @@
 #include "controllers/AccountSessions.h"
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
+#include "controllers/Job.h"
+#include "controllers/Journal.h"
+#include "controllers/OperationController.h"
 #include "ui/AccountSidebar.h"
 #include "ui/CapabilitiesDialog.h"
 #include "ui/LogPanel.h"
+#include "ui/OperationPreviewDialog.h"
 #include "ui/DetailPane.h"
 #include "controllers/BrowseController.h"
 #include "ui/ObjectBrowser.h"
@@ -116,6 +120,8 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_sessions = new AccountSessions(m_accounts, m_secrets, this);
         m_capStore = new CapabilityStore(this);
         m_capabilities = new CapabilityController(m_accounts, m_sessions, m_capStore, m_activity, this);
+        m_journal = new Journal(this);
+        m_operations = new OperationController(m_accounts, m_sessions, m_capabilities, m_journal, m_activity, this);
     }
 
     buildMenuBar_();
@@ -147,6 +153,92 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_browser->navigation()->navigate({id, {}, {}});
     });
     connectBrowser_();
+    connectOperations_();
+}
+
+// ---------------------------------------------------------------------------
+// Operations: preview, progress, report (PLAN.md §12.2)
+// ---------------------------------------------------------------------------
+void MainWindow::connectOperations_()
+{
+    if (!m_operations)
+        return;
+    connect(m_operations, &OperationController::previewNeeded, this, [this](Job* job) {
+        auto* dlg = new OperationPreviewDialog(job, this);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        dlg->open();
+    });
+    connect(m_operations, &OperationController::jobStarted, this, [this](Job* job) {
+        connect(job, &Job::progressChanged, this, &MainWindow::updateJobStatus_);
+        connect(job, &Job::phaseChanged, this, &MainWindow::updateJobStatus_);
+        updateJobStatus_();
+    });
+    connect(m_operations, &OperationController::jobFinished, this, [this](Job* job) {
+        QMetaObject::invokeMethod(this, &MainWindow::updateJobStatus_, Qt::QueuedConnection);
+        showJobReport_(job);
+        // What the job changed is listed afresh.
+        const Location here = m_browser->navigation()->current();
+        if (job->outcome() != Job::Outcome::Refused && job->phase() == Job::Phase::Finished
+            && here.account == job->account().id && here.bucket == job->bucket())
+            m_browser->refresh();
+    });
+    connect(m_jobCancel, &QToolButton::clicked, this, [this] {
+        for (Job* job : m_operations->jobs())
+            job->cancel();
+    });
+    connect(m_journal, &Journal::writeFailed, this, [this](const QString& message) {
+        m_activity->add(ActivityLog::Level::Error, tr("The operation journal could not be written: %1").arg(message));
+    });
+}
+
+void MainWindow::updateJobStatus_()
+{
+    const QList<Job*> running = m_operations ? m_operations->jobs() : QList<Job*>{};
+    QList<Job*> busy;
+    for (Job* j : running) {
+        if (j->phase() == Job::Phase::Planning || j->phase() == Job::Phase::Executing
+            || j->phase() == Job::Phase::Verifying)
+            busy.append(j);
+    }
+    m_jobLabel->setVisible(!busy.isEmpty());
+    m_jobCancel->setVisible(!busy.isEmpty());
+    if (busy.isEmpty())
+        return;
+    const Job* job = busy.first();
+    QString step;
+    switch (job->phase()) {
+    case Job::Phase::Planning:
+        step = tr("planning");
+        break;
+    case Job::Phase::Verifying:
+        step = tr("verifying");
+        break;
+    default:
+        step = job->progressTotal() > 0 ? tr("%1 of %2").arg(job->progressDone()).arg(job->progressTotal())
+                                        : tr("running");
+        break;
+    }
+    m_jobLabel->setText(busy.size() > 1 ? tr("%1 (%2) and %n more", nullptr, int(busy.size() - 1)).arg(job->title(), step)
+                                        : tr("%1 (%2)").arg(job->title(), step));
+}
+
+void MainWindow::showJobReport_(Job* job)
+{
+    const QString summary = OperationController::summary(*job);
+    const Job::Outcome outcome = job->outcome();
+    if (outcome == Job::Outcome::Succeeded || outcome == Job::Outcome::Cancelled) {
+        statusBar()->showMessage(summary, 10000);
+        return;
+    }
+    auto* box = new QMessageBox(outcome == Job::Outcome::Refused ? QMessageBox::Information : QMessageBox::Warning,
+                                job->title(), summary, QMessageBox::Close, this);
+    QStringList details = job->report().failures;
+    if (!job->report().verification.isEmpty())
+        details.prepend(job->report().verification);
+    if (!details.isEmpty())
+        box->setDetailedText(details.join(u'\n'));
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->open();
 }
 
 // ---------------------------------------------------------------------------
@@ -584,6 +676,15 @@ void MainWindow::buildStatusBar_()
 
     m_locationLabel = new QLabel(tr("Not connected"));
     sb->addWidget(m_locationLabel, 1);
+
+    // A running operation: what, how far, and a way to stop it.
+    m_jobLabel = new QLabel;
+    m_jobLabel->hide();
+    sb->addPermanentWidget(m_jobLabel);
+    m_jobCancel = new QToolButton;
+    m_jobCancel->setText(tr("Cancel"));
+    m_jobCancel->hide();
+    sb->addPermanentWidget(m_jobCancel);
 
     m_connectionDot = new QLabel;
     sb->addPermanentWidget(m_connectionDot);

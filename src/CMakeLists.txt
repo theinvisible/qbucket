@@ -50,6 +50,12 @@ add_library(qbucket_controllers STATIC
     controllers/BrowseController.cpp
     controllers/CapabilityController.h
     controllers/CapabilityController.cpp
+    controllers/Job.h
+    controllers/Job.cpp
+    controllers/Journal.h
+    controllers/Journal.cpp
+    controllers/OperationController.h
+    controllers/OperationController.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h
@@ -113,6 +119,8 @@ add_library(qbucket_app_ui STATIC
     ui/MainWindow.cpp
     ui/ObjectBrowser.h
     ui/ObjectBrowser.cpp
+    ui/OperationPreviewDialog.h
+    ui/OperationPreviewDialog.cpp
     ui/ObjectRowDelegate.h
     ui/ObjectRowDelegate.cpp
     ui/PathBar.h

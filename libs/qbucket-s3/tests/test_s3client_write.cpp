@@ -104,6 +104,7 @@ private Q_SLOTS:
         QVERIFY2(r, qPrintable(r ? QString() : r.error().toString()));
         QCOMPARE(r->etag, QStringLiteral("\"e1\""));
         QCOMPARE(r->versionId, QStringLiteral("v7"));
+        QVERIFY(r->requestId.startsWith(QLatin1String("FAKE")));   // for the journal
 
         const RecordedRequest req = m_server->requests().first();
         QCOMPARE(req.path, QByteArray("/bkt/dir/file%20name.bin"));

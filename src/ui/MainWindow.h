@@ -21,6 +21,9 @@ class AccountSessions;
 class ActivityLog;
 class CapabilityController;
 class CapabilityStore;
+class Job;
+class Journal;
+class OperationController;
 class AccountSidebar;
 class DetailPane;
 class ObjectBrowser;
@@ -59,6 +62,9 @@ private:
     void updateNavigation_();
     void updateStatus_();
     void showCapabilities_();
+    void connectOperations_();
+    void updateJobStatus_();
+    void showJobReport_(Job* job);
     void restoreWindowState_();
     void saveWindowState_();
 
@@ -77,6 +83,8 @@ private:
     ActivityLog*        m_activity = nullptr;
     CapabilityStore*    m_capStore = nullptr;
     CapabilityController* m_capabilities = nullptr;
+    Journal*            m_journal = nullptr;
+    OperationController* m_operations = nullptr;
 
     // Menu actions
     QMenu*        m_editMenu        = nullptr;
@@ -125,6 +133,8 @@ private:
 
     // Status bar
     QLabel* m_locationLabel   = nullptr;
+    QLabel* m_jobLabel        = nullptr;
+    QToolButton* m_jobCancel  = nullptr;
     QLabel* m_connectionDot   = nullptr;
     QLabel* m_connectionLabel = nullptr;
 };

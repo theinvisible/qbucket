@@ -98,11 +98,13 @@ struct PutObjectParams {
 struct PutObjectResult {
     QString etag;
     QString versionId;                    // versioned buckets only
+    QString requestId;                    // x-amz-request-id, for the journal
 };
 
 struct DeleteObjectResult {
     QString versionId;                    // version removed, or of the new delete marker
     bool deleteMarker = false;            // a delete marker was created / removed
+    QString requestId;                    // x-amz-request-id, for the journal
 };
 
 struct CreateBucketParams {
@@ -131,6 +133,7 @@ struct DeleteObjectsResult {
     };
     QList<Deleted> deleted;
     QList<Failed> failed;
+    QString requestId;        // x-amz-request-id of the batch, for the journal
 };
 
 } // namespace qbucket::s3

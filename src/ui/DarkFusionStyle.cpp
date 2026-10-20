@@ -118,6 +118,8 @@ QPushButton:disabled { color: @text3@; }
 QPushButton:default, QPushButton#primary { background: @accent@; color: @accentFg@; border-color: transparent; }
 QPushButton:default:hover, QPushButton#primary:hover { background: @accentHover@; }
 QPushButton#ghost { background: transparent; border-color: transparent; }
+QPushButton#danger { background: @danger@; color: #ffffff; border-color: transparent; }
+QPushButton#danger:disabled { background: @panel2@; color: @text3@; border-color: @borderStrong@; }
 QPushButton#ghost:hover { background: @hover@; }
 
 /* ---- Item views (sidebar tree, object list) ---- */

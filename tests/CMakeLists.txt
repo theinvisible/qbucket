@@ -132,8 +132,22 @@ qbucket_add_test(test_capabilities_dialog
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_operation_controller
+    test_operation_controller.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui
     qbucket::s3_testsupport
 )
+
+# --- Static checks -----------------------------------------------------------
+# The mutation gate (PLAN.md §12.1): writing S3 calls only in src/controllers/.
+if(UNIX)
+    add_test(NAME mutation_gate
+             COMMAND sh ${CMAKE_SOURCE_DIR}/tools/check-mutation-gate.sh
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endif()

@@ -439,6 +439,7 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
         PutObjectResult out;
         out.etag = QString::fromLatin1(r.header("etag"));
         out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+        out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
         return Result<PutObjectResult>(out);
     });
 }
@@ -460,6 +461,7 @@ quint64 S3Client::deleteObject(const QString& bucket, const QString& key, const 
         DeleteObjectResult out;
         out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
         out.deleteMarker = r.header("x-amz-delete-marker") == "true";
+        out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
         return Result<DeleteObjectResult>(out);
     });
 }
@@ -498,6 +500,7 @@ quint64 S3Client::deleteObjects(const QString& bucket, const QList<ObjectIdentif
         Result<DeleteObjectsResult> parsed = xml::parseDeleteResult(r.body);
         if (!parsed)
             return parsed;
+        parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
         // Every requested key must be accounted for.
         QSet<QPair<QString, QString>> reported;
         for (const auto& d : parsed->deleted)

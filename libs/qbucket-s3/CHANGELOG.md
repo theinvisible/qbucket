@@ -40,6 +40,8 @@ version bump may break the API.
 - `SessionOptions::initialClockOffsetSecs` (carry a learned offset over).
 - `ObjectMeta::responseHeaders`: every header of the HeadObject / GetObject
   answer, as received.
+- `requestId` in `PutObjectResult`, `DeleteObjectResult` and
+  `DeleteObjectsResult` (`x-amz-request-id`, for audit journals).
 
 ### Fixed
 
