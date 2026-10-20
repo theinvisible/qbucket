@@ -1,0 +1,15 @@
+# Normalise line endings in the repository (LF), check out natively.
+* text=auto
+
+# Files whose consumers insist on a specific ending.
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.desktop   text eol=lf
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# Binary assets.
+*.png  binary
+*.ico  binary
+*.qm   binary

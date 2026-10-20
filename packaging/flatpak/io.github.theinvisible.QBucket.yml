@@ -1,0 +1,47 @@
+# Flatpak manifest for QBucket.
+#
+# Local build (from the repository root):
+#   flatpak-builder --user --install --force-clean build-flatpak \
+#       packaging/flatpak/io.github.theinvisible.QBucket.yml
+#   flatpak run io.github.theinvisible.QBucket
+#
+# The runtime brings Qt; our CMake finds it via find_package() inside the SDK.
+# Keep runtime-version on a supported KDE branch (Qt >= 6.5).
+id: io.github.theinvisible.QBucket
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+command: qbucket
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # S3 endpoints (from M1 on).
+  - --share=network
+  # Default download target; everything else goes through the FileChooser
+  # portal — no blanket home access (PLAN.md §9).
+  - --filesystem=xdg-download
+
+cleanup:
+  - /include
+  - /lib/cmake
+  - '*.a'
+
+modules:
+  - name: qbucket
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DQBUCKET_BUILD_TESTS=OFF
+    sources:
+      - type: dir
+        path: ../..
+        skip:
+          - build
+          - build-flatpak
+          - .flatpak-builder
+          - cmake-build-debug
+          - cmake-build-release

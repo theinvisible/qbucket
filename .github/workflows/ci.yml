@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # 6.11.x repo layout broke aqtinstall 3.3.0 (see xyz-profiler); stay on the
+  # last known-good 6.10 release until a fixed aqtinstall ships.
+  QT_VERSION: 6.10.2
+
+jobs:
+  # ---------------------------------------------------------------------------
+  windows:
+    name: Windows (MSVC, Release)
+    # Pinned: windows-latest moved to a VS-2026 image that lacks the VS 2022
+    # layout Qt's msvc2022 binaries and msvc-dev-cmd expect.
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Setup MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQBUCKET_WARNINGS_AS_ERRORS=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      # windeployqt already staged the Qt runtime next to qbucket.exe
+      # (POST_BUILD in src/CMakeLists.txt).
+      - name: Package ZIP
+        shell: pwsh
+        run: |
+          $stage = "stage/qbucket"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "build/qbucket.exe" $stage
+          Get-ChildItem "build/*.dll" -File | Copy-Item -Destination $stage
+          foreach ($d in 'platforms','imageformats','iconengines','styles',
+                         'tls','generic','networkinformation','translations') {
+            if (Test-Path "build/$d") { Copy-Item "build/$d" $stage -Recurse -Force }
+          }
+          Copy-Item LICENSE $stage
+          $sha = "${{ github.sha }}".Substring(0,7)
+          $zip = "qbucket-windows-x64-$sha.zip"
+          Compress-Archive -Path "stage/qbucket" -DestinationPath $zip -Force
+          "ZIP=$zip" | Out-File -Append $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qbucket-windows-x64
+          path: ${{ env.ZIP }}
+          if-no-files-found: error
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  linux:
+    name: Linux (GCC, Release)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev \
+            libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQBUCKET_WARNINGS_AS_ERRORS=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  sanitizers:
+    name: Linux (ASan + UBSan, Debug)
+    runs-on: ubuntu-24.04
+    env:
+      # Leak reports from fontconfig / the platform plugin are noise for now;
+      # memory errors and UB are what this job is for.
+      ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev \
+            libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DQBUCKET_WARNINGS_AS_ERRORS=ON -DQBUCKET_SANITIZERS=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang clang-tidy libgl1-mesa-dev \
+            libxkbcommon-dev libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Configure (clang)
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+      # Build first: moc/uic/rcc output must exist for clang-tidy to parse.
+      - name: Build
+        run: cmake --build build -j
+
+      - name: clang-tidy
+        run: >
+          run-clang-tidy -p build -quiet
+          '^(?!.*_autogen).*/(src|tests)/.*\.cpp$'
+
+  # ---------------------------------------------------------------------------
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-24.04
+    container:
+      # Tag must match runtime-version in the manifest.
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: qbucket.flatpak
+          manifest-path: packaging/flatpak/io.github.theinvisible.QBucket.yml
+          cache-key: flatpak-builder-${{ github.sha }}

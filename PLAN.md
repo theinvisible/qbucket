@@ -32,7 +32,7 @@ the robustness work from §12).
 
 | Topic | Decision | Why |
 |---|---|---|
-| Language / UI | C++20, Qt 6.5+ Widgets, CMake ≥ 3.21 | Same stack as xyz-profiler; tables, trees, forms, D&D are built in |
+| Language / UI | C++20, Qt 6.5+ Widgets, CMake ≥ 3.22 | Same stack as xyz-profiler; tables, trees, forms, D&D are built in |
 | S3 client | **Own client on `QNetworkAccessManager`** — SigV4 signer + `QXmlStreamReader` parsers | Async Qt-native networking that runs on worker threads (one QNAM per thread), no aws-sdk-cpp build pain, full control over provider quirks |
 | TLS | Qt's default backend (Schannel on Windows, OpenSSL on Linux) | Nothing extra to ship on Windows |
 | Secrets | **All passwords / secret keys via QtKeychain** (FetchContent) → Windows Credential Manager, Secret Service / KWallet on Linux. Wrapped in `SecretStore`; **no plaintext fallback** | Never store secrets in the INI, a JSON file or the resume store |
@@ -531,10 +531,13 @@ Copy, rename namespace, keep tokens 1:1:
 Each milestone ends with: ctest green, a usable build, and `CLAUDE.md` status
 updated.
 
-### M0 — Skeleton & design system — **M** (2–3 days)
+### M0 — Skeleton & design system — **M** (2–3 days) — ✅ done (devlog 001)
 
-- CMake top-level with the Qt auto-detection from xyz-profiler; FetchContent
-  for QtKeychain; `qt_standard_project_setup`, AUTOMOC/RCC/UIC
+- CMake top-level with the Qt auto-detection from xyz-profiler;
+  `qt_standard_project_setup`, AUTOMOC/RCC/UIC. *(QtKeychain moved to M1,
+  where `SecretStore` first uses it — it brings libsecret into the Linux and
+  Flatpak builds, which is better validated together with the code that
+  needs it.)*
 - Port `Theme`, `DarkFusionStyle`, `IconFactory` + new icons
 - `SettingsController` (theme, window/splitter state with the 300 ms debounce)
 - Empty `MainWindow` with the full layout from §4 (placeholder models),
@@ -587,6 +590,8 @@ theme switches live, CI is green.
 - **Hetzner capability matrix**: docs + probing against a real Hetzner
   project → `docs/providers/hetzner.md` + `HetznerProfile::capabilities()`;
   capture Hetzner response fixtures for the parser tests
+- QtKeychain via FetchContent (moved here from M0), incl. libsecret in the
+  Linux CI and the Flatpak manifest
 - `AccountStore` + `SecretStore` (QtKeychain): every secret — secret access
   key, session token, proxy password — goes through `SecretStore` only.
   QtKeychain jobs are async, which fits the event-loop model: the session

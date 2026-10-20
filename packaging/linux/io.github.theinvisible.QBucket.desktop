@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=QBucket
+GenericName=S3 Browser
+GenericName[de]=S3-Browser
+Comment=Browse and manage S3-compatible object storage
+Comment[de]=S3-kompatiblen Object Storage durchsuchen und verwalten
+Exec=qbucket
+Icon=io.github.theinvisible.QBucket
+Terminal=false
+Categories=Network;FileTransfer;Utility;Qt;
+Keywords=S3;object storage;bucket;cloud;Hetzner;Ceph;
+Keywords[de]=S3;Object Storage;Bucket;Cloud;Hetzner;Ceph;
+StartupNotify=true
+StartupWMClass=qbucket

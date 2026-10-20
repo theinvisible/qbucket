@@ -1,0 +1,25 @@
+# clang-tidy configuration (enforced in CI, see .github/workflows/ci.yml).
+#
+# Deliberately a focused set: bug patterns, the static analyzer and
+# performance checks. Style-only checks are left out on purpose.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-exception-escape,
+  clang-analyzer-*,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
+  performance-*,
+  -performance-enum-size,
+  modernize-use-nullptr,
+  modernize-use-override,
+  readability-misleading-indentation,
+  readability-redundant-smartptr-get
+
+# Qt parent/child ownership is invisible to the analyzer, which is why
+# clang-analyzer-cplusplus.NewDeleteLeaks is off.
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(src|tests)/.*'
+FormatStyle: none

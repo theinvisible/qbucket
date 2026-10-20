@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata for Flathub / software centres.
+     Validate with: appstreamcli validate io.github.theinvisible.QBucket.metainfo.xml -->
+<component type="desktop-application">
+  <id>io.github.theinvisible.QBucket</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>QBucket</name>
+  <summary>Browse and manage S3-compatible object storage</summary>
+
+  <developer id="io.github.theinvisible">
+    <name>René Hadler</name>
+  </developer>
+
+  <description>
+    <p>
+      QBucket is a native desktop browser for Amazon S3 and S3-compatible
+      object storage such as Hetzner Object Storage, Ceph RGW and others.
+    </p>
+    <p>
+      It is built for working with production data: every destructive
+      operation is planned, previewed and verified, features the server does
+      not support are detected automatically and cannot be triggered, and the
+      interface stays responsive even with millions of objects.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.theinvisible.QBucket.desktop</launchable>
+  <icon type="stock">io.github.theinvisible.QBucket</icon>
+
+  <url type="homepage">https://github.com/theinvisible/qbucket</url>
+  <url type="bugtracker">https://github.com/theinvisible/qbucket/issues</url>
+  <url type="vcs-browser">https://github.com/theinvisible/qbucket</url>
+
+  <categories>
+    <category>Network</category>
+    <category>FileTransfer</category>
+  </categories>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-20" type="development">
+      <description>
+        <p>Project skeleton: main window layout, light and dark theme.</p>
+      </description>
+    </release>
+  </releases>
+</component>

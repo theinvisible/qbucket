@@ -1,0 +1,593 @@
+#include "ui/MainWindow.h"
+
+#include "controllers/SettingsController.h"
+#include "ui/IconFactory.h"
+#include "ui/SettingsDialog.h"
+#include "ui/Theme.h"
+#include "ui/ThemeManager.h"
+
+#include <QAction>
+#include <QActionGroup>
+#include <QApplication>
+#include <QButtonGroup>
+#include <QCloseEvent>
+#include <QDockWidget>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMenuBar>
+#include <QMessageBox>
+#include <QPainter>
+#include <QPushButton>
+#include <QRegularExpression>
+#include <QSplitter>
+#include <QStackedWidget>
+#include <QStandardItemModel>
+#include <QStatusBar>
+#include <QTabBar>
+#include <QTabWidget>
+#include <QTimer>
+#include <QToolBar>
+#include <QToolButton>
+#include <QTreeView>
+#include <QVBoxLayout>
+
+namespace qbucket {
+namespace {
+
+// On Windows, QKeySequence::Quit and QKeySequence::Preferences don't resolve
+// to a key chord — they map to the named system keys Qt::Key_Exit /
+// Qt::Key_Settings, whose text is the bare word "Exit" / "Settings". A QMenu
+// paints that word in the item's shortcut column, and with the German Qt
+// translation loaded the entry looks doubled ("Einstellungen … Einstellungen").
+// Keep the shortcut only when it carries a modifier or is a function key
+// (Linux's Ctrl+Q, F5); drop the bare named-key sequences. (xyz-profiler
+// lesson — don't go back to a bare setShortcut() for standard keys.)
+void setStandardShortcut(QAction* action, QKeySequence::StandardKey key)
+{
+    const QString portable = QKeySequence(key).toString(QKeySequence::PortableText);
+    static const QRegularExpression fnKey(QStringLiteral("^F\\d+$"));
+    if (portable.contains(QLatin1Char('+')) || fnKey.match(portable).hasMatch())
+        action->setShortcut(key);
+}
+
+QToolButton* makeIconButton(const QString& tooltip)
+{
+    auto* btn = new QToolButton;
+    btn->setObjectName(QStringLiteral("tbIcon"));
+    btn->setToolTip(tooltip);
+    return btn;
+}
+
+QLabel* makeEmptyState(const QString& text)
+{
+    auto* label = new QLabel(text);
+    label->setObjectName(QStringLiteral("emptyState"));
+    label->setAlignment(Qt::AlignCenter);
+    label->setWordWrap(true);
+    return label;
+}
+
+QPixmap statusDot(const QColor& color, qreal dpr)
+{
+    constexpr int kSize = 10;
+    QPixmap pm(QSize(kSize, kSize) * dpr);
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing, true);
+    p.setPen(Qt::NoPen);
+    p.setBrush(color);
+    p.drawEllipse(QRectF(1, 1, kSize - 2, kSize - 2));
+    return pm;
+}
+
+constexpr int kSidebarWidth = 250;
+constexpr int kDetailWidth  = 400;
+
+} // namespace
+
+MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
+                       QWidget* parent)
+    : QMainWindow(parent),
+      m_settings(settings),
+      m_theme(theme)
+{
+    setWindowTitle(QStringLiteral("QBucket"));
+
+    buildMenuBar_();
+    buildToolBar_();
+    buildCentralWidget_();
+    buildTransferDock_();
+    buildStatusBar_();
+    connectSettings_();
+    restoreWindowState_();
+
+    applyBrowseMode_();
+    applyThemeChoice_();
+    refreshIcons_();
+}
+
+// ---------------------------------------------------------------------------
+// Menu bar
+// ---------------------------------------------------------------------------
+void MainWindow::buildMenuBar_()
+{
+    auto* mb = menuBar();
+
+    auto* file = mb->addMenu(tr("&File"));
+    m_actAddAccount = file->addAction(tr("Add &Account…"));
+    m_actAddAccount->setEnabled(false);
+    file->addSeparator();
+    m_actQuit = file->addAction(tr("&Quit"), qApp, &QApplication::quit);
+    setStandardShortcut(m_actQuit, QKeySequence::Quit);
+
+    auto* view = mb->addMenu(tr("&View"));
+    m_viewMenu = view;
+    m_browseModeGroup = new QActionGroup(this);
+    m_actFolders  = view->addAction(tr("&Folders"));
+    m_actFlat     = view->addAction(tr("F&lat Listing"));
+    m_actVersions = view->addAction(tr("&Versions"));
+    const QList<QPair<QAction*, QString>> modes = {
+        {m_actFolders,  QStringLiteral("folders")},
+        {m_actFlat,     QStringLiteral("flat")},
+        {m_actVersions, QStringLiteral("versions")},
+    };
+    for (const auto& entry : modes) {
+        QAction* action = entry.first;
+        const QString mode = entry.second;
+        action->setCheckable(true);
+        action->setData(mode);
+        m_browseModeGroup->addAction(action);
+        connect(action, &QAction::triggered, this,
+                [this, mode] { m_settings->setBrowseMode(mode); });
+    }
+
+    view->addSeparator();
+    auto* themeMenu = view->addMenu(tr("&Theme"));
+    m_themeGroup = new QActionGroup(this);
+    m_actThemeDark   = themeMenu->addAction(tr("&Dark"));
+    m_actThemeLight  = themeMenu->addAction(tr("&Light"));
+    m_actThemeSystem = themeMenu->addAction(tr("Follow &System"));
+    const QList<QPair<QAction*, QString>> themes = {
+        {m_actThemeDark,   QStringLiteral("Dark")},
+        {m_actThemeLight,  QStringLiteral("Light")},
+        {m_actThemeSystem, QStringLiteral("System")},
+    };
+    for (const auto& entry : themes) {
+        QAction* action = entry.first;
+        const QString name = entry.second;
+        action->setCheckable(true);
+        action->setData(name);
+        m_themeGroup->addAction(action);
+        connect(action, &QAction::triggered, this,
+                [this, name] { m_settings->setThemeName(name); });
+    }
+    // The transfer-panel toggle is appended once the dock exists
+    // (buildTransferDock_).
+    view->addSeparator();
+
+    auto* tools = mb->addMenu(tr("&Tools"));
+    m_actSettings = tools->addAction(tr("&Settings…"),
+                                     this, &MainWindow::showSettingsDialog_);
+    setStandardShortcut(m_actSettings, QKeySequence::Preferences);
+
+    auto* help = mb->addMenu(tr("&Help"));
+    m_actAbout   = help->addAction(tr("&About QBucket…"), this, &MainWindow::showAbout_);
+    m_actAboutQt = help->addAction(tr("About &Qt…"), qApp, &QApplication::aboutQt);
+}
+
+// ---------------------------------------------------------------------------
+// Toolbar
+// ---------------------------------------------------------------------------
+void MainWindow::buildToolBar_()
+{
+    auto* tb = addToolBar(tr("Main"));
+    tb->setObjectName(QStringLiteral("mainToolBar"));   // for saveState()
+    tb->setMovable(false);
+    tb->setFloatable(false);
+    tb->setIconSize(QSize(16, 16));
+
+    const auto spacer = [](int width = -1) {
+        auto* w = new QWidget;
+        if (width < 0)
+            w->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        else
+            w->setFixedWidth(width);
+        return w;
+    };
+
+    // Primary action. Every mutating action stays disabled until the S3
+    // milestones wire it through the OperationController (PLAN.md §12.1).
+    m_uploadBtn = new QToolButton;
+    m_uploadBtn->setObjectName(QStringLiteral("tbPrimary"));
+    m_uploadBtn->setText(tr("Upload"));
+    m_uploadBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_uploadBtn->setToolTip(tr("Upload files or folders to the current location"));
+    m_uploadBtn->setEnabled(false);
+    tb->addWidget(m_uploadBtn);
+
+    m_downloadBtn = makeIconButton(tr("Download the selection"));
+    m_downloadBtn->setEnabled(false);
+    tb->addWidget(m_downloadBtn);
+
+    m_newFolderBtn = makeIconButton(tr("New folder"));
+    m_newFolderBtn->setEnabled(false);
+    tb->addWidget(m_newFolderBtn);
+
+    m_deleteBtn = makeIconButton(tr("Delete the selection"));
+    m_deleteBtn->setEnabled(false);
+    tb->addWidget(m_deleteBtn);
+
+    tb->addWidget(spacer(14));
+
+    m_backBtn = makeIconButton(tr("Back"));
+    m_backBtn->setEnabled(false);
+    tb->addWidget(m_backBtn);
+
+    m_forwardBtn = makeIconButton(tr("Forward"));
+    m_forwardBtn->setEnabled(false);
+    tb->addWidget(m_forwardBtn);
+
+    m_upBtn = makeIconButton(tr("Up one level"));
+    m_upBtn->setEnabled(false);
+    tb->addWidget(m_upBtn);
+
+    m_refreshBtn = makeIconButton(tr("Refresh"));
+    m_refreshBtn->setEnabled(false);
+    tb->addWidget(m_refreshBtn);
+
+    tb->addWidget(spacer());
+
+    m_filterField = new QLineEdit;
+    m_filterField->setObjectName(QStringLiteral("filterField"));
+    m_filterField->setPlaceholderText(tr("Filter this folder…"));
+    m_filterField->setClearButtonEnabled(true);
+    m_filterField->setMinimumWidth(220);
+    m_filterField->setMaximumWidth(340);
+    m_filterField->setEnabled(false);
+    m_filterIcon = m_filterField->addAction(QIcon(), QLineEdit::LeadingPosition);
+    tb->addWidget(m_filterField);
+
+    tb->addWidget(spacer());
+
+    // Segmented browse-mode control: Folders | Flat | Versions.
+    auto* seg = new QWidget;
+    seg->setObjectName(QStringLiteral("viewSeg"));
+    auto* segLay = new QHBoxLayout(seg);
+    segLay->setContentsMargins(2, 2, 2, 2);
+    segLay->setSpacing(2);
+    m_browseSeg = new QButtonGroup(this);
+    m_browseSeg->setExclusive(true);
+    const QList<QPair<QString, QString>> segments = {
+        {QStringLiteral("folders"),  tr("Folders")},
+        {QStringLiteral("flat"),     tr("Flat")},
+        {QStringLiteral("versions"), tr("Versions")},
+    };
+    for (const auto& entry : segments) {
+        const QString mode = entry.first;
+        const QString& label = entry.second;
+        auto* btn = new QToolButton;
+        btn->setObjectName(QStringLiteral("segText"));
+        btn->setText(label);
+        btn->setCheckable(true);
+        btn->setProperty("browseMode", mode);
+        m_browseSeg->addButton(btn);
+        segLay->addWidget(btn);
+        connect(btn, &QToolButton::clicked, this,
+                [this, mode] { m_settings->setBrowseMode(mode); });
+    }
+    seg->setToolTip(tr("Folders: browse by prefix · Flat: every key below the "
+                       "current prefix · Versions: all object versions"));
+    tb->addWidget(seg);
+
+    tb->addWidget(spacer(8));
+
+    m_themeBtn = makeIconButton(tr("Toggle light / dark"));
+    connect(m_themeBtn, &QToolButton::clicked, this, [this] {
+        m_settings->setThemeName(m_theme->isDark() ? QStringLiteral("Light")
+                                                   : QStringLiteral("Dark"));
+    });
+    tb->addWidget(m_themeBtn);
+
+    m_settingsBtn = makeIconButton(tr("Settings"));
+    connect(m_settingsBtn, &QToolButton::clicked, this, &MainWindow::showSettingsDialog_);
+    tb->addWidget(m_settingsBtn);
+}
+
+// ---------------------------------------------------------------------------
+// Central widget: sidebar | object area | detail pane
+// ---------------------------------------------------------------------------
+void MainWindow::buildCentralWidget_()
+{
+    m_splitter = new QSplitter(Qt::Horizontal);
+    m_splitter->setObjectName(QStringLiteral("mainSplitter"));
+    m_splitter->setChildrenCollapsible(false);
+    m_splitter->addWidget(buildSidebar_());
+    m_splitter->addWidget(buildObjectArea_());
+    m_splitter->addWidget(buildDetailPane_());
+    m_splitter->setStretchFactor(0, 0);
+    m_splitter->setStretchFactor(1, 1);
+    m_splitter->setStretchFactor(2, 0);
+    m_splitter->setSizes({kSidebarWidth, 800, kDetailWidth});
+    setCentralWidget(m_splitter);
+
+    const QByteArray splitState = QByteArray::fromBase64(
+        m_settings->mainSplitterState().toLatin1());
+    if (!splitState.isEmpty())
+        m_splitter->restoreState(splitState);
+
+    // Debounced: splitterMoved fires per mouse pixel, and persisting goes
+    // through QSettings::sync() — a synchronous INI rewrite. Save once,
+    // shortly after the drag settles (xyz-profiler lesson).
+    auto* splitterSave = new QTimer(this);
+    splitterSave->setSingleShot(true);
+    splitterSave->setInterval(300);
+    const auto persistSplitter = [this] {
+        m_settings->setMainSplitterState(
+            QString::fromLatin1(m_splitter->saveState().toBase64()));
+    };
+    connect(splitterSave, &QTimer::timeout, this, persistSplitter);
+    connect(m_splitter, &QSplitter::splitterMoved, splitterSave,
+            qOverload<>(&QTimer::start));
+    // A drag followed by an immediate quit must not lose the new position.
+    connect(qApp, &QCoreApplication::aboutToQuit, this,
+            [splitterSave, persistSplitter] {
+        if (splitterSave->isActive()) {
+            splitterSave->stop();
+            persistSplitter();
+        }
+    });
+}
+
+QWidget* MainWindow::buildSidebar_()
+{
+    auto* sidebar = new QWidget;
+    sidebar->setObjectName(QStringLiteral("sidebar"));
+    sidebar->setMinimumWidth(180);
+    auto* lay = new QVBoxLayout(sidebar);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(0);
+
+    auto* header = new QLabel(tr("ACCOUNTS"));
+    header->setObjectName(QStringLiteral("sectionHeader"));
+    lay->addWidget(header);
+
+    // Accounts → buckets. Placeholder model until AccountTreeModel (M2).
+    m_accountTree = new QTreeView;
+    m_accountTree->setHeaderHidden(true);
+    m_accountTree->setModel(new QStandardItemModel(this));
+    m_accountTree->setVisible(false);
+    lay->addWidget(m_accountTree, 1);
+
+    auto* empty = makeEmptyState(tr("No accounts yet."));
+    lay->addWidget(empty, 1);
+
+    auto* addBtn = new QPushButton(tr("Add Account…"));
+    addBtn->setObjectName(QStringLiteral("ghost"));
+    addBtn->setEnabled(false);
+    addBtn->setToolTip(tr("Not available yet"));
+    auto* btnRow = new QHBoxLayout;
+    btnRow->setContentsMargins(10, 6, 10, 12);
+    btnRow->addWidget(addBtn);
+    lay->addLayout(btnRow);
+
+    return sidebar;
+}
+
+QWidget* MainWindow::buildObjectArea_()
+{
+    auto* area = new QWidget;
+    area->setMinimumWidth(360);
+    auto* lay = new QVBoxLayout(area);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(0);
+
+    // Path bar. A clickable breadcrumb (PathBar) replaces this label in M2.
+    auto* pathBar = new QWidget;
+    pathBar->setObjectName(QStringLiteral("pathBar"));
+    auto* pathLay = new QHBoxLayout(pathBar);
+    pathLay->setContentsMargins(0, 0, 0, 0);
+    m_pathText = new QLabel(tr("No location"));
+    m_pathText->setObjectName(QStringLiteral("pathText"));
+    pathLay->addWidget(m_pathText);
+    lay->addWidget(pathBar);
+
+    m_objectStack = new QStackedWidget;
+
+    // Index 0: empty state.
+    m_objectStack->addWidget(
+        makeEmptyState(tr("Add an account to start browsing your buckets.")));
+
+    // Index 1: object list. Placeholder model until ObjectTableModel (M2).
+    // Column widths are fixed + Interactive on purpose: ResizeToContents is
+    // O(rows) per resize, fatal with 100k-row listings (xyz-profiler lesson).
+    auto* model = new QStandardItemModel(0, 4, this);
+    model->setHorizontalHeaderLabels(
+        {tr("Name"), tr("Size"), tr("Last Modified"), tr("Storage Class")});
+    m_objectView = new QTreeView;
+    m_objectView->setModel(model);
+    m_objectView->setRootIsDecorated(false);
+    m_objectView->setUniformRowHeights(true);
+    m_objectView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_objectView->setAllColumnsShowFocus(true);
+    auto* header = m_objectView->header();
+    header->setStretchLastSection(false);
+    header->setSectionResizeMode(0, QHeaderView::Stretch);
+    for (int col = 1; col < 4; ++col)
+        header->setSectionResizeMode(col, QHeaderView::Interactive);
+    header->resizeSection(1, 110);
+    header->resizeSection(2, 170);
+    header->resizeSection(3, 130);
+    m_objectStack->addWidget(m_objectView);
+
+    m_objectStack->setCurrentIndex(0);
+    lay->addWidget(m_objectStack, 1);
+    return area;
+}
+
+QWidget* MainWindow::buildDetailPane_()
+{
+    auto* pane = new QWidget;
+    pane->setObjectName(QStringLiteral("detailPane"));
+    pane->setMinimumWidth(260);
+    auto* lay = new QVBoxLayout(pane);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(0);
+
+    auto* title = new QLabel(tr("Details"));
+    title->setObjectName(QStringLiteral("paneTitle"));
+    lay->addWidget(title);
+
+    auto* tabs = new QTabWidget;
+    tabs->setDocumentMode(true);
+    tabs->tabBar()->setExpanding(false);
+    const QStringList tabNames = {
+        tr("Properties"), tr("Metadata"), tr("Tags"), tr("Versions"), tr("Access"),
+    };
+    for (const QString& name : tabNames)
+        tabs->addTab(makeEmptyState(tr("Select an object to see its details.")), name);
+    lay->addWidget(tabs, 1);
+    return pane;
+}
+
+// ---------------------------------------------------------------------------
+// Transfer dock
+// ---------------------------------------------------------------------------
+void MainWindow::buildTransferDock_()
+{
+    m_transferDock = new QDockWidget(tr("Transfers"), this);
+    m_transferDock->setObjectName(QStringLiteral("transferDock"));   // saveState()
+    m_transferDock->setAllowedAreas(Qt::BottomDockWidgetArea);
+    m_transferDock->setFeatures(QDockWidget::DockWidgetClosable);
+
+    auto* tabs = new QTabWidget;
+    tabs->setDocumentMode(true);
+    tabs->addTab(makeEmptyState(tr("No transfers.")), tr("Transfers"));
+    tabs->addTab(makeEmptyState(tr("No activity yet.")), tr("Log"));
+    tabs->setMinimumHeight(120);
+    m_transferDock->setWidget(tabs);
+    addDockWidget(Qt::BottomDockWidgetArea, m_transferDock);
+
+    // View → Transfers panel toggle (appended to the View menu).
+    QAction* toggle = m_transferDock->toggleViewAction();
+    toggle->setText(tr("&Transfers Panel"));
+    m_viewMenu->addAction(toggle);
+}
+
+// ---------------------------------------------------------------------------
+// Status bar
+// ---------------------------------------------------------------------------
+void MainWindow::buildStatusBar_()
+{
+    auto* sb = statusBar();
+    sb->setSizeGripEnabled(false);
+
+    m_locationLabel = new QLabel(tr("Not connected"));
+    sb->addWidget(m_locationLabel, 1);
+
+    m_connectionDot = new QLabel;
+    sb->addPermanentWidget(m_connectionDot);
+    m_connectionLabel = new QLabel(tr("Offline"));
+    sb->addPermanentWidget(m_connectionLabel);
+}
+
+// ---------------------------------------------------------------------------
+// Settings & theme
+// ---------------------------------------------------------------------------
+void MainWindow::connectSettings_()
+{
+    connect(m_settings, &SettingsController::browseModeChanged,
+            this, &MainWindow::applyBrowseMode_);
+    connect(m_settings, &SettingsController::themeNameChanged,
+            this, &MainWindow::applyThemeChoice_);
+    connect(m_theme, &ThemeManager::themeChanged, this, [this] {
+        refreshIcons_();
+        if (m_objectView)  m_objectView->viewport()->update();
+        if (m_accountTree) m_accountTree->viewport()->update();
+    });
+}
+
+void MainWindow::applyBrowseMode_()
+{
+    const QString mode = m_settings->browseMode();
+    for (QAction* action : m_browseModeGroup->actions())
+        action->setChecked(action->data().toString() == mode);
+    for (QAbstractButton* btn : m_browseSeg->buttons())
+        btn->setChecked(btn->property("browseMode").toString() == mode);
+}
+
+void MainWindow::applyThemeChoice_()
+{
+    const QString name = m_settings->themeName();
+    for (QAction* action : m_themeGroup->actions())
+        action->setChecked(action->data().toString() == name);
+}
+
+void MainWindow::refreshIcons_()
+{
+    const Palette& p = Theme::current();
+    m_uploadBtn->setIcon(IconFactory::icon(QStringLiteral("upload"), p.accentFg, 16));
+    m_downloadBtn->setIcon(IconFactory::icon(QStringLiteral("download"), p.text2, 16));
+    m_newFolderBtn->setIcon(IconFactory::icon(QStringLiteral("folderPlus"), p.text2, 16));
+    m_deleteBtn->setIcon(IconFactory::icon(QStringLiteral("trash"), p.text2, 16));
+    m_backBtn->setIcon(IconFactory::icon(QStringLiteral("arrowLeft"), p.text2, 16));
+    m_forwardBtn->setIcon(IconFactory::icon(QStringLiteral("arrowRight"), p.text2, 16));
+    m_upBtn->setIcon(IconFactory::icon(QStringLiteral("arrowUp"), p.text2, 16));
+    m_refreshBtn->setIcon(IconFactory::icon(QStringLiteral("refresh"), p.text2, 16));
+    m_filterIcon->setIcon(IconFactory::icon(QStringLiteral("filter"), p.text3, 16));
+    m_settingsBtn->setIcon(IconFactory::icon(QStringLiteral("settings"), p.text2, 16));
+    m_themeBtn->setIcon(IconFactory::icon(
+        Theme::isDark() ? QStringLiteral("sun") : QStringLiteral("moon"), p.text2, 16));
+
+    m_connectionDot->setPixmap(statusDot(p.text3, devicePixelRatioF()));
+}
+
+void MainWindow::showSettingsDialog_()
+{
+    SettingsDialog dlg(m_settings, this);
+    dlg.exec();
+}
+
+void MainWindow::showAbout_()
+{
+    QMessageBox::about(this, tr("About QBucket"),
+        tr("<h3>QBucket %1</h3>"
+           "<p>A native browser for S3 and S3-compatible object storage.</p>"
+           "<p>Built with Qt %2 Widgets. Licensed under the MIT license.</p>")
+            .arg(QStringLiteral(QBUCKET_VERSION_STRING),
+                 QString::fromLatin1(qVersion())));
+}
+
+// ---------------------------------------------------------------------------
+// Window state
+// ---------------------------------------------------------------------------
+void MainWindow::restoreWindowState_()
+{
+    const QByteArray geometry = QByteArray::fromBase64(
+        m_settings->windowGeometry().toLatin1());
+    if (geometry.isEmpty() || !restoreGeometry(geometry))
+        resize(1400, 880);
+
+    const QByteArray state = QByteArray::fromBase64(
+        m_settings->windowState().toLatin1());
+    if (!state.isEmpty())
+        restoreState(state);
+}
+
+void MainWindow::saveWindowState_()
+{
+    // One-shot on close — not a per-event path, so the synchronous settings
+    // write is fine here.
+    m_settings->setWindowGeometry(QString::fromLatin1(saveGeometry().toBase64()));
+    m_settings->setWindowState(QString::fromLatin1(saveState().toBase64()));
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    saveWindowState_();
+    QMainWindow::closeEvent(event);
+}
+
+} // namespace qbucket

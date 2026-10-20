@@ -44,9 +44,33 @@ convenient):
 
 ## Status
 
-**Planning.** No code yet. The full plan — decisions, scope, architecture,
-milestones M0–M8, test strategy, protocol pitfalls — lives in **`PLAN.md`**.
-Start there, and update this section as milestones land.
+**M0 (skeleton) done** — devlog 001. The full plan — decisions, scope,
+architecture, milestones M0–M8, test strategy, protocol pitfalls — lives in
+**`PLAN.md`**. Start there, and update this section as milestones land.
+
+What exists:
+
+- CMake skeleton (Qt auto-detect, `qbucket::compile_options` with Qt
+  strictness defines, `/W4` / `-Wall -Wextra`, optional `-Werror` and
+  ASan/UBSan), static libs `qbucket_diagnostics`, `qbucket_controllers`,
+  `qbucket_ui_foundation`, `qbucket_app_ui`, executable `qbucket`
+- Design system ported from xyz-profiler: `ui/Theme`, `ui/DarkFusionStyle`,
+  `ui/IconFactory` (+ S3 icons), plus `ui/ThemeManager` (follows the OS
+  scheme live for "System")
+- `MainWindow` with the full §4 layout on placeholder models (every
+  mutating action disabled), `SettingsDialog` (Appearance),
+  `SettingsController` (theme, browse mode, window/splitter state with
+  debounce)
+- `diagnostics/StallWatchdog` (debug builds / `QBUCKET_STALL_WATCHDOG=1`)
+- German translation, app icon (`resources/make_icon.ps1` → `app.ico`, SVG
+  master for Linux), `.desktop` + AppStream metainfo, Flatpak manifest
+- CI: Windows, Linux, ASan/UBSan, clang-tidy, Flatpak
+  (`.github/workflows/ci.yml`)
+- 4 test binaries: ui foundation, settings, stall watchdog, main window
+
+Next: **M1** (library skeleton `libs/qbucket-s3`, SigV4, worker-thread
+client, provider profiles, capability prober, Docker test backends,
+QtKeychain) — developed on Linux.
 
 ## Devlog
 
@@ -60,7 +84,7 @@ Screenshots go to `docs/devlog/img/`.
 
 ## Stack
 
-- **Qt 6.5+** (local: `H:/Qt/6.12.0/msvc2022_64`), C++20, CMake ≥ 3.21
+- **Qt 6.5+** (local: `H:/Qt/6.12.0/msvc2022_64`), C++20, CMake ≥ 3.22
 - **UI: Qt Widgets** on Fusion with Dark / Light / System theming — design
   system ported from the sibling project **xyz-profiler**
   (`H:\DEV\CLion\xyz-profiler`: `ui/Theme`, `ui/DarkFusionStyle`,
@@ -84,6 +108,12 @@ ctest --test-dir build --output-on-failure
 
 The top-level `CMakeLists.txt` auto-detects Qt under `H:/Qt` / `C:/Qt` (same
 logic as xyz-profiler). Override with `-DCMAKE_PREFIX_PATH=...`.
+
+Test binaries land in `build/tests/` (not next to `qbucket.exe`, see the
+lessons below) and run on the `offscreen` platform. To refresh the devlog
+screenshots, run the window test on a real platform:
+`QT_QPA_PLATFORM=windows QBUCKET_SCREENSHOT_DIR=docs/devlog/img build/tests/test_main_window`
+(`xcb` / `wayland` on Linux).
 
 Integration tests against a real endpoint are opt-in via `QBUCKET_IT_*`
 environment variables (endpoint, region, access key, secret, bucket,
@@ -144,6 +174,24 @@ Each of these cost time there; don't relearn them.
   column enum value anywhere but at the end.
 - **Delegates never do I/O in `paint()`.** Anything that needs loading
   (thumbnails, lazy HEADs) goes async and triggers a repaint.
+
+## Lessons from QBucket itself
+
+- **`QApplication::style()->name()` is empty once a stylesheet is set** —
+  `style()` then returns Qt's `QStyleSheetStyle` proxy. The xyz-profiler
+  "install Fusion only once" check relied on the name and therefore
+  re-installed Fusion (full re-polish) on every theme switch.
+  `DarkFusionStyle` now remembers it in a static flag; the regression test
+  `themeSwitchKeepsTheStyleObject` guards it. (xyz-profiler likely still
+  has the bug.)
+- **Test executables must not share the app's output directory on
+  Windows.** windeployqt copies a trimmed Qt (only the `windows` platform
+  plugin) next to `qbucket.exe`; a test there can't load `offscreen` and
+  Qt aborts with a *modal* debug dialog. Tests build into `build/tests/`
+  and get Qt's `bin` via `ENVIRONMENT_MODIFICATION` (a plain `PATH=a;b` in
+  `ENVIRONMENT` is split as a CMake list).
+- **A `&` in a tab or button label is a mnemonic** — "Headers & Meta"
+  rendered as "Headers _Meta". Use `&&` or avoid the character.
 
 ## Production data — safety rules
 
