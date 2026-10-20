@@ -359,7 +359,7 @@ Result<QString> parseLocationConstraint(const QByteArray& body)
     QXmlStreamReader r(body);
     if (auto err = openRoot(r, QLatin1StringView("LocationConstraint")))
         return *err;
-    const QString value = r.readElementText().trimmed();
+    QString value = r.readElementText().trimmed();
     if (auto err = finish(r))
         return *err;
     return value;

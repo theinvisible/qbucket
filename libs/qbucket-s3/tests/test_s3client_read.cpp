@@ -89,7 +89,7 @@ private:
     FakeS3Server* m_server = nullptr;
     std::shared_ptr<RecordingObserver> m_observer;
 
-    std::unique_ptr<S3Client> makeClient(std::shared_ptr<CredentialsProvider> provider = {},
+    std::unique_ptr<S3Client> makeClient(const std::shared_ptr<CredentialsProvider>& provider = {},
                                          int maxResponseBytes = 64 * 1024 * 1024)
     {
         ClientConfig cfg;
@@ -394,7 +394,7 @@ private Q_SLOTS:
     {
         auto client = makeClient();
         bool called = false;
-        client->headBucket(QString(), [&](Result<void>) { called = true; });
+        client->headBucket(QString(), [&](const Result<void>&) { called = true; });
         QVERIFY(!called);   // validation error, still delivered later
         QTRY_VERIFY(called);
     }

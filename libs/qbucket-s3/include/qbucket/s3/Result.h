@@ -9,12 +9,23 @@
 
 namespace qbucket::s3 {
 
+namespace detail {
+// What error() returns when there is none: asserting in debug builds is
+// not enough — in release it must not be undefined behaviour either.
+inline const Error& noError()
+{
+    static const Error none = Error::make(ErrorCategory::Internal, QStringLiteral("no error"));
+    return none;
+}
+} // namespace detail
+
 // Result<T>: either a value or an Error — the library's only error channel
 // (no exceptions). Member names follow std::expected so a later move to C++23
 // is mechanical.
 //
-// Accessing value() on an error (or error() on a value) is a programming
-// error: it asserts in debug builds and is undefined behaviour otherwise.
+// Accessing value() on an error is a programming error: it asserts in debug
+// builds and is undefined behaviour otherwise. error() on a value asserts
+// too, but returns a harmless Internal error in release builds.
 //
 // Value type; reentrant.
 template <typename T>
@@ -52,12 +63,14 @@ public:
     [[nodiscard]] const Error& error() const&
     {
         Q_ASSERT(!has_value());
-        return *std::get_if<1>(&m_data);
+        const Error* e = std::get_if<1>(&m_data);
+        return e ? *e : detail::noError();
     }
-    [[nodiscard]] Error&& error() &&
+    [[nodiscard]] Error error() &&
     {
         Q_ASSERT(!has_value());
-        return std::move(*std::get_if<1>(&m_data));
+        Error* e = std::get_if<1>(&m_data);
+        return e ? std::move(*e) : detail::noError();
     }
 
     template <typename U>
@@ -108,12 +121,12 @@ public:
     [[nodiscard]] const Error& error() const&
     {
         Q_ASSERT(!has_value());
-        return *m_error;
+        return m_error ? *m_error : detail::noError();
     }
-    [[nodiscard]] Error&& error() &&
+    [[nodiscard]] Error error() &&
     {
         Q_ASSERT(!has_value());
-        return std::move(*m_error);
+        return m_error ? std::move(*m_error) : detail::noError();
     }
 
 private:

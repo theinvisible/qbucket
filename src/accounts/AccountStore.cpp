@@ -123,8 +123,11 @@ void AccountStore::load_()
 
 void AccountStore::sort_()
 {
+    // Case-insensitive first: the same order under every locale (the C
+    // locale would put "Zeta" before "alpha").
     std::sort(m_accounts.begin(), m_accounts.end(), [](const Account& a, const Account& b) {
-        return QString::localeAwareCompare(a.name, b.name) < 0;
+        const int c = a.name.compare(b.name, Qt::CaseInsensitive);
+        return c != 0 ? c < 0 : a.name < b.name;
     });
 }
 

@@ -405,7 +405,7 @@ bool RequestPipeline::handleFailure(const std::shared_ptr<Call>& call, const Raw
     //     the likelier cause — re-sign once with the server's time.
     if (error.httpStatus == 403 && error.code.isEmpty() && raw.body.isEmpty() && !call->skewRetried) {
         const QDateTime serverTime = parseHttpDate(raw.header("date"));
-        if (serverTime.isValid() && std::abs(correctedNow().secsTo(serverTime)) > 5 * 60) {
+        if (serverTime.isValid() && std::abs(correctedNow().secsTo(serverTime)) > 300) {   // 5 min
             const qint64 offset = QDateTime::currentDateTimeUtc().secsTo(serverTime);
             m_config.clockOffsetSecs->store(offset);
             qCWarning(lcSigning) << "bare 403 with a server clock" << offset << "s off: re-signing";
@@ -541,6 +541,7 @@ void RequestPipeline::abort(quint64 id)
 void RequestPipeline::abortAll()
 {
     std::vector<quint64> ids;
+    ids.reserve(m_calls.size());
     for (const auto& [id, call] : m_calls)
         ids.push_back(id);
     for (const quint64 id : ids)

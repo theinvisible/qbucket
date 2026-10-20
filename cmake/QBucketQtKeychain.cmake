@@ -46,6 +46,7 @@ function(qbucket_fetch_qtkeychain)
     set(BUILD_SHARED_LIBS OFF)
     set(BUILD_TRANSLATIONS OFF)
     set(BUILD_TEST_APPLICATION OFF)
+    set(BUILD_TESTING OFF)   # its autotest would join our ctest run, unbuilt
     FetchContent_Declare(qtkeychain
         GIT_REPOSITORY https://github.com/frankosterfeld/qtkeychain.git
         GIT_TAG        ad7344c45a86a4f66cbafc4b081b5f7b876cb0b7   # 0.15.0

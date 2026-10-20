@@ -120,7 +120,7 @@ private Q_SLOTS:
         context->moveToThread(&other);
         std::atomic<QThread*> seen{nullptr};
         session->headBucket(QStringLiteral("bkt"), context,
-                            [&](Result<void>) { seen = QThread::currentThread(); });
+                            [&](const Result<void>&) { seen = QThread::currentThread(); });
         QTRY_VERIFY(seen.load() != nullptr);
         QCOMPARE(seen.load(), &other);
         context->deleteLater();
@@ -136,7 +136,7 @@ private Q_SLOTS:
         auto session = makeSession();
         auto* context = new QObject;
         bool called = false;
-        session->headBucket(QStringLiteral("bkt"), context, [&](Result<void>) { called = true; });
+        session->headBucket(QStringLiteral("bkt"), context, [&](const Result<void>&) { called = true; });
         delete context;
         QTest::qWait(500);
         QVERIFY(!called);
@@ -147,7 +147,7 @@ private Q_SLOTS:
     {
         auto session = makeSession();
         QTest::ignoreMessage(QtWarningMsg, "request without a context object ignored");
-        QCOMPARE(session->headBucket(QStringLiteral("bkt"), nullptr, [](Result<void>) {}),
+        QCOMPARE(session->headBucket(QStringLiteral("bkt"), nullptr, [](const Result<void>&) {}),
                  RequestId::Invalid);
     }
 
@@ -179,7 +179,7 @@ private Q_SLOTS:
         QObject context;
         int calls = 0;
         std::optional<ErrorCategory> category;
-        const RequestId id = session->headBucket(QStringLiteral("bkt"), &context, [&](Result<void> r) {
+        const RequestId id = session->headBucket(QStringLiteral("bkt"), &context, [&](const Result<void>& r) {
             ++calls;
             category = r ? std::nullopt : std::optional(r.error().category);
         });
@@ -202,7 +202,7 @@ private Q_SLOTS:
         {
             auto session = makeSession();
             for (int i = 0; i < 5; ++i)
-                session->headBucket(QStringLiteral("b%1").arg(i), &context, [&](Result<void>) { ++calls; });
+                session->headBucket(QStringLiteral("b%1").arg(i), &context, [&](const Result<void>&) { ++calls; });
             QTRY_VERIFY(m_server->requestCount() >= 1);
         }
         QVERIFY(t.elapsed() < 2500);
@@ -221,7 +221,7 @@ private Q_SLOTS:
         QList<ErrorCategory> results;
         for (int i = 0; i < 3; ++i) {
             session->headBucket(QStringLiteral("bkt"), &context,
-                                [&](Result<void> r) { results.append(r.error().category); });
+                                [&](const Result<void>& r) { results.append(r ? ErrorCategory::Internal : r.error().category); });
         }
         session->shutdown();
         QVERIFY(finished.wait(3000));
@@ -231,7 +231,7 @@ private Q_SLOTS:
 
         std::optional<ErrorCategory> late;
         session->headBucket(QStringLiteral("bkt"), &context,
-                            [&](Result<void> r) { late = r.error().category; });
+                            [&](const Result<void>& r) { late = r ? ErrorCategory::Internal : r.error().category; });
         QTRY_VERIFY(late.has_value());
         QCOMPARE(*late, ErrorCategory::Cancelled);
     }
@@ -246,12 +246,13 @@ private Q_SLOTS:
         int ok = 0;
         int failed = 0;
         std::vector<std::thread> threads;
+        threads.reserve(kThreads);
         for (int t = 0; t < kThreads; ++t) {
             threads.emplace_back([&, t] {
                 for (int i = 0; i < kPerThread; ++i) {
                     const RequestId id = session->headBucket(
                         QStringLiteral("b%1-%2").arg(t).arg(i), &context,
-                        [&](Result<void> r) { r ? ++ok : ++failed; });   // context thread only
+                        [&](const Result<void>& r) { r ? ++ok : ++failed; });   // context thread only
                     if (i % 7 == 3)
                         session->cancel(id);
                 }
@@ -313,7 +314,7 @@ private Q_SLOTS:
                 got = true;
             }) != RequestId::Invalid);
             QVERIFY(pager.isFetching());
-            QCOMPARE(pager.fetchNext(&context, [](Result<ListPage>) {}), RequestId::Invalid);
+            QCOMPARE(pager.fetchNext(&context, [](const Result<ListPage>&) {}), RequestId::Invalid);
             QTRY_VERIFY(got);
         }
         QCOMPARE(keys, (QStringList{QStringLiteral("a"), QStringLiteral("b"), QStringLiteral("c")}));
@@ -338,7 +339,7 @@ private Q_SLOTS:
         int pages = 0;
         while (pager.hasMore() && pages < 10) {
             bool got = false;
-            pager.fetchNext(&context, [&](Result<ListPage> r) {
+            pager.fetchNext(&context, [&](const Result<ListPage>& r) {
                 if (!r)
                     error = r.error();
                 got = true;
@@ -354,13 +355,13 @@ private Q_SLOTS:
 
     void clockSkewSignalCrossesThreads()
     {
-        m_server->setClockOffsetSecs(30 * 60);
+        m_server->setClockOffsetSecs(qint64(30) * 60);
         m_server->on("HEAD", QString(), FakeResponse());
         auto session = makeSession();
         QSignalSpy skew(session.get(), &Session::clockSkewDetected);
         QObject context;
         bool ok = false;
-        session->headBucket(QStringLiteral("bkt"), &context, [&](Result<void> r) { ok = bool(r); });
+        session->headBucket(QStringLiteral("bkt"), &context, [&](const Result<void>& r) { ok = bool(r); });
         QTRY_VERIFY(ok);
         QTRY_VERIFY(skew.size() >= 1);
     }

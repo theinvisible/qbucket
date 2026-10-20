@@ -204,7 +204,8 @@ Result<CapabilitySet> CapabilitySet::fromJson(const QJsonObject& json)
 
     const QJsonObject fp = json.value(QLatin1String("fingerprint")).toObject();
     set.fingerprint.serverHeader = fp.value(QLatin1String("server")).toString();
-    for (const QJsonValue& v : fp.value(QLatin1String("amzHeaders")).toArray())
+    const QJsonArray amzHeaders = fp.value(QLatin1String("amzHeaders")).toArray();
+    for (const auto& v : amzHeaders)
         set.fingerprint.amzHeaderNames.append(v.toString());
     set.fingerprint.requestIdShape = fp.value(QLatin1String("requestIdShape")).toString();
 
@@ -237,10 +238,10 @@ namespace capabilities {
 
 CapabilityEntry effective(Feature f, const CapabilitySet& probed, const CapabilitySet& profile)
 {
-    const CapabilityEntry p = probed.entry(f);
+    CapabilityEntry p = probed.entry(f);
     if (isDefinitive(p.state))
         return p;
-    const CapabilityEntry known = profile.entry(f);
+    CapabilityEntry known = profile.entry(f);
     if (isDefinitive(known.state))
         return known;
     return p;

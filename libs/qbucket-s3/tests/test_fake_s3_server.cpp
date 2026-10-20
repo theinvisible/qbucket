@@ -301,7 +301,7 @@ private Q_SLOTS:
         FakeS3Server server;
         QVERIFY(server.listen());
         server.setVerifySignatures(creds(), "test-1");
-        server.setClockOffsetSecs(20 * 60);
+        server.setClockOffsetSecs(qint64(20) * 60);
         server.on("", QString(), FakeResponse::ok("<ok/>"));
         QNetworkAccessManager nam;
 
@@ -312,7 +312,7 @@ private Q_SLOTS:
         QVERIFY(r.body.contains("<ServerTime>"));
 
         r = send(nam, signedRequest(server, "GET", QStringLiteral("k"), {}, creds(), "test-1",
-                                    QDateTime::currentDateTimeUtc().addSecs(20 * 60)));
+                                    QDateTime::currentDateTimeUtc().addSecs(qint64(20) * 60)));
         QCOMPARE(r.status, 200);
     }
 

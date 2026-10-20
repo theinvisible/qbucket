@@ -116,23 +116,26 @@ struct Session::Impl {
             return RequestId(id);
         }
 
+        // Impl outlives the worker (the destructor joins it), so the raw
+        // pointer is safe on the worker thread.
+        Impl* const self = this;
         QMetaObject::invokeMethod(
             client,
-            [this, id, cb = std::move(cb), start = std::move(start)]() mutable {
+            [self, id, cb = std::move(cb), start = std::move(start)]() mutable {
                 {
-                    QMutexLocker lock(&mutex);
-                    if (!pending.count(id))
+                    QMutexLocker lock(&self->mutex);
+                    if (self->pending.find(id) == self->pending.end())
                         return;   // cancelled before it started: nothing to send
                 }
-                const quint64 op = start(client, [this, id, cb](Result<T> r) {
-                    deliver<T>(id, std::move(r), cb);
+                const quint64 op = start(self->client, [self, id, cb](Result<T> r) {
+                    self->deliver<T>(id, std::move(r), cb);
                 });
-                QMutexLocker lock(&mutex);
-                const auto it = pending.find(id);
-                if (it != pending.end())
+                QMutexLocker lock(&self->mutex);
+                const auto it = self->pending.find(id);
+                if (it != self->pending.end())
                     it->second.clientOp = op;
                 else
-                    client->abort(op);   // cancelled while starting
+                    self->client->abort(op);   // cancelled while starting
             },
             Qt::QueuedConnection);
         return RequestId(id);
@@ -206,7 +209,7 @@ Session::~Session()
         if (!d->worker->wait(2000)) {
             // Never terminate(): leak the worker and its state instead.
             qCWarning(lcSession) << "worker thread did not stop in time; leaking it";
-            (void)d.release();
+            [[maybe_unused]] Impl* const leaked = d.release();
             return;
         }
     }

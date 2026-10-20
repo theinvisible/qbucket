@@ -7,7 +7,7 @@ using namespace qbucket::s3;
 namespace {
 
 CapabilityEntry probed(CapabilityState s, int status = 200, int unknownAttempts = 0,
-                       QDateTime at = QDateTime::currentDateTimeUtc())
+                       const QDateTime& at = QDateTime::currentDateTimeUtc())
 {
     return {s, CapabilitySource::Probed, at, status, {}, false, unknownAttempts};
 }
@@ -122,23 +122,23 @@ private Q_SLOTS:
         QVERIFY(capabilities::isExpired(server, now));   // never probed
         server.probedAt = now.addSecs(-3600);
         QVERIFY(!capabilities::isExpired(server, now));
-        server.probedAt = now.addSecs(-25 * 3600);
+        server.probedAt = now.addSecs(-qint64(25) * 3600);
         QVERIFY(capabilities::isExpired(server, now));
 
         CapabilitySet bucket;
         bucket.scope = CapabilityScope::Bucket;
-        bucket.probedAt = now.addSecs(-5 * 60);
+        bucket.probedAt = now.addSecs(-qint64(5) * 60);
         QVERIFY(!capabilities::isExpired(bucket, now));
-        bucket.probedAt = now.addSecs(-11 * 60);
+        bucket.probedAt = now.addSecs(-qint64(11) * 60);
         QVERIFY(capabilities::isExpired(bucket, now));
 
         // Unknown results come back sooner, with back-off: 5 min, 30 min, 2 h.
         server.probedAt = now.addSecs(-60);
-        server.set(Feature::Cors, probed(CapabilityState::Unknown, 503, 1, now.addSecs(-6 * 60)));
+        server.set(Feature::Cors, probed(CapabilityState::Unknown, 503, 1, now.addSecs(-qint64(6) * 60)));
         QVERIFY(capabilities::isExpired(server, now));
-        server.set(Feature::Cors, probed(CapabilityState::Unknown, 503, 2, now.addSecs(-6 * 60)));
+        server.set(Feature::Cors, probed(CapabilityState::Unknown, 503, 2, now.addSecs(-qint64(6) * 60)));
         QVERIFY(!capabilities::isExpired(server, now));
-        server.set(Feature::Cors, probed(CapabilityState::Unknown, 503, 9, now.addSecs(-3 * 3600)));
+        server.set(Feature::Cors, probed(CapabilityState::Unknown, 503, 9, now.addSecs(-qint64(3) * 3600)));
         QVERIFY(capabilities::isExpired(server, now));
     }
 

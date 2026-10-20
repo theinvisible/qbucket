@@ -75,7 +75,7 @@ void SecretStore::read(const QUuid& account, Kind kind, QObject* context, Callba
     }
     const QPointer<SecretStore> self(this);
     m_backend->read(QString::fromLatin1(kService), key,
-                    [self, ctx, done, account, kind](KeychainBackend::Status s, const QString& secret,
+                    [self, ctx, done = std::move(done), account, kind](KeychainBackend::Status s, const QString& secret,
                                                      const QString& error) {
         if (!self) {
             deliver_(ctx, done, outcome(Result::Outcome::Failed, QStringLiteral("secret store closed")));
@@ -120,7 +120,7 @@ void SecretStore::write(const QUuid& account, Kind kind, const QString& secret, 
     }
     const QPointer<SecretStore> self(this);
     m_backend->write(QString::fromLatin1(kService), key, secret,
-                     [self, ctx, done, key, secret](KeychainBackend::Status s, const QString& error) {
+                     [self, ctx, done = std::move(done), key, secret](KeychainBackend::Status s, const QString& error) {
         if (!self) {
             deliver_(ctx, done, outcome(Result::Outcome::Failed, QStringLiteral("secret store closed")));
             return;
@@ -154,21 +154,23 @@ void SecretStore::removeAll(const QUuid& account, QObject* context, Callback don
         return;
     }
 
-    // One after another; the first failure is reported, the rest still tried.
+    // All kinds at once; the first failure is reported, the others still tried.
     struct State {
         int pending = 0;
         QString firstError;
+        Callback done;
     };
     auto state = std::make_shared<State>();
     state->pending = int(kinds.size());
+    state->done = std::move(done);
     for (const Kind k : kinds) {
         m_backend->remove(QString::fromLatin1(kService), keyFor(account, k),
-                          [state, ctx, done](KeychainBackend::Status s, const QString& error) {
+                          [state, ctx](KeychainBackend::Status s, const QString& error) {
             if (s != KeychainBackend::Status::Ok && s != KeychainBackend::Status::NoBackend
                 && state->firstError.isEmpty())
                 state->firstError = error.isEmpty() ? QStringLiteral("keychain error") : error;
             if (--state->pending == 0) {
-                deliver_(ctx, done, state->firstError.isEmpty()
+                deliver_(ctx, state->done, state->firstError.isEmpty()
                                         ? outcome(Result::Outcome::Ok)
                                         : outcome(Result::Outcome::Failed, state->firstError));
             }

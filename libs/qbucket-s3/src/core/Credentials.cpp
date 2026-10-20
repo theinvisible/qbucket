@@ -46,7 +46,7 @@ AwsSharedFileCredentialsProvider::AwsSharedFileCredentialsProvider(QString path,
 
 QString AwsSharedFileCredentialsProvider::defaultPath()
 {
-    const QString fromEnv = qEnvironmentVariable("AWS_SHARED_CREDENTIALS_FILE");
+    QString fromEnv = qEnvironmentVariable("AWS_SHARED_CREDENTIALS_FILE");
     if (!fromEnv.isEmpty())
         return fromEnv;
     return QDir::homePath() + QStringLiteral("/.aws/credentials");

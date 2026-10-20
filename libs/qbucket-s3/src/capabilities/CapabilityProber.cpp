@@ -128,7 +128,7 @@ void S3Client::runProbes(const std::shared_ptr<ProbeRun>& run)
             spec.key = run->objectKey;
         spec.query = probe.query;
         ++run->inFlight;
-        send(run->op, std::move(spec), [this, run, probe](Result<RawResponse> r) {
+        send(run->op, std::move(spec), [this, run, probe](const Result<RawResponse>& r) {
             --run->inFlight;
             CapabilityEntry e =
                 interpretProbe(probe, r, QDateTime::currentDateTimeUtc(), &run->result.bucketState);

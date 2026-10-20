@@ -15,6 +15,7 @@ ProbeSpec specFor(Feature f)
             return p;
     }
     qFatal("no probe for %s", qPrintable(featureId(f)));
+    Q_UNREACHABLE_RETURN(bucketProbes().first());
 }
 
 Result<RawResponse> ok(int status, const QByteArray& body)

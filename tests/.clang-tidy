@@ -1,0 +1,6 @@
+# Tests: QVERIFY / QTRY_VERIFY return from the test function on failure, but
+# the dataflow behind bugprone-unchecked-optional-access can't see that, so
+# every "QVERIFY(opt); use(*opt)" is reported. Everything else applies.
+InheritParentConfig: true
+Checks: >
+  -bugprone-unchecked-optional-access

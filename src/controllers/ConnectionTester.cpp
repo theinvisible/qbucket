@@ -91,7 +91,7 @@ void ConnectionTester::start(const Account& account, const QString& secretAccess
 
 void ConnectionTester::tryExternalBucket_(const QString& bucket)
 {
-    m_session->headBucket(bucket, m_run.get(), [this, bucket](s3::Result<void> r) {
+    m_session->headBucket(bucket, m_run.get(), [this, bucket](const s3::Result<void>& r) {
         if (r)
             finish_(true, tr("Connected — bucket “%1” is reachable (listing buckets is not permitted).").arg(bucket));
         else

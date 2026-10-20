@@ -110,7 +110,7 @@ private:
     }
     // One request → parse(RawResponse) → done.
     template <typename T, typename Parse>
-    quint64 single(RequestSpec spec, Done<T> done, Parse parse);
+    quint64 single(RequestSpec&& spec, Done<T> done, Parse parse);
 
     std::optional<Error> shortCircuit(const RequestSpec& spec) const;
     void learnFrom(const RequestSpec& spec, const Error& error);

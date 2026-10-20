@@ -144,6 +144,7 @@ private Q_SLOTS:
         case 1: bad.closeAfterBodyBytes = 10; break;
         case 2: bad.declaredContentLength = kBuckets.size() + 20; bad.closeConnection = true; break;
         case 3: bad.stallAfterBodyBytes = 5; break;
+        default: QFAIL("unknown fault");
         }
         Matcher any;
         m_server->addRoute(any, {bad, FakeResponse::ok(kBuckets, kXml)});
@@ -221,7 +222,7 @@ private Q_SLOTS:
 
     void clockSkewIsCorrectedOnce()
     {
-        m_server->setClockOffsetSecs(20 * 60);
+        m_server->setClockOffsetSecs(qint64(20) * 60);
         m_server->on("", QString(), FakeResponse::ok(kBuckets, kXml));
         auto client = makeClient();
         QSignalSpy skew(client.get(), &S3Client::clockSkewDetected);

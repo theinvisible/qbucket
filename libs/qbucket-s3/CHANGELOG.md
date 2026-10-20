@@ -61,6 +61,10 @@ version bump may break the API.
   for Hetzner's sporadic empty-message 403s and overrides the misleading
   `?encryption` read probe.
 
+- `Result<T>::error()` on a success no longer is undefined behaviour in
+  release builds (asserts in debug, returns an Internal error otherwise);
+  `error() &&` returns by value.
+
 ### Safety
 
 - Retries only where safe: transient failures of idempotent requests, and

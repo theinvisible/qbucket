@@ -381,7 +381,7 @@ private Q_SLOTS:
     void clockSkewIsCorrected()
     {
         SessionOptions o = m_options;
-        o.initialClockOffsetSecs = -20 * 60;   // pretend our clock is 20 min ahead
+        o.initialClockOffsetSecs = -qint64(20) * 60;   // pretend our clock is 20 min ahead
         Session skewed(o);
         QSignalSpy skew(&skewed, &Session::clockSkewDetected);
         const Result<BucketList> r = await<BucketList>([&](auto cb) { skewed.listBuckets(&m_ctx, std::move(cb)); });

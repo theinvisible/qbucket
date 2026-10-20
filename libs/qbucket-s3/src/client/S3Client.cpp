@@ -105,7 +105,7 @@ void S3Client::endOp(const std::shared_ptr<Op>& op)
 }
 
 template <typename T, typename Parse>
-quint64 S3Client::single(RequestSpec spec, Done<T> done, Parse parse)
+quint64 S3Client::single(RequestSpec&& spec, Done<T> done, Parse parse)
 {
     const auto op = newOp();
     send(op, std::move(spec),
@@ -205,6 +205,7 @@ void S3Client::abort(quint64 operationId)
 void S3Client::abortAll()
 {
     std::vector<quint64> ids;
+    ids.reserve(m_ops.size());
     for (const auto& [id, op] : m_ops)
         ids.push_back(id);
     for (const quint64 id : ids)
@@ -340,7 +341,7 @@ quint64 S3Client::getBucketLocation(const QString& bucket, Done<QString> done)
     spec.bucket = bucket;
     spec.query.append({"location", {}, true});
     return single(std::move(spec), std::move(done), [this](const RawResponse& r) -> Result<QString> {
-        const Result<QString> constraint = xml::parseLocationConstraint(r.body);
+        Result<QString> constraint = xml::parseLocationConstraint(r.body);
         if (!constraint)
             return constraint;
         return config().profile->regionFromLocationConstraint(constraint.value());
