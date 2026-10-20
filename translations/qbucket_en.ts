@@ -68,9 +68,60 @@
     </message>
 </context>
 <context>
+    <name>qbucket::DownloadJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DownloadJob.cpp" line="84"/>
+        <source>Download %n item(s) to %1</source>
+        <translation>
+            <numerusform>Download %n item to %1</numerusform>
+            <numerusform>Download %n items to %1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DownloadJob.cpp" line="372"/>
+        <source>s3://%1 — %n selected item(s) → %2</source>
+        <translation>
+            <numerusform>s3://%1 — %n selected item → %2</numerusform>
+            <numerusform>s3://%1 — %n selected items → %2</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DownloadJob.cpp" line="379"/>
+        <source>%n selected object(s) no longer exist and are skipped.</source>
+        <translation>
+            <numerusform>%n selected object no longer exists and is skipped.</numerusform>
+            <numerusform>%n selected objects no longer exist and are skipped.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DownloadJob.cpp" line="382"/>
+        <source>%n name(s) contain characters this system does not allow and are saved under another name, e.g. %1</source>
+        <translation>
+            <numerusform>%n name contains characters this system does not allow and is saved under another name, e.g. %1</numerusform>
+            <numerusform>%n names contain characters this system does not allow and are saved under another name, e.g. %1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DownloadJob.cpp" line="388"/>
+        <source>%n object(s) can&apos;t be saved here and are left out — first: %1</source>
+        <translation>
+            <numerusform>%n object can't be saved here and is left out — first: %1</numerusform>
+            <numerusform>%n objects can't be saved here and are left out — first: %1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DownloadJob.cpp" line="677"/>
+        <source>%n file(s) verified by MD5</source>
+        <translation>
+            <numerusform>%n file verified by MD5</numerusform>
+            <numerusform>%n files verified by MD5</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="357"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="381"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -81,7 +132,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="467"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="483"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -93,7 +144,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="469"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="485"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -101,7 +152,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="475"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="491"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>

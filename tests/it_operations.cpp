@@ -12,6 +12,7 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
+#include "controllers/DownloadJob.h"
 #include "controllers/RenameJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -267,6 +268,33 @@ private slots:
         QCOMPARE(again->outcome(), Job::Outcome::Succeeded);
         QCOMPARE(again->report().succeeded, 0);
         QCOMPARE(again->preview().conflicts, small.size() + 1);
+    }
+
+    // The tree of uploadAFolder back to disk, byte for byte.
+    void downloadTheUploadBack()
+    {
+        const QString source = m_dir.filePath(QStringLiteral("upload/tree ä"));
+        if (!QFile::exists(source + QStringLiteral("/big.bin")))
+            QSKIP("needs uploadAFolder");
+        const QString target = m_dir.filePath(QStringLiteral("download"));
+        auto* job = new DownloadJob(m_account, m_bucket, {{m_root + QStringLiteral("uploaded/tree ä/"), true, {}}}, target,
+                                    m_ops->planDir(), {});
+        run(job);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        qInfo().noquote() << job->report().verification;
+        QCOMPARE(job->sizeVerified(), 0);   // MD5 or MD5-of-MD5s for every file
+        for (const QString& rel : {QStringLiteral("a.txt"), QStringLiteral("sub/b c.txt"),
+                                   QStringLiteral("sub/deeper/ü+%.bin"), QStringLiteral("big.bin")}) {
+            QFile a(source + u'/' + rel);
+            QFile b(target + QStringLiteral("/tree ä/") + rel);
+            QVERIFY2(a.open(QIODevice::ReadOnly) && b.open(QIODevice::ReadOnly), qPrintable(rel));
+            QCryptographicHash ha(QCryptographicHash::Md5);
+            QCryptographicHash hb(QCryptographicHash::Md5);
+            QVERIFY(ha.addData(&a));
+            QVERIFY(hb.addData(&b));
+            QCOMPARE(hb.result(), ha.result());
+        }
+        QVERIFY(QFileInfo(target + QStringLiteral("/tree ä/empty")).isDir());
     }
 
 private:

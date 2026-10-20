@@ -51,9 +51,13 @@ public:
     [[nodiscard]] QAction* copyUriAction() const { return m_actCopyUri; }
     [[nodiscard]] QAction* renameAction() const { return m_actRename; }
     [[nodiscard]] QAction* deleteAction() const { return m_actDelete; }
+    [[nodiscard]] QAction* downloadAction() const { return m_actDownload; }
+    [[nodiscard]] QAction* downloadToAction() const { return m_actDownloadTo; }
 
     // The gate's verdict for the mutating actions (MainWindow decides).
     void setMutationsAllowed(bool allowed, const QString& reason);
+    // Downloads only read: also on read-only accounts.
+    void setDownloadsAllowed(bool allowed, const QString& reason);
 
     // Selected rows (column 0), in view order.
     [[nodiscard]] QModelIndexList selectedRows() const;
@@ -103,6 +107,10 @@ private:
     QAction* m_actCopyUri = nullptr;
     QAction* m_actRename = nullptr;
     QAction* m_actDelete = nullptr;
+    QAction* m_actDownload = nullptr;
+    QAction* m_actDownloadTo = nullptr;
+    bool m_downloadsAllowed = false;
+    QString m_downloadsReason;
     bool m_mutationsAllowed = false;
     QString m_mutationsReason;
 };

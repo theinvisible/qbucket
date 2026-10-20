@@ -12,6 +12,7 @@
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/DownloadJob.h"
 #include "controllers/TransferService.h"
 #include "controllers/UploadJob.h"
 #include "ui/AccountSidebar.h"
@@ -233,6 +234,10 @@ void MainWindow::updateMutationActions_()
     if (m_operations && here.hasBucket())
         del = m_operations->check(here.account, here.bucket, {}, true);
     m_browser->setMutationsAllowed(del.allowed, del.reason);
+    OperationController::Check read{false, tr("Open a bucket first.")};
+    if (m_operations && here.hasBucket())
+        read = m_operations->check(here.account, here.bucket, {}, false, false);
+    m_browser->setDownloadsAllowed(read.allowed, read.reason);
 }
 
 void MainWindow::renameSelection_()
@@ -307,6 +312,25 @@ void MainWindow::startUpload_(const QStringList& paths, bool alwaysConfirm)
     m_operations->start(new UploadJob(*account, here.bucket, here.prefix, paths, m_operations->planDir(), options));
 }
 
+void MainWindow::downloadSelection_(const QString& folder)
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket())
+        return;
+    QList<DownloadJob::Item> items;
+    for (const QModelIndex& row : m_browser->selectedRows())
+        items.append({row.data(ObjectTableModel::KeyRole).toString(), row.data(ObjectTableModel::IsFolderRole).toBool(), {}});
+    if (items.isEmpty())
+        return;
+    DownloadJob::Options options;
+    // Straight into the download folder: one object without a local
+    // conflict needs no preview. A chosen folder was a deliberate step too.
+    options.alwaysConfirm = items.size() != 1 || items.first().folder;
+    const QString target = folder.isEmpty() ? m_settings->downloadDirectory() : folder;
+    m_operations->start(new DownloadJob(*account, here.bucket, items, target, m_operations->planDir(), options));
+}
+
 void MainWindow::newFolder_()
 {
     const Location here = m_browser->navigation()->current();
@@ -374,6 +398,18 @@ void MainWindow::showJobReport_(Job* job)
     details += job->report().notes;
     if (!details.isEmpty())
         box->setDetailedText(details.join(u'\n'));
+    // "Retry Failed": a new download of exactly the objects that failed.
+    if (const auto* down = qobject_cast<const DownloadJob*>(job); down && !down->failedItems().isEmpty()) {
+        QPushButton* retry = box->addButton(tr("Retry Failed"), QMessageBox::ActionRole);
+        const QList<DownloadJob::Item> items = down->failedItems();
+        const Account account = down->account();
+        const QString bucket = down->bucket();
+        const QString target = down->targetDir();
+        connect(box, &QMessageBox::buttonClicked, this, [this, retry, items, account, bucket, target](QAbstractButton* b) {
+            if (b == retry && m_operations)
+                m_operations->start(new DownloadJob(account, bucket, items, target, m_operations->planDir(), {}));
+        });
+    }
     // "Retry Failed": a new upload of exactly the files that failed.
     if (const auto* up = qobject_cast<const UploadJob*>(job); up && !up->failedItems().isEmpty()) {
         QPushButton* retry = box->addButton(tr("Retry Failed"), QMessageBox::ActionRole);
@@ -424,9 +460,9 @@ void MainWindow::connectBrowser_()
     m_actNewFolder = m_editMenu->addAction(tr("&New Folder…"), this, &MainWindow::newFolder_);
     m_actNewFolder->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     connect(m_newFolderBtn, &QToolButton::clicked, m_actNewFolder, &QAction::trigger);
-    m_actUploadFiles = m_editMenu->addAction(tr("&Upload Files…"), this, &MainWindow::chooseUploadFiles_);
+    m_actUploadFiles = m_editMenu->addAction(tr("Upload &Files…"), this, &MainWindow::chooseUploadFiles_);
     m_actUploadFiles->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_U));
-    m_actUploadFolder = m_editMenu->addAction(tr("Upload F&older…"), this, &MainWindow::chooseUploadFolder_);
+    m_actUploadFolder = m_editMenu->addAction(tr("Upload Fo&lder…"), this, &MainWindow::chooseUploadFolder_);
     auto* uploadMenu = new QMenu(m_uploadBtn);
     uploadMenu->addAction(m_actUploadFiles);
     uploadMenu->addAction(m_actUploadFolder);
@@ -442,6 +478,23 @@ void MainWindow::connectBrowser_()
     });
     m_editMenu->addAction(m_browser->renameAction());
     m_editMenu->addAction(m_browser->deleteAction());
+    m_editMenu->addSeparator();
+    m_editMenu->addAction(m_browser->downloadAction());
+    m_editMenu->addAction(m_browser->downloadToAction());
+    connect(m_browser->downloadAction(), &QAction::triggered, this, [this] { downloadSelection_(QString()); });
+    connect(m_browser->downloadToAction(), &QAction::triggered, this, [this] {
+        auto* dlg = new QFileDialog(this, tr("Download To"), m_settings->downloadDirectory());
+        dlg->setFileMode(QFileDialog::Directory);
+        dlg->setOption(QFileDialog::ShowDirsOnly);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        connect(dlg, &QFileDialog::fileSelected, this, [this](const QString& dir) { downloadSelection_(dir); });
+        dlg->open();
+    });
+    connect(m_downloadBtn, &QToolButton::clicked, m_browser->downloadAction(), &QAction::trigger);
+    connect(m_browser->downloadAction(), &QAction::changed, this, [this] {
+        m_downloadBtn->setEnabled(m_browser->downloadAction()->isEnabled());
+        m_downloadBtn->setToolTip(m_browser->downloadAction()->toolTip());
+    });
     connect(m_actEditPath, &QAction::triggered, m_browser, &ObjectBrowser::editPath);
     connect(m_backBtn, &QToolButton::clicked, m_actBack, &QAction::trigger);
     connect(m_forwardBtn, &QToolButton::clicked, m_actForward, &QAction::trigger);

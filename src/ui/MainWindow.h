@@ -73,6 +73,8 @@ private:
     void chooseUploadFolder_();
     // Uploads local files / folders into the current location.
     void startUpload_(const QStringList& paths, bool alwaysConfirm);
+    // Downloads the browser's selection into `folder` (empty: the settings' download folder).
+    void downloadSelection_(const QString& folder);
     void renameSelection_();
     void restoreWindowState_();
     void saveWindowState_();

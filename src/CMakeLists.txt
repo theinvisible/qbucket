@@ -54,6 +54,8 @@ add_library(qbucket_controllers STATIC
     controllers/Job.cpp
     controllers/Journal.h
     controllers/Journal.cpp
+    controllers/LocalPathMapper.h
+    controllers/LocalPathMapper.cpp
     controllers/LocalScanner.h
     controllers/LocalScanner.cpp
     controllers/OperationController.h
@@ -66,6 +68,8 @@ add_library(qbucket_controllers STATIC
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h
     controllers/DeleteJob.cpp
+    controllers/DownloadJob.h
+    controllers/DownloadJob.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h

@@ -390,6 +390,8 @@ void ObjectBrowser::buildActions_()
     // it handles them, the actions say why they can't be used.
     m_actRename = make(tr("&Rename…"), QKeySequence(Qt::Key_F2));
     m_actDelete = make(tr("&Delete…"), QKeySequence::Delete);
+    m_actDownload = make(tr("Do&wnload"), QKeySequence(Qt::CTRL | Qt::Key_D));
+    m_actDownloadTo = make(tr("Download &To…"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
 
     // Backspace goes up, like a file manager — wherever the focus is in
     // the browser (a line edit keeps its own Backspace).
@@ -410,6 +412,17 @@ void ObjectBrowser::updateActions_()
     m_actDelete->setToolTip(m_mutationsAllowed ? tr("Delete the selection") : m_mutationsReason);
     m_actRename->setEnabled(rows.size() == 1 && m_mutationsAllowed);
     m_actRename->setToolTip(m_mutationsAllowed ? tr("Rename the selected object or folder") : m_mutationsReason);
+    for (QAction* a : {m_actDownload, m_actDownloadTo}) {
+        a->setEnabled(!rows.isEmpty() && m_downloadsAllowed);
+        a->setToolTip(m_downloadsAllowed ? tr("Download the selection") : m_downloadsReason);
+    }
+}
+
+void ObjectBrowser::setDownloadsAllowed(bool allowed, const QString& reason)
+{
+    m_downloadsAllowed = allowed;
+    m_downloadsReason = reason;
+    updateActions_();
 }
 
 void ObjectBrowser::setMutationsAllowed(bool allowed, const QString& reason)
@@ -451,6 +464,9 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
         menu.addAction(m_actOpen);
     menu.addAction(m_actCopyKey);
     menu.addAction(m_actCopyUri);
+    menu.addSeparator();
+    menu.addAction(m_actDownload);
+    menu.addAction(m_actDownloadTo);
     menu.addSeparator();
     menu.addAction(m_actRename);
     menu.addAction(m_actDelete);
