@@ -27,7 +27,7 @@ option(QBUCKET_BUILD_TESTS          "Build the test suite"                      
 option(QBUCKET_WARNINGS_AS_ERRORS   "Treat compiler warnings as errors (CI)"        OFF)
 option(QBUCKET_SANITIZERS           "AddressSanitizer + UBSan (GCC/Clang only)"     OFF)
 
-set(_qbucket_qt_components Core Gui Widgets Svg LinguistTools)
+set(_qbucket_qt_components Core Gui Widgets Svg Network LinguistTools)
 if(QBUCKET_BUILD_TESTS)
     list(APPEND _qbucket_qt_components Test)
 endif()
@@ -86,9 +86,23 @@ qt_standard_project_setup()
 include(GNUInstallDirs)
 include(cmake/QBucketCompileOptions.cmake)
 
+if(QBUCKET_BUILD_TESTS)
+    enable_testing()
+endif()
+
+# --- S3 library (libs/qbucket-s3, standalone-capable) ----------------------
+# Forward our build settings; the library's own options default to "off"
+# when it is not the top-level project. Never installed with the app.
+set(QBUCKET_S3_BUILD_TESTS ${QBUCKET_BUILD_TESTS})
+set(QBUCKET_S3_WARNINGS_AS_ERRORS ${QBUCKET_WARNINGS_AS_ERRORS})
+set(QBUCKET_S3_INSTALL OFF)
+if(QBUCKET_SANITIZERS)
+    set(QBUCKET_S3_SANITIZE "address,undefined")
+endif()
+add_subdirectory(libs/qbucket-s3)
+
 add_subdirectory(src)
 
 if(QBUCKET_BUILD_TESTS)
-    enable_testing()
     add_subdirectory(tests)
 endif()

@@ -148,6 +148,88 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   # ---------------------------------------------------------------------------
+  # The S3 library on its own — no app, no QtKeychain, no Widgets. Enforces the
+  # library boundary (PLAN.md §3.0) and checks the installed CMake package.
+  s3-standalone:
+    name: qbucket-s3 standalone (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux, static
+            os: ubuntu-24.04
+            shared: 'OFF'
+            qt_host: linux
+            qt_arch: linux_gcc_64
+          - name: Linux, shared
+            os: ubuntu-24.04
+            shared: 'ON'
+            qt_host: linux
+            qt_arch: linux_gcc_64
+          # Shared on Windows catches missing QBUCKET_S3_EXPORTs.
+          - name: Windows, shared
+            os: windows-2022
+            shared: 'ON'
+            qt_host: windows
+            qt_arch: win64_msvc2022_64
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: ${{ matrix.qt_host }}
+          target: desktop
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Setup MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Ninja
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Configure
+        run: >
+          cmake -S libs/qbucket-s3 -B build-s3 -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DQBUCKET_S3_WARNINGS_AS_ERRORS=ON -DQBUCKET_S3_BUILD_SHARED=${{ matrix.shared }}
+
+      - name: Build
+        run: cmake --build build-s3 -j
+
+      - name: Test
+        run: ctest --test-dir build-s3 --output-on-failure
+
+      - name: Install + build a consumer against the package
+        shell: bash
+        run: |
+          qt="$QT_ROOT_DIR"
+          stage="$PWD/stage"
+          if command -v cygpath >/dev/null; then   # Git Bash on Windows
+            qt="$(cygpath -m "$qt")"
+            stage="$(cygpath -m "$stage")"
+          fi
+          cmake --install build-s3 --prefix "$stage"
+          cmake -S libs/qbucket-s3/tests/install-consumer -B build-consumer -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$stage;$qt"
+          cmake --build build-consumer
+          # Windows: the consumer finds our DLL and Qt's through PATH.
+          export PATH="$PWD/stage/bin:$(cd "$qt/bin" && pwd):$PATH"
+          ./build-consumer/consumer
+
+  # ---------------------------------------------------------------------------
   clang-tidy:
     name: clang-tidy
     runs-on: ubuntu-24.04

@@ -1,0 +1,129 @@
+# qbucket-s3 — reusable S3 client library (Qt6 Core + Network).
+#
+# Builds standalone:
+#   cmake -S libs/qbucket-s3 -B build-s3 -DCMAKE_PREFIX_PATH=<Qt prefix>
+# or as part of a larger project via add_subdirectory(); the parent can preset
+# the QBUCKET_S3_* options with plain set() before adding it (CMP0077).
+#
+# Rules (PLAN.md §3.0): Qt Core / Network / Concurrent only, no app types, no
+# QSettings, no hard-coded paths. Public API = include/qbucket/s3/**.
+cmake_minimum_required(VERSION 3.22)
+
+project(qbucket-s3
+    VERSION 0.1.0
+    DESCRIPTION "Threaded, provider-aware S3 client library for Qt 6"
+    HOMEPAGE_URL "https://github.com/theinvisible/qbucket"
+    LANGUAGES CXX
+)
+
+# PROJECT_IS_TOP_LEVEL needs CMake 3.21 — covered by the minimum above.
+option(QBUCKET_S3_BUILD_SHARED        "Build qbucket-s3 as a shared library"            OFF)
+option(QBUCKET_S3_BUILD_TESTS         "Build the qbucket-s3 test suite"                 ${PROJECT_IS_TOP_LEVEL})
+option(QBUCKET_S3_INSTALL             "Generate install rules and the CMake package"    ${PROJECT_IS_TOP_LEVEL})
+option(QBUCKET_S3_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors"               OFF)
+set(QBUCKET_S3_SANITIZE "" CACHE STRING
+    "Sanitizers for GCC/Clang: empty, 'address,undefined' or 'thread'")
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Network)
+
+include(GNUInstallDirs)
+include(GenerateExportHeader)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/QBucketS3BuildOptions.cmake)
+
+set(_s3_generated_include "${CMAKE_CURRENT_BINARY_DIR}/include")
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/qbucket/s3/Version.h.in
+    ${_s3_generated_include}/qbucket/s3/Version.h
+    @ONLY
+)
+
+# --- qbucket::s3 -------------------------------------------------------------
+if(QBUCKET_S3_BUILD_SHARED)
+    set(_s3_lib_type SHARED)
+else()
+    set(_s3_lib_type STATIC)
+endif()
+
+add_library(qbucket_s3 ${_s3_lib_type}
+    include/qbucket/s3/Error.h
+    include/qbucket/s3/Result.h
+    src/core/Error.cpp
+)
+add_library(qbucket::s3 ALIAS qbucket_s3)
+
+generate_export_header(qbucket_s3
+    BASE_NAME QBUCKET_S3
+    EXPORT_FILE_NAME ${_s3_generated_include}/qbucket/s3/Export.h
+)
+
+set_target_properties(qbucket_s3 PROPERTIES
+    EXPORT_NAME s3
+    OUTPUT_NAME qbucket-s3
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    AUTOMOC ON
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+)
+
+target_compile_features(qbucket_s3 PUBLIC cxx_std_20)
+if(NOT QBUCKET_S3_BUILD_SHARED)
+    target_compile_definitions(qbucket_s3 PUBLIC QBUCKET_S3_STATIC_DEFINE)
+endif()
+
+target_include_directories(qbucket_s3
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${_s3_generated_include}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(qbucket_s3 PUBLIC Qt6::Core Qt6::Network)
+qbucket_s3_apply_build_options(qbucket_s3)
+
+# --- Tests -------------------------------------------------------------------
+if(QBUCKET_S3_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# --- Install + CMake package -------------------------------------------------
+if(QBUCKET_S3_INSTALL)
+    include(CMakePackageConfigHelpers)
+
+    install(TARGETS qbucket_s3
+        EXPORT QBucketS3Targets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    install(DIRECTORY include/ ${_s3_generated_include}/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILES_MATCHING PATTERN "*.h"
+    )
+
+    set(_s3_cmake_dir ${CMAKE_INSTALL_LIBDIR}/cmake/QBucketS3)
+    install(EXPORT QBucketS3Targets
+        NAMESPACE qbucket::
+        DESTINATION ${_s3_cmake_dir}
+    )
+    configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/QBucketS3Config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/QBucketS3Config.cmake
+        INSTALL_DESTINATION ${_s3_cmake_dir}
+    )
+    # Pre-1.0: a minor bump may break the API, so only the same minor matches.
+    write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/QBucketS3ConfigVersion.cmake
+        COMPATIBILITY SameMinorVersion
+    )
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/QBucketS3Config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/QBucketS3ConfigVersion.cmake
+        DESTINATION ${_s3_cmake_dir}
+    )
+endif()
