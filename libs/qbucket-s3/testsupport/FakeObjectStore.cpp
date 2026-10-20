@@ -691,9 +691,9 @@ struct FakeObjectStore::Impl {
                 break;
             QByteArray common;
             if (!delimiter.isEmpty()) {
-                const qsizetype d = k.indexOf(delimiter.toUtf8(), p.size());
-                if (d >= 0)
-                    common = k.left(d + delimiter.toUtf8().size());
+                const qsizetype at = k.indexOf(delimiter.toUtf8(), p.size());
+                if (at >= 0)
+                    common = k.left(at + delimiter.toUtf8().size());
             }
             if (returned == maxKeys) {
                 truncated = true;

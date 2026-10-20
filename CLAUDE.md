@@ -286,6 +286,12 @@ Each of these cost time there; don't relearn them.
   `ObjectTableModel`'s own digit-run comparison.
 - **`windows.h` defines `min` / `max`** — targets including it get
   `NOMINMAX`.
+- **MSVC C4458: a local `d` in a `Foo::Impl` method hides `Foo::d`** (the
+  PIMPL pointer) — GCC and clang say nothing, `/WX` breaks the Windows
+  build. Before pushing much new code, check with clang:
+  `clang-tidy -p build -checks='-*,cert-dcl58-cpp,clang-diagnostic-*'
+  --extra-arg=-Wshadow-all --extra-arg=-Wno-error FILE` and look for
+  "shadows a field" (the lambda "uncaptured local" hits are fine on MSVC).
 - **`QAbstractItemModelTester` re-checks the whole model on every change**
   (30 s with thousands of rows) and calls `fetchMore` inside its own reset
   handling — use it on small models; `fetchMore` must not insert rows
