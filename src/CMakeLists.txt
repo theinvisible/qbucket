@@ -99,10 +99,14 @@ add_library(qbucket_app_ui STATIC
     ui/AccountSidebar.cpp
     ui/AccountTreeDelegate.h
     ui/AccountTreeDelegate.cpp
+    ui/DetailPane.h
+    ui/DetailPane.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
     ui/ObjectBrowser.h
     ui/ObjectBrowser.cpp
+    ui/ObjectRowDelegate.h
+    ui/ObjectRowDelegate.cpp
     ui/PathBar.h
     ui/PathBar.cpp
     ui/SettingsDialog.h

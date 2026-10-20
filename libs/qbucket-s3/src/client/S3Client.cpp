@@ -51,6 +51,7 @@ ObjectMeta metaFromHeaders(const QString& key, const RawResponse& r)
     m.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
     static constexpr char kMetaPrefix[] = "x-amz-meta-";
     for (const auto& [name, value] : r.headers) {
+        m.responseHeaders.append({QString::fromLatin1(name), QString::fromUtf8(value)});
         const QByteArray lower = name.toLower();
         if (lower.startsWith(kMetaPrefix)) {
             m.userMetadata.insert(QString::fromUtf8(lower.mid(int(sizeof(kMetaPrefix)) - 1)),

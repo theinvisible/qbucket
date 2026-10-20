@@ -4,6 +4,7 @@
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 #include "ui/AccountSidebar.h"
+#include "ui/DetailPane.h"
 #include "controllers/BrowseController.h"
 #include "ui/ObjectBrowser.h"
 #include "controllers/SettingsController.h"
@@ -176,6 +177,13 @@ void MainWindow::connectBrowser_()
         updateNavigation_();
     });
     connect(m_browser, &ObjectBrowser::statusChanged, this, &MainWindow::updateStatus_);
+    // The detail pane follows the selection (and is emptied by every
+    // listing reset, which clears the selection).
+    connect(m_browser->view()->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this] {
+        const Location here = m_browser->navigation()->current();
+        m_details->setSelection(here.account, here.bucket, m_browser->view()->selectionModel()->selectedRows());
+    });
+    connect(m_browser, &ObjectBrowser::locationChanged, m_details, &DetailPane::clear);
     updateNavigation_();
     updateStatus_();
 }
@@ -495,27 +503,8 @@ QWidget* MainWindow::buildObjectArea_()
 
 QWidget* MainWindow::buildDetailPane_()
 {
-    auto* pane = new QWidget;
-    pane->setObjectName(QStringLiteral("detailPane"));
-    pane->setMinimumWidth(260);
-    auto* lay = new QVBoxLayout(pane);
-    lay->setContentsMargins(0, 0, 0, 0);
-    lay->setSpacing(0);
-
-    auto* title = new QLabel(tr("Details"));
-    title->setObjectName(QStringLiteral("paneTitle"));
-    lay->addWidget(title);
-
-    auto* tabs = new QTabWidget;
-    tabs->setDocumentMode(true);
-    tabs->tabBar()->setExpanding(false);
-    const QStringList tabNames = {
-        tr("Properties"), tr("Metadata"), tr("Tags"), tr("Versions"), tr("Access"),
-    };
-    for (const QString& name : tabNames)
-        tabs->addTab(makeEmptyState(tr("Select an object to see its details.")), name);
-    lay->addWidget(tabs, 1);
-    return pane;
+    m_details = new DetailPane(m_sessions);
+    return m_details;
 }
 
 // ---------------------------------------------------------------------------

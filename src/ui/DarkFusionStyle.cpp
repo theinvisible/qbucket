@@ -153,6 +153,7 @@ QLabel#bannerInfo { color: @text2@; }
 QLabel#bannerError { color: @danger@; }
 QLabel#emptyState { color: @text3@; padding: 24px; }
 QLabel#paneTitle { color: @text@; font-weight: 600; padding: 12px 14px 6px 14px; }
+QLabel#fieldLabel { color: @text3@; padding-top: 6px; }
 
 /* ---- Tabs (detail pane, transfer panel) ---- */
 QTabWidget::pane { border: none; border-top: 1px solid @border@; background: @panel@; }

@@ -7,6 +7,8 @@
 #include <QMutex>
 #include <QtTest>
 
+#include <algorithm>
+
 #include <atomic>
 #include <optional>
 #include <thread>
@@ -233,6 +235,11 @@ private Q_SLOTS:
         QCOMPARE(r->lastModified, QDateTime(QDate(2026, 10, 20), QTime(8, 0), QTimeZone::UTC));
         QCOMPARE(r->versionId, QStringLiteral("v42"));
         QCOMPARE(r->userMetadata.value(QStringLiteral("owner")), QStringLiteral("rene"));
+        const auto header = std::find_if(r->responseHeaders.cbegin(), r->responseHeaders.cend(),
+                                         [](const auto& h) { return h.first.compare(QLatin1String("x-amz-meta-owner"),
+                                                                                    Qt::CaseInsensitive) == 0; });
+        QVERIFY(header != r->responseHeaders.cend());
+        QCOMPARE(header->second, QStringLiteral("rene"));
         QCOMPARE(m_server->requests().first().queryItem("versionId"), QByteArray("v42"));
     }
 

@@ -114,6 +114,12 @@ qbucket_add_test(test_object_browser
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_detail_pane
+    test_detail_pane.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

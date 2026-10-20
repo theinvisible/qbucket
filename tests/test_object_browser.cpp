@@ -228,8 +228,12 @@ private slots:
         const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
         if (dir.isEmpty())
             QSKIP("QBUCKET_SCREENSHOT_DIR not set");
-        for (const char* k : {"vm/101/disk-0.img", "vm/101/2026-10/a", "vm/101/index.json", "vm/101/notes.md"})
-            m_bucket.add(QString::fromLatin1(k), 123456789);
+        m_bucket.add(QStringLiteral("vm/101/2026-10/a"));
+        m_bucket.add(QStringLiteral("vm/101/disk-0.img"), Q_INT64_C(42949672960));
+        m_bucket.add(QStringLiteral("vm/101/index.json"), 12288);
+        m_bucket.add(QStringLiteral("vm/101/notes.md"), 2100, "STANDARD_IA");
+        m_bucket.add(QStringLiteral("vm/101/2025-archive.tar.zst"), Q_INT64_C(9126805504), "GLACIER");
+        m_bucket.add(QStringLiteral("vm/101/screenshot.png"), 482000);
         m_bucket.sort();
         ObjectBrowser browser(m_accounts.get(), m_sessions.get());
         browser.resize(760, 300);

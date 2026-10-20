@@ -3,6 +3,7 @@
 #include "accounts/AccountStore.h"
 #include "controllers/AccountSessions.h"
 #include "controllers/BrowseController.h"
+#include "ui/ObjectRowDelegate.h"
 #include "ui/PathBar.h"
 
 #include <QEvent>
@@ -70,6 +71,7 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
     m_view->setItemsExpandable(false);
     m_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_view->setAllColumnsShowFocus(true);
+    m_view->setItemDelegate(new ObjectRowDelegate(m_view));
     m_stack->addWidget(m_view);
     lay->addWidget(m_stack, 1);
 

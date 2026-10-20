@@ -38,6 +38,8 @@ version bump may break the API.
 - `ListObjectsPager` — page-by-page listing with loop detection across pages.
 
 - `SessionOptions::initialClockOffsetSecs` (carry a learned offset over).
+- `ObjectMeta::responseHeaders`: every header of the HeadObject / GetObject
+  answer, as received.
 - `examples/s3ls` — CLI over the public API; also the install-consumer check.
 - Integration tests (`it_s3_backend`) with Docker backends (Ceph RGW,
   VersityGW, Garage) and per-backend expectation files for known deviations.

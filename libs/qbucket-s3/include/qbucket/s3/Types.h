@@ -6,6 +6,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <utility>
+
 // Value types exchanged with the library. All of them are plain structs with
 // implicitly shared Qt members: cheap to copy across threads, reentrant.
 
@@ -66,6 +68,9 @@ struct ObjectMeta {
     QString storageClass;
     QString versionId;
     QMap<QString, QString> userMetadata;  // x-amz-meta-* without the prefix, lower-case names
+    // Every response header as received (names as sent, in order) — for
+    // showing an object's headers; the fields above are parsed from these.
+    QList<std::pair<QString, QString>> responseHeaders;
 };
 
 // How far a download's content could be verified. Reported honestly: an

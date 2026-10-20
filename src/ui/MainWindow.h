@@ -19,6 +19,7 @@ namespace qbucket {
 
 class AccountSessions;
 class AccountSidebar;
+class DetailPane;
 class ObjectBrowser;
 class AccountStore;
 class SecretStore;
@@ -110,6 +111,7 @@ private:
     QSplitter*      m_splitter      = nullptr;
     AccountSidebar* m_sidebar       = nullptr;
     ObjectBrowser*  m_browser       = nullptr;
+    DetailPane*     m_details       = nullptr;
     QDockWidget*    m_transferDock  = nullptr;
 
     // Status bar
