@@ -1,9 +1,14 @@
 #include "ui/MainWindow.h"
 
 #include "accounts/AccountStore.h"
+#include "accounts/CapabilityStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
+#include "controllers/ActivityLog.h"
+#include "controllers/CapabilityController.h"
 #include "ui/AccountSidebar.h"
+#include "ui/CapabilitiesDialog.h"
+#include "ui/LogPanel.h"
 #include "ui/DetailPane.h"
 #include "controllers/BrowseController.h"
 #include "ui/ObjectBrowser.h"
@@ -106,8 +111,12 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
       m_secrets(secrets)
 {
     setWindowTitle(QStringLiteral("QBucket"));
-    if (m_accounts && m_secrets)
+    m_activity = new ActivityLog(this);
+    if (m_accounts && m_secrets) {
         m_sessions = new AccountSessions(m_accounts, m_secrets, this);
+        m_capStore = new CapabilityStore(this);
+        m_capabilities = new CapabilityController(m_accounts, m_sessions, m_capStore, m_activity, this);
+    }
 
     buildMenuBar_();
     buildToolBar_();
@@ -177,10 +186,21 @@ void MainWindow::connectBrowser_()
             [this] { m_browser->searchPrefix(m_filterField->text()); });
 
     connect(nav, &BrowseController::historyChanged, this, &MainWindow::updateNavigation_);
-    connect(m_browser, &ObjectBrowser::locationChanged, this, [this] {
+    connect(m_browser, &ObjectBrowser::locationChanged, this, [this](const Location& here) {
         m_filterField->clear();   // the filter is per folder
         updateNavigation_();
+        // What the bucket supports, before anything is done with it.
+        if (m_capabilities && here.hasBucket())
+            m_capabilities->bucketOpened(here.account, here.bucket);
     });
+    if (m_capabilities) {
+        connect(m_capabilities, &CapabilityController::changesDetected, this, [this](const QUuid& id) {
+            const std::optional<Account> a = m_accounts->account(id);
+            statusBar()->showMessage(
+                tr("What “%1” supports has changed — see Tools → Server Capabilities.").arg(a ? a->name : QString()),
+                10000);
+        });
+    }
     connect(m_browser, &ObjectBrowser::statusChanged, this, &MainWindow::updateStatus_);
     // The detail pane follows the selection (and is emptied by every
     // listing reset, which clears the selection).
@@ -202,11 +222,23 @@ void MainWindow::updateNavigation_()
     m_actUp->setEnabled(nav->canGoUp());
     m_actRefresh->setEnabled(here || m_sessions);
     m_actEditPath->setEnabled(nav->current().isValid());
+    m_actCapabilities->setEnabled(m_capabilities && nav->current().isValid());
     m_backBtn->setEnabled(nav->canGoBack());
     m_forwardBtn->setEnabled(nav->canGoForward());
     m_upBtn->setEnabled(nav->canGoUp());
     m_refreshBtn->setEnabled(here);
     m_filterField->setEnabled(here);
+}
+
+void MainWindow::showCapabilities_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_capabilities || !account)
+        return;
+    auto* dlg = new CapabilitiesDialog(m_capabilities, account->id, account->name, here.bucket, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
 }
 
 void MainWindow::updateStatus_()
@@ -321,6 +353,9 @@ void MainWindow::buildMenuBar_()
     view->addSeparator();
 
     auto* tools = mb->addMenu(tr("&Tools"));
+    m_actCapabilities = tools->addAction(tr("Server &Capabilities…"), this, &MainWindow::showCapabilities_);
+    m_actCapabilities->setEnabled(false);
+    tools->addSeparator();
     m_actSettings = tools->addAction(tr("&Settings…"),
                                      this, &MainWindow::showSettingsDialog_);
     setStandardShortcut(m_actSettings, QKeySequence::Preferences);
@@ -528,7 +563,7 @@ void MainWindow::buildTransferDock_()
     auto* tabs = new QTabWidget;
     tabs->setDocumentMode(true);
     tabs->addTab(makeEmptyState(tr("No transfers.")), tr("Transfers"));
-    tabs->addTab(makeEmptyState(tr("No activity yet.")), tr("Log"));
+    tabs->addTab(new LogPanel(m_activity), tr("Log"));
     tabs->setMinimumHeight(120);
     m_transferDock->setWidget(tabs);
     addDockWidget(Qt::BottomDockWidgetArea, m_transferDock);

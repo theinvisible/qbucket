@@ -133,6 +133,32 @@ private slots:
         QVERIFY(!loadNow(store, a).server);
     }
 
+    void historyIsAppendedAndBounded()
+    {
+        QTemporaryDir dir;
+        const QUuid a = QUuid::createUuid();
+        CapabilityStore store(dir.path());
+        for (int i = 0; i < CapabilityStore::kHistoryKeep + 300; i += 100) {
+            QList<QJsonObject> batch;
+            for (int j = i; j < i + 100; ++j)
+                batch.append(QJsonObject{{QStringLiteral("n"), j}, {QStringLiteral("pad"), QString(300, u'x')}});
+            store.appendHistory(a, batch);
+        }
+        QObject context;
+        std::optional<QList<QJsonObject>> out;
+        store.loadHistory(a, &context, [&](const QList<QJsonObject>& e) { out = e; });
+        QTRY_VERIFY(out.has_value());
+        QVERIFY(out->size() <= CapabilityStore::kHistoryKeep);
+        QCOMPARE(out->last().value(QStringLiteral("n")).toInt(), CapabilityStore::kHistoryKeep + 299);   // newest kept
+        QVERIFY(out->first().value(QStringLiteral("n")).toInt() > 0);                              // oldest dropped
+        // A load is in call order too, and the history goes with the account.
+        store.removeAll(a);
+        out.reset();
+        store.loadHistory(a, &context, [&](const QList<QJsonObject>& e) { out = e; });
+        QTRY_VERIFY(out.has_value());
+        QVERIFY(out->isEmpty());
+    }
+
     void callbackDroppedWithItsContext()
     {
         QTemporaryDir dir;

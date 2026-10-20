@@ -17,6 +17,7 @@ namespace {
 
 const QString kServerFile = QStringLiteral("server.json");
 const QString kBucketPrefix = QStringLiteral("bucket-");
+const QString kHistoryFile = QStringLiteral("history.jsonl");
 
 bool writeJson(const QString& path, const QJsonObject& json, QString* error)
 {
@@ -139,6 +140,65 @@ void CapabilityStore::removeAll(const QUuid& account)
         QDir d(dir);
         if (d.exists() && !d.removeRecursively())
             qCWarning(lcApp).noquote() << "could not remove" << dir;
+    });
+}
+
+void CapabilityStore::appendHistory(const QUuid& account, const QList<QJsonObject>& entries)
+{
+    if (entries.isEmpty())
+        return;
+    const QString dir = accountDir_(account);
+    m_io.start([dir, entries] {
+        if (!QDir().mkpath(dir))
+            return;
+        QFile f(dir + u'/' + kHistoryFile);
+        if (!f.open(QIODevice::Append | QIODevice::Text)) {
+            qCWarning(lcApp).noquote() << "could not write" << f.fileName() << ':' << f.errorString();
+            return;
+        }
+        for (const QJsonObject& e : entries)
+            f.write(QJsonDocument(e).toJson(QJsonDocument::Compact) + '\n');
+        const bool tooLong = f.size() > qint64(kHistoryKeep) * 400;   // roughly: lines are ~150 bytes
+        f.close();
+        if (!tooLong)
+            return;
+        // Keep the newest lines only.
+        if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+        QList<QByteArray> lines = f.readAll().split('\n');
+        f.close();
+        lines.removeAll(QByteArray());
+        if (lines.size() <= kHistoryKeep)
+            return;
+        lines = lines.mid(lines.size() - kHistoryKeep);
+        QSaveFile out(f.fileName());
+        if (out.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            out.write(lines.join('\n') + '\n');
+            out.commit();
+        }
+    });
+}
+
+void CapabilityStore::loadHistory(const QUuid& account, QObject* context, HistoryCallback done)
+{
+    const QString path = accountDir_(account) + u'/' + kHistoryFile;
+    const QPointer<QObject> guard(context);
+    m_io.start([this, path, guard, done = std::move(done)] {
+        QList<QJsonObject> entries;
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            for (const QByteArray& line : f.readAll().split('\n')) {
+                const QJsonDocument doc = QJsonDocument::fromJson(line);
+                if (doc.isObject())
+                    entries.append(doc.object());
+            }
+        }
+        if (entries.size() > kHistoryKeep)
+            entries = entries.mid(entries.size() - kHistoryKeep);
+        QMetaObject::invokeMethod(this, [guard, done, entries] {
+            if (guard)
+                done(entries);
+        }, Qt::QueuedConnection);
     });
 }
 

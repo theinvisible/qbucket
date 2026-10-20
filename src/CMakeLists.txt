@@ -44,8 +44,12 @@ target_link_libraries(qbucket_accounts
 add_library(qbucket_controllers STATIC
     controllers/AccountSessions.h
     controllers/AccountSessions.cpp
+    controllers/ActivityLog.h
+    controllers/ActivityLog.cpp
     controllers/BrowseController.h
     controllers/BrowseController.cpp
+    controllers/CapabilityController.h
+    controllers/CapabilityController.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h
@@ -99,8 +103,12 @@ add_library(qbucket_app_ui STATIC
     ui/AccountSidebar.cpp
     ui/AccountTreeDelegate.h
     ui/AccountTreeDelegate.cpp
+    ui/CapabilitiesDialog.h
+    ui/CapabilitiesDialog.cpp
     ui/DetailPane.h
     ui/DetailPane.cpp
+    ui/LogPanel.h
+    ui/LogPanel.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
     ui/ObjectBrowser.h

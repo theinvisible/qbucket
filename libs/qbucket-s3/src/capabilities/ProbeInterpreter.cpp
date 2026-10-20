@@ -197,7 +197,7 @@ ServerFingerprint fingerprintOf(const RawResponse& response)
     else if (hex.match(id).hasMatch())
         fp.requestIdShape = QStringLiteral("hex%1").arg(id.size());
     else
-        fp.requestIdShape = QStringLiteral("other%1").arg(id.size());
+        fp.requestIdShape = QStringLiteral("other");   // no length: ids like "req9" / "req10" grow
     return fp;
 }
 

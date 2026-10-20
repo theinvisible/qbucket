@@ -362,6 +362,371 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::CapabilitiesDialog</name>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="59"/>
+        <source>Server Capabilities — %1</source>
+        <translation>Server-Fähigkeiten — %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="64"/>
+        <source>Show:</source>
+        <translation>Anzeigen:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="69"/>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="158"/>
+        <location filename="../tests/test_capabilities_dialog.cpp" line="109"/>
+        <source>Check Again</source>
+        <translation>Erneut prüfen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="81"/>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="94"/>
+        <source>Feature</source>
+        <translation>Funktion</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="81"/>
+        <source>State</source>
+        <translation>Zustand</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="81"/>
+        <source>Known from</source>
+        <translation>Bekannt aus</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="81"/>
+        <source>Checked</source>
+        <translation>Geprüft</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="81"/>
+        <source>Answer</source>
+        <translation>Antwort</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="89"/>
+        <source>Changes</source>
+        <translation>Änderungen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="94"/>
+        <source>When</source>
+        <translation>Wann</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="94"/>
+        <source>Where</source>
+        <translation>Wo</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="94"/>
+        <source>Change</source>
+        <translation>Änderung</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="142"/>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="214"/>
+        <source>Server</source>
+        <translation>Server</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="148"/>
+        <source>Bucket “%1”</source>
+        <translation>Bucket „%1“</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="158"/>
+        <source>Checking…</source>
+        <translation>Wird geprüft…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="165"/>
+        <source>Being checked…</source>
+        <translation>Wird gerade geprüft…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="165"/>
+        <source>Not checked yet — the provider profile&apos;s knowledge is shown.</source>
+        <translation>Noch nicht geprüft — angezeigt wird, was das Anbieterprofil weiß.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="167"/>
+        <source>Checked %1.</source>
+        <translation>Geprüft %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="169"/>
+        <source>Server software: %1.</source>
+        <translation>Server-Software: %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="171"/>
+        <source>never enabled</source>
+        <translation>nie aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="173"/>
+        <source>Versioning: %1.</source>
+        <translation>Versionierung: %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="175"/>
+        <source>Object lock: enabled.</source>
+        <translation>Object Lock: aktiviert.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="176"/>
+        <source>Object lock: not enabled.</source>
+        <translation>Object Lock: nicht aktiviert.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="216"/>
+        <source>%1 → %2</source>
+        <translation>%1 → %2</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CapabilitiesDialog.cpp" line="221"/>
+        <source>No changes recorded.</source>
+        <translation>Keine Änderungen aufgezeichnet.</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::CapabilityController</name>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="77"/>
+        <source>Stored capabilities skipped: %1</source>
+        <translation>Gespeicherte Fähigkeiten übersprungen: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="234"/>
+        <source>Could not check what the server of “%1” supports: %2</source>
+        <translation>Konnte nicht prüfen, was der Server von „%1“ unterstützt: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="260"/>
+        <source>Could not check what bucket “%1” supports: %2</source>
+        <translation>Konnte nicht prüfen, was der Bucket „%1“ unterstützt: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="291"/>
+        <source>%1 › %2</source>
+        <translation>%1 › %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="304"/>
+        <source>%1: %2 changed from “%3” to “%4”.</source>
+        <translation>%1: %2 hat sich von „%3“ auf „%4“ geändert.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="343"/>
+        <source>%1 › %2: the server refused %3; it is not offered any more.</source>
+        <translation>%1 › %2: Der Server hat %3 abgelehnt; es wird nicht mehr angeboten.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="478"/>
+        <source>Versioning</source>
+        <translation>Versionierung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="479"/>
+        <source>Object lock</source>
+        <translation>Object Lock</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="480"/>
+        <source>Legal hold</source>
+        <translation>Legal Hold</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="481"/>
+        <source>Retention</source>
+        <translation>Aufbewahrung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="482"/>
+        <source>Lifecycle rules</source>
+        <translation>Lifecycle-Regeln</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="483"/>
+        <source>CORS</source>
+        <translation>CORS</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="484"/>
+        <source>Bucket policy</source>
+        <translation>Bucket-Richtlinie</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="485"/>
+        <source>Policy status</source>
+        <translation>Richtlinienstatus</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="486"/>
+        <source>Bucket ACL</source>
+        <translation>Bucket-ACL</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="487"/>
+        <source>Object ACL</source>
+        <translation>Objekt-ACL</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="488"/>
+        <source>Bucket tags</source>
+        <translation>Bucket-Tags</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="489"/>
+        <source>Object tags</source>
+        <translation>Objekt-Tags</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="490"/>
+        <source>Default encryption</source>
+        <translation>Standardverschlüsselung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="491"/>
+        <source>Customer-provided keys (SSE-C)</source>
+        <translation>Eigene Schlüssel (SSE-C)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="492"/>
+        <source>Static website</source>
+        <translation>Statische Website</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="493"/>
+        <source>Replication</source>
+        <translation>Replikation</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="494"/>
+        <source>Access logging</source>
+        <translation>Zugriffsprotokollierung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="495"/>
+        <source>Event notifications</source>
+        <translation>Ereignisbenachrichtigungen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="496"/>
+        <source>Public access block</source>
+        <translation>Öffentlichen Zugriff blockieren</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="497"/>
+        <source>Ownership controls</source>
+        <translation>Besitzkontrollen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="498"/>
+        <source>Listing multipart uploads</source>
+        <translation>Multipart-Uploads auflisten</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="499"/>
+        <source>Listing object versions</source>
+        <translation>Objektversionen auflisten</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="500"/>
+        <source>Conditional writes</source>
+        <translation>Bedingte Schreibzugriffe</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="501"/>
+        <source>Copying between buckets</source>
+        <translation>Kopieren zwischen Buckets</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="502"/>
+        <source>Deleting many objects at once</source>
+        <translation>Viele Objekte auf einmal löschen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="503"/>
+        <source>Presigned links</source>
+        <translation>Vorsignierte Links</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="511"/>
+        <source>Supported</source>
+        <translation>Unterstützt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="512"/>
+        <source>Not supported</source>
+        <translation>Nicht unterstützt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="513"/>
+        <source>Not permitted</source>
+        <translation>Nicht erlaubt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
+        <source>Unknown</source>
+        <translation>Unbekannt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="522"/>
+        <source>Checked</source>
+        <translation>Geprüft</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="523"/>
+        <source>Learned from a request</source>
+        <translation>Aus einer Anfrage gelernt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="524"/>
+        <source>Provider profile</source>
+        <translation>Anbieterprofil</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="534"/>
+        <source>known from the provider profile</source>
+        <translation>aus dem Anbieterprofil bekannt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="539"/>
+        <source>HTTP %1 %2, %3</source>
+        <translation>HTTP %1 %2, %3</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="547"/>
+        <source>%1 is switched off for this provider: its proxy mishandles these requests.</source>
+        <translation>%1 ist für diesen Anbieter abgeschaltet: Sein Proxy behandelt diese Anfragen falsch.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="548"/>
+        <source>The server does not support %1 (%2).</source>
+        <translation>Der Server unterstützt %1 nicht (%2).</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="550"/>
+        <source>These credentials may not use %1 (%2).</source>
+        <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="552"/>
+        <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
+        <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="554"/>
+        <source>%1 is not verified on this server.</source>
+        <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ConnectionTester</name>
     <message>
         <location filename="../src/controllers/ConnectionTester.cpp" line="36"/>
@@ -627,287 +992,300 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::LogPanel</name>
+    <message>
+        <location filename="../src/ui/LogPanel.cpp" line="16"/>
+        <source>No activity yet.</source>
+        <translation>Noch keine Aktivität.</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::MainWindow</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="131"/>
+        <location filename="../src/ui/MainWindow.cpp" line="140"/>
         <source>No system keychain available — secrets are kept for this session only (%1).</source>
         <translation>Kein Schlüsselbund verfügbar — geheime Schlüssel werden nur für diese Sitzung gehalten (%1).</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="251"/>
+        <location filename="../src/ui/MainWindow.cpp" line="200"/>
+        <source>What “%1” supports has changed — see Tools → Server Capabilities.</source>
+        <translation>Was „%1“ unterstützt, hat sich geändert — siehe Extras → Server-Fähigkeiten.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="283"/>
         <source>&amp;File</source>
         <translation>&amp;Datei</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="252"/>
+        <location filename="../src/ui/MainWindow.cpp" line="284"/>
         <source>Add &amp;Account…</source>
         <translation>&amp;Konto hinzufügen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="255"/>
+        <location filename="../src/ui/MainWindow.cpp" line="287"/>
         <source>&amp;Quit</source>
         <translation>&amp;Beenden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="258"/>
+        <location filename="../src/ui/MainWindow.cpp" line="290"/>
         <source>&amp;Edit</source>
         <translation>&amp;Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="261"/>
+        <location filename="../src/ui/MainWindow.cpp" line="293"/>
         <source>&amp;View</source>
         <translation>&amp;Ansicht</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="264"/>
+        <location filename="../src/ui/MainWindow.cpp" line="296"/>
         <source>&amp;Folders</source>
         <translation>&amp;Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="265"/>
+        <location filename="../src/ui/MainWindow.cpp" line="297"/>
         <source>F&amp;lat Listing</source>
         <translation>&amp;Flache Liste</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="266"/>
+        <location filename="../src/ui/MainWindow.cpp" line="298"/>
         <source>&amp;Versions</source>
         <translation>&amp;Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="286"/>
+        <location filename="../src/ui/MainWindow.cpp" line="318"/>
         <source>&amp;Back</source>
         <translation>&amp;Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="288"/>
+        <location filename="../src/ui/MainWindow.cpp" line="320"/>
         <source>&amp;Forward</source>
         <translation>&amp;Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="290"/>
+        <location filename="../src/ui/MainWindow.cpp" line="322"/>
         <source>&amp;Up One Level</source>
         <translation>Eine Ebene &amp;nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="292"/>
+        <location filename="../src/ui/MainWindow.cpp" line="324"/>
         <source>&amp;Refresh</source>
         <translation>&amp;Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="294"/>
+        <location filename="../src/ui/MainWindow.cpp" line="326"/>
         <source>&amp;Go to Path…</source>
         <translation>&amp;Gehe zu Pfad…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="300"/>
+        <location filename="../src/ui/MainWindow.cpp" line="332"/>
         <source>&amp;Theme</source>
         <translation>&amp;Design</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="302"/>
+        <location filename="../src/ui/MainWindow.cpp" line="334"/>
         <source>&amp;Dark</source>
         <translation>&amp;Dunkel</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="303"/>
+        <location filename="../src/ui/MainWindow.cpp" line="335"/>
         <source>&amp;Light</source>
         <translation>&amp;Hell</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="304"/>
+        <location filename="../src/ui/MainWindow.cpp" line="336"/>
         <source>Follow &amp;System</source>
         <translation>&amp;System folgen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="323"/>
+        <location filename="../src/ui/MainWindow.cpp" line="355"/>
         <source>&amp;Tools</source>
         <translation>E&amp;xtras</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="324"/>
+        <location filename="../src/ui/MainWindow.cpp" line="356"/>
+        <source>Server &amp;Capabilities…</source>
+        <translation>Server-&amp;Fähigkeiten…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="359"/>
         <source>&amp;Settings…</source>
         <translation>&amp;Einstellungen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="328"/>
+        <location filename="../src/ui/MainWindow.cpp" line="363"/>
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="329"/>
+        <location filename="../src/ui/MainWindow.cpp" line="364"/>
         <source>&amp;About QBucket…</source>
         <translation>&amp;Über QBucket…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="330"/>
+        <location filename="../src/ui/MainWindow.cpp" line="365"/>
         <source>About &amp;Qt…</source>
         <translation>Über &amp;Qt…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="338"/>
+        <location filename="../src/ui/MainWindow.cpp" line="373"/>
         <source>Main</source>
         <translation>Haupt</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="357"/>
+        <location filename="../src/ui/MainWindow.cpp" line="392"/>
         <source>Upload</source>
         <translation>Hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="359"/>
+        <location filename="../src/ui/MainWindow.cpp" line="394"/>
         <source>Upload files or folders to the current location</source>
         <translation>Dateien oder Ordner an den aktuellen Ort hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="363"/>
+        <location filename="../src/ui/MainWindow.cpp" line="398"/>
         <source>Download the selection</source>
         <translation>Auswahl herunterladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="367"/>
+        <location filename="../src/ui/MainWindow.cpp" line="402"/>
         <source>New folder</source>
         <translation>Neuer Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="371"/>
+        <location filename="../src/ui/MainWindow.cpp" line="406"/>
         <source>Delete the selection</source>
         <translation>Auswahl löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="377"/>
+        <location filename="../src/ui/MainWindow.cpp" line="412"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="381"/>
+        <location filename="../src/ui/MainWindow.cpp" line="416"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="385"/>
+        <location filename="../src/ui/MainWindow.cpp" line="420"/>
         <source>Up one level</source>
         <translation>Eine Ebene nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="389"/>
+        <location filename="../src/ui/MainWindow.cpp" line="424"/>
         <source>Refresh</source>
         <translation>Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="397"/>
+        <location filename="../src/ui/MainWindow.cpp" line="432"/>
         <source>Filter this folder…</source>
         <translation>Diesen Ordner filtern…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="416"/>
+        <location filename="../src/ui/MainWindow.cpp" line="451"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="417"/>
+        <location filename="../src/ui/MainWindow.cpp" line="452"/>
         <source>Flat</source>
         <translation>Flach</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="418"/>
+        <location filename="../src/ui/MainWindow.cpp" line="453"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="434"/>
+        <location filename="../src/ui/MainWindow.cpp" line="469"/>
         <source>Not available yet</source>
         <translation>Noch nicht verfügbar</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="437"/>
+        <location filename="../src/ui/MainWindow.cpp" line="472"/>
         <source>Folders: browse by prefix · Flat: every key below the current prefix · Versions: all object versions</source>
         <translation>Ordner: nach Präfix navigieren · Flach: alle Keys unterhalb des aktuellen Präfixes · Versionen: alle Objektversionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="443"/>
+        <location filename="../src/ui/MainWindow.cpp" line="478"/>
         <source>Toggle light / dark</source>
         <translation>Hell / dunkel umschalten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="450"/>
+        <location filename="../src/ui/MainWindow.cpp" line="485"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="523"/>
-        <location filename="../src/ui/MainWindow.cpp" line="530"/>
+        <location filename="../src/ui/MainWindow.cpp" line="558"/>
+        <location filename="../src/ui/MainWindow.cpp" line="565"/>
         <source>Transfers</source>
         <translation>Übertragungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="530"/>
+        <location filename="../src/ui/MainWindow.cpp" line="565"/>
         <source>No transfers.</source>
         <translation>Keine Übertragungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="531"/>
-        <source>No activity yet.</source>
-        <translation>Noch keine Aktivität.</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="531"/>
+        <location filename="../src/ui/MainWindow.cpp" line="566"/>
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="538"/>
+        <location filename="../src/ui/MainWindow.cpp" line="573"/>
         <source>&amp;Transfers Panel</source>
         <translation>&amp;Übertragungsbereich</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="216"/>
-        <location filename="../src/ui/MainWindow.cpp" line="550"/>
+        <location filename="../src/ui/MainWindow.cpp" line="248"/>
+        <location filename="../src/ui/MainWindow.cpp" line="585"/>
         <source>Not connected</source>
         <translation>Nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="218"/>
-        <location filename="../src/ui/MainWindow.cpp" line="555"/>
+        <location filename="../src/ui/MainWindow.cpp" line="250"/>
+        <location filename="../src/ui/MainWindow.cpp" line="590"/>
         <source>Offline</source>
         <translation>Offline</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="225"/>
+        <location filename="../src/ui/MainWindow.cpp" line="257"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="230"/>
+        <location filename="../src/ui/MainWindow.cpp" line="262"/>
         <source>Refreshing…</source>
         <translation>Wird aktualisiert…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="230"/>
+        <location filename="../src/ui/MainWindow.cpp" line="262"/>
         <source>Online</source>
         <translation>Online</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="234"/>
+        <location filename="../src/ui/MainWindow.cpp" line="266"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="628"/>
+        <location filename="../src/ui/MainWindow.cpp" line="663"/>
         <source>Account “%1” saved — its secret is kept for this session only.</source>
         <translation>Konto „%1“ gespeichert — sein geheimer Schlüssel wird nur für diese Sitzung gehalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="629"/>
+        <location filename="../src/ui/MainWindow.cpp" line="664"/>
         <source>Account “%1” saved.</source>
         <translation>Konto „%1“ gespeichert.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="636"/>
+        <location filename="../src/ui/MainWindow.cpp" line="671"/>
         <source>About QBucket</source>
         <translation>Über QBucket</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="637"/>
+        <location filename="../src/ui/MainWindow.cpp" line="672"/>
         <source>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;A native browser for S3 and S3-compatible object storage.&lt;/p&gt;&lt;p&gt;Built with Qt %2 Widgets. Licensed under the MIT license.&lt;/p&gt;</source>
         <translation>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;Ein nativer Browser für S3 und S3-kompatiblen Object Storage.&lt;/p&gt;&lt;p&gt;Erstellt mit Qt %2 Widgets. Lizenziert unter der MIT-Lizenz.&lt;/p&gt;</translation>
     </message>

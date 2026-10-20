@@ -2,6 +2,7 @@
 
 #include <qbucket/s3/Capabilities.h>
 
+#include <QJsonObject>
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -16,7 +17,9 @@ namespace qbucket {
 
 // The capability results the app keeps between runs (PLAN.md §3.3), one
 // directory per account under AppDataLocation/capabilities:
-// server.json and bucket-<name>.json, each a CapabilitySet::toJson().
+// server.json and bucket-<name>.json, each a CapabilitySet::toJson(), and
+// history.jsonl, one line per detected change (kept to the newest
+// kHistoryKeep lines).
 // Expiry and merging are the CapabilityController's job; this only stores.
 //
 // File I/O runs on one background thread, in call order — a load after a
@@ -35,6 +38,9 @@ public:
         QStringList problems;   // unreadable files, skipped (English, for the log)
     };
     using LoadCallback = std::function<void(const Snapshot&)>;
+    using HistoryCallback = std::function<void(const QList<QJsonObject>&)>;
+
+    static constexpr int kHistoryKeep = 1000;
 
     explicit CapabilityStore(QObject* parent = nullptr);
     // Explicit root directory, for tests.
@@ -45,6 +51,10 @@ public:
     void save(const QUuid& account, const s3::CapabilitySet& set);
     // When the account is deleted.
     void removeAll(const QUuid& account);
+
+    void appendHistory(const QUuid& account, const QList<QJsonObject>& entries);
+    // Oldest first.
+    void loadHistory(const QUuid& account, QObject* context, HistoryCallback done);
 
     // Blocks until queued I/O is done — tests only.
     void waitForIdle();

@@ -40,6 +40,14 @@ version bump may break the API.
 - `SessionOptions::initialClockOffsetSecs` (carry a learned offset over).
 - `ObjectMeta::responseHeaders`: every header of the HeadObject / GetObject
   answer, as received.
+
+### Fixed
+
+- `ServerFingerprint::requestIdShape` no longer contains the length of
+  request ids that are neither hex nor RGW-style: ids of a growing counter
+  changed the fingerprint with every probe, and `capabilities::merge` then
+  dropped all earlier definitive results (a 5xx probe could erase a known
+  "Supported").
 - `examples/s3ls` — CLI over the public API; also the install-consumer check.
 - Integration tests (`it_s3_backend`) with Docker backends (Ceph RGW,
   VersityGW, Garage) and per-backend expectation files for known deviations.

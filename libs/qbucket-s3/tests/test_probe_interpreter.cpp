@@ -169,6 +169,14 @@ private Q_SLOTS:
         aws.headers = {{"Server", "AmazonS3"}, {"x-amz-request-id", "4442587FB7D0A2F9"}};
         QCOMPARE(fingerprintOf(aws).requestIdShape, QStringLiteral("hex16"));
         QVERIFY(fingerprintOf(aws).hash() != a.hash());
+
+        // Ids of a growing counter are the same software: a changed
+        // fingerprint would throw every earlier answer away.
+        RawResponse counter;
+        counter.headers = {{"x-amz-request-id", "fake9"}};
+        const QString nine = fingerprintOf(counter).hash();
+        counter.headers[0].second = "fake10";
+        QCOMPARE(fingerprintOf(counter).hash(), nine);
     }
 };
 

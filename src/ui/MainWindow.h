@@ -18,6 +18,9 @@ class QTreeView;
 namespace qbucket {
 
 class AccountSessions;
+class ActivityLog;
+class CapabilityController;
+class CapabilityStore;
 class AccountSidebar;
 class DetailPane;
 class ObjectBrowser;
@@ -55,6 +58,7 @@ private:
     void connectBrowser_();
     void updateNavigation_();
     void updateStatus_();
+    void showCapabilities_();
     void restoreWindowState_();
     void saveWindowState_();
 
@@ -70,6 +74,9 @@ private:
     AccountStore*       m_accounts;
     SecretStore*        m_secrets;
     AccountSessions*    m_sessions = nullptr;   // with account management only
+    ActivityLog*        m_activity = nullptr;
+    CapabilityStore*    m_capStore = nullptr;
+    CapabilityController* m_capabilities = nullptr;
 
     // Menu actions
     QMenu*        m_editMenu        = nullptr;
@@ -89,6 +96,7 @@ private:
     QAction*      m_actThemeDark    = nullptr;
     QAction*      m_actThemeLight   = nullptr;
     QAction*      m_actThemeSystem  = nullptr;
+    QAction*      m_actCapabilities = nullptr;
     QAction*      m_actSettings     = nullptr;
     QAction*      m_actAbout        = nullptr;
     QAction*      m_actAboutQt      = nullptr;
