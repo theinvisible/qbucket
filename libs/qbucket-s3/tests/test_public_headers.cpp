@@ -14,8 +14,12 @@
 #include <qbucket/s3/Session.h>
 #include <qbucket/s3/Types.h>
 #include <qbucket/s3/Version.h>
+#include <qbucket/s3/providers/AwsProfile.h>
+#include <qbucket/s3/providers/GarageProfile.h>
 #include <qbucket/s3/providers/GenericS3Profile.h>
+#include <qbucket/s3/providers/HetznerProfile.h>
 #include <qbucket/s3/providers/ProviderProfile.h>
+#include <qbucket/s3/providers/ProviderRegistry.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 
 #include <QtTest>

@@ -18,7 +18,7 @@
 
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/Session.h>
-#include <qbucket/s3/providers/GenericS3Profile.h>
+#include <qbucket/s3/providers/ProviderRegistry.h>
 
 #include <QCryptographicHash>
 #include <QFile>
@@ -176,7 +176,7 @@ private Q_SLOTS:
         m_options.endpoint.addressing = env("QBUCKET_IT_ADDRESSING") == QLatin1String("virtual")
             ? AddressingStyle::VirtualHosted
             : AddressingStyle::Path;
-        m_options.profile = std::make_shared<GenericS3Profile>();
+        m_options.profile = ProviderRegistry::builtin().findOrGeneric(env("QBUCKET_IT_PROVIDER"));
         m_options.transferTimeoutMs = 30000;
         m_options = optionsWith(env("QBUCKET_IT_ACCESS_KEY"), env("QBUCKET_IT_SECRET_KEY"));
         QVERIFY2(m_options.endpoint.isValid(), qPrintable(m_options.endpoint.validationError()));

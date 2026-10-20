@@ -58,8 +58,12 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/Result.h
     include/qbucket/s3/Session.h
     include/qbucket/s3/Types.h
+    include/qbucket/s3/providers/AwsProfile.h
+    include/qbucket/s3/providers/GarageProfile.h
     include/qbucket/s3/providers/GenericS3Profile.h
+    include/qbucket/s3/providers/HetznerProfile.h
     include/qbucket/s3/providers/ProviderProfile.h
+    include/qbucket/s3/providers/ProviderRegistry.h
     src/client/RequestPipeline.h
     src/client/RequestPipeline.cpp
     src/client/RetryPolicy.h
@@ -86,7 +90,11 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/logging/Logging.cpp
     src/logging/Redaction.h
     src/logging/Redaction.cpp
+    src/providers/AwsProfile.cpp
+    src/providers/GarageProfile.cpp
+    src/providers/HetznerProfile.cpp
     src/providers/ProviderProfile.cpp
+    src/providers/ProviderRegistry.cpp
     src/session/ListObjectsPager.cpp
     src/session/Session.cpp
     src/signing/SigV4Signer.cpp

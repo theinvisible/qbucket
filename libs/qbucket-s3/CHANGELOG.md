@@ -42,6 +42,12 @@ version bump may break the API.
 - Integration tests (`it_s3_backend`) with Docker backends (Ceph RGW,
   VersityGW, Garage) and per-backend expectation files for known deviations.
 
+- `ProviderRegistry` with `HetznerProfile` (fsn1/nbg1/hel1, virtual-hosted,
+  location = signing region), `AwsProfile`, `GarageProfile` (maps Garage's
+  "Invalid signature" AccessDenied to Authentication) and `GenericS3Profile`.
+- `AwsSharedFileCredentialsProvider` (~/.aws/credentials format, re-read on
+  every fetch).
+
 ### Safety
 
 - Retries only where safe: transient failures of idempotent requests, and

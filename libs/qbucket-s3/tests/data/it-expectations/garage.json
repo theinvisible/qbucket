@@ -1,4 +1,3 @@
 {
-    "_comment": "Garage answers a wrong secret with 403 AccessDenied ('Forbidden: Invalid signature') instead of SignatureDoesNotMatch. Verified 2026-10-20 with garage v2.4.1.",
-    "wrongSecretCategory": "NotPermitted"
+    "_comment": "Garage v2.4.1: a wrong secret comes back as 403 AccessDenied 'Forbidden: Invalid signature'; GarageProfile maps it to Authentication (tests/data/garage). Otherwise plain S3 for what it_s3_backend checks."
 }

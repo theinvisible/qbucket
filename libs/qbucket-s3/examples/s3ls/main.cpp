@@ -1,9 +1,9 @@
 // s3ls — list buckets and objects with qbucket-s3.
 //
 //   export AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=…
-//   s3ls --endpoint https://fsn1.your-objectstorage.com --region fsn1 buckets
+//   s3ls --provider hetzner --region fsn1 buckets
 //   s3ls --endpoint http://127.0.0.1:7480 --region us-east-1 ls my-bucket photos/
-//   s3ls … ls my-bucket --recursive
+//   s3ls --provider aws --region eu-central-1 --aws-profile work ls my-bucket -r
 //
 // Shows the intended use of the public API: a Session on its own worker
 // thread, callbacks with a context object, ListObjectsPager for paging.
@@ -11,7 +11,7 @@
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/Session.h>
 #include <qbucket/s3/Version.h>
-#include <qbucket/s3/providers/GenericS3Profile.h>
+#include <qbucket/s3/providers/ProviderRegistry.h>
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -75,32 +75,47 @@ int main(int argc, char** argv)
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral(
         "List S3 buckets and objects. Credentials come from AWS_ACCESS_KEY_ID, "
-        "AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN."));
+        "AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN, or with --aws-profile from "
+        "the AWS shared credentials file."));
     parser.addHelpOption();
     parser.addVersionOption();
+    const QCommandLineOption providerOpt(QStringLiteral("provider"),
+                                         QStringLiteral("Provider profile: hetzner, aws, garage, generic."),
+                                         QStringLiteral("id"), QStringLiteral("generic"));
     const QCommandLineOption endpointOpt(QStringLiteral("endpoint"),
-                                         QStringLiteral("S3 endpoint URL."), QStringLiteral("url"));
-    const QCommandLineOption regionOpt(QStringLiteral("region"), QStringLiteral("Signing region."),
-                                       QStringLiteral("region"), QStringLiteral("us-east-1"));
-    const QCommandLineOption virtualOpt(QStringLiteral("virtual-hosted"),
-                                        QStringLiteral("Bucket in the host name (default: path-style)."));
+                                         QStringLiteral("S3 endpoint URL (default: the provider's for --region)."),
+                                         QStringLiteral("url"));
+    const QCommandLineOption regionOpt(QStringLiteral("region"), QStringLiteral("Region."),
+                                       QStringLiteral("region"));
+    const QCommandLineOption profileOpt(QStringLiteral("aws-profile"),
+                                        QStringLiteral("Profile in the AWS shared credentials file."),
+                                        QStringLiteral("name"));
+    const QCommandLineOption pathOpt(QStringLiteral("path-style"),
+                                     QStringLiteral("Bucket in the path (default: the provider's choice)."));
     const QCommandLineOption recursiveOpt({QStringLiteral("r"), QStringLiteral("recursive")},
                                           QStringLiteral("List without delimiter."));
-    parser.addOptions({endpointOpt, regionOpt, virtualOpt, recursiveOpt});
+    parser.addOptions({providerOpt, endpointOpt, regionOpt, profileOpt, pathOpt, recursiveOpt});
     parser.addPositionalArgument(QStringLiteral("command"), QStringLiteral("buckets | ls <bucket> [prefix]"));
     parser.process(app);
 
     const QStringList args = parser.positionalArguments();
-    if (args.isEmpty() || !parser.isSet(endpointOpt))
+    if (args.isEmpty())
         parser.showHelp(2);
 
     SessionOptions options;
-    options.endpoint.url = QUrl(parser.value(endpointOpt));
-    options.endpoint.region = parser.value(regionOpt);
-    options.endpoint.addressing = parser.isSet(virtualOpt) ? AddressingStyle::VirtualHosted
-                                                           : AddressingStyle::Path;
-    options.profile = std::make_shared<GenericS3Profile>();
-    options.credentials = std::make_shared<EnvCredentialsProvider>();
+    options.profile = ProviderRegistry::builtin().findOrGeneric(parser.value(providerOpt));
+    options.endpoint.region = parser.isSet(regionOpt)
+        ? parser.value(regionOpt)
+        : options.profile->regions().value(0, options.profile->signingRegion(QString()));
+    options.endpoint.url = parser.isSet(endpointOpt) ? QUrl(parser.value(endpointOpt))
+                                                     : options.profile->endpointFor(options.endpoint.region);
+    options.endpoint.addressing = parser.isSet(pathOpt) ? AddressingStyle::Path : AddressingStyle::Auto;
+    if (parser.isSet(profileOpt)) {
+        options.credentials = std::make_shared<AwsSharedFileCredentialsProvider>(
+            QString(), parser.value(profileOpt));
+    } else {
+        options.credentials = std::make_shared<EnvCredentialsProvider>();
+    }
     if (const QString e = options.endpoint.validationError(); !e.isEmpty()) {
         err() << "error: " << e << Qt::endl;
         return 2;

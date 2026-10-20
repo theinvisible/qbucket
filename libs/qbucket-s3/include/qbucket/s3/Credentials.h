@@ -75,4 +75,25 @@ public:
     void fetch(Callback done) override;
 };
 
+// The AWS shared credentials file (~/.aws/credentials format): sections
+// [profile] with aws_access_key_id, aws_secret_access_key and optional
+// aws_session_token. Read on every fetch(), so edits apply without a
+// restart. Thread-safe (immutable configuration, no shared state).
+class QBUCKET_S3_EXPORT AwsSharedFileCredentialsProvider final : public CredentialsProvider {
+public:
+    // Empty path: defaultPath(). Empty profile: $AWS_PROFILE, else "default".
+    explicit AwsSharedFileCredentialsProvider(QString path = {}, QString profile = {});
+    void fetch(Callback done) override;
+
+    // $AWS_SHARED_CREDENTIALS_FILE, else ~/.aws/credentials.
+    [[nodiscard]] static QString defaultPath();
+
+    // The parser on its own (also used by tests).
+    [[nodiscard]] static Result<Credentials> parse(const QByteArray& content, const QString& profile);
+
+private:
+    QString m_path;
+    QString m_profile;
+};
+
 } // namespace qbucket::s3
