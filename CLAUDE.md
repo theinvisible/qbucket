@@ -72,8 +72,10 @@ What exists:
 - App accounts (M1): `accounts/SecretStore` (QtKeychain, session-only mode),
   `accounts/AccountStore`, `accounts/KeychainCredentialsProvider`,
   `controllers/ConnectionTester`, `ui/AccountDialog`.
-- CI: Windows, Linux, ASan/UBSan, clang-tidy, Flatpak, `s3-standalone`
-  (static/shared/Windows/ASan+LSan), `s3-integration.yml` (Docker backends).
+- CI per push (`ci.yml`): Linux Release, Windows app, library as Windows DLL.
+  Weekly / tags / on demand: `ci-extended.yml` (ASan/UBSan, library
+  static/shared/LSan, clang-tidy, Flatpak), `s3-integration.yml` (Docker
+  backends). The user pushes; check runs with `gh`.
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
@@ -127,6 +129,30 @@ screenshots, run the window test on a real platform:
 Integration tests against a real endpoint are opt-in via `QBUCKET_IT_*`
 environment variables (endpoint, region, access key, secret, bucket,
 addressing style) and are skipped when unset.
+
+CI runs only the essentials on every push (`ci.yml`). Run the rest locally
+when a change touches what they guard — threading/lifetimes, the library
+protocol, packaging (Linux commands; all builds outside the source tree):
+
+```sh
+# library alone, with ASan + UBSan + LeakSanitizer (lifetimes, threads)
+cmake -S libs/qbucket-s3 -B build-s3-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+      -DQBUCKET_S3_WARNINGS_AS_ERRORS=ON -DQBUCKET_S3_SANITIZE=address,undefined
+cmake --build build-s3-asan && ctest --test-dir build-s3-asan
+# Release build with -Werror (GCC -O3 warns differently than Debug)
+cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DQBUCKET_WARNINGS_AS_ERRORS=ON
+cmake --build build-release && ctest --test-dir build-release
+# clang-tidy 18 like CI (pip/wheel `clang-tidy==18.1.8`), on build/compile_commands.json
+run-clang-tidy -p build -quiet '^(?!.*_autogen).*/(src|tests)/.*\.cpp$'
+# real S3 servers in Docker (Ceph RGW, VersityGW, Garage)
+libs/qbucket-s3/tests/docker/it-up.sh
+cmake -S libs/qbucket-s3 -B build-s3 -DQBUCKET_S3_IT_LOCAL=ON && cmake --build build-s3
+ctest --test-dir build-s3 -L docker
+# Hetzner: set -a; . ~/.config/qbucket-it/hetzner.env; set +a; build-s3/tests/it_s3_backend
+```
+
+The extended CI (`ci-extended.yml`, `s3-integration.yml`) can be started by
+hand from the Actions tab (`workflow_dispatch`).
 
 ## Conventions
 

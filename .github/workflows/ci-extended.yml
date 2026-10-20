@@ -1,0 +1,227 @@
+name: CI extended
+
+# The slower or locally reproducible checks: sanitizers (app, and the library
+# with leak detection), clang-tidy, the Flatpak build, the library alone on
+# Linux (static / shared). Weekly, on release tags and on demand — and
+# locally before risky changes (CLAUDE.md, "Build & test").
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'   # Mondays 04:00 UTC
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # 6.11.x repo layout broke aqtinstall 3.3.0 (see xyz-profiler); stay on the
+  # last known-good 6.10 release until a fixed aqtinstall ships.
+  QT_VERSION: 6.10.2
+
+jobs:
+  # ---------------------------------------------------------------------------
+  sanitizers:
+    name: Linux (ASan + UBSan, Debug)
+    runs-on: ubuntu-24.04
+    env:
+      # Leak reports from fontconfig / the platform plugin are noise for now;
+      # memory errors and UB are what this job is for.
+      ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev \
+            libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 libdbus-1-3 \
+            libsecret-1-dev pkg-config
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DQBUCKET_WARNINGS_AS_ERRORS=ON -DQBUCKET_SANITIZERS=ON
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  # The S3 library on its own on Linux: static, shared, and with ASan + UBSan
+  # + LeakSanitizer. The Windows DLL variant runs on every push (ci.yml).
+  s3-standalone:
+    name: qbucket-s3 standalone (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux, static
+            os: ubuntu-24.04
+            shared: 'OFF'
+            qt_host: linux
+            qt_arch: linux_gcc_64
+          - name: Linux, shared
+            os: ubuntu-24.04
+            shared: 'ON'
+            qt_host: linux
+            qt_arch: linux_gcc_64
+          # With leak detection (the app's sanitizer job has it off because
+          # of fontconfig / platform-plugin noise; the library has none).
+          - name: Linux, ASan + UBSan + LSan
+            os: ubuntu-24.04
+            shared: 'OFF'
+            qt_host: linux
+            qt_arch: linux_gcc_64
+            build_type: Debug
+            sanitize: address,undefined
+          # Shared on Windows catches missing QBUCKET_S3_EXPORTs.
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: ${{ matrix.qt_host }}
+          target: desktop
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Setup MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup Ninja
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Configure
+        run: >
+          cmake -S libs/qbucket-s3 -B build-s3 -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type || 'Release' }}
+          -DQBUCKET_S3_WARNINGS_AS_ERRORS=ON -DQBUCKET_S3_BUILD_SHARED=${{ matrix.shared }}
+          -DQBUCKET_S3_SANITIZE=${{ matrix.sanitize }}
+
+      - name: Build
+        run: cmake --build build-s3 -j
+
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --test-dir build-s3 --output-on-failure
+
+      # ctest shows no QtTest output on Windows: rerun what failed with
+      # QtTest's own file logger and print that.
+      - name: Output of failed tests
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $log = "build-s3/Testing/Temporary/LastTestsFailed.log"
+          if (!(Test-Path $log)) { exit 0 }
+          $env:PATH = "$env:QT_ROOT_DIR\bin;$PWD\build-s3;$env:PATH"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          foreach ($line in Get-Content $log) {
+            $name = $line.Split(':')[1]
+            $exe = Get-ChildItem build-s3 -Recurse -Filter "$name.exe" | Select-Object -First 1
+            if (!$exe) { continue }
+            & $exe.FullName -o "$name-log.txt,txt"
+            Write-Host "===== $name (exit $LASTEXITCODE)"
+            Get-Content "$name-log.txt" -ErrorAction SilentlyContinue
+          }
+
+      - name: Install + build a consumer against the package
+        if: ${{ !matrix.sanitize }}
+        shell: bash
+        run: |
+          qt="$QT_ROOT_DIR"
+          stage="$PWD/stage"
+          if command -v cygpath >/dev/null; then   # Git Bash on Windows
+            qt="$(cygpath -m "$qt")"
+            stage="$(cygpath -m "$stage")"
+          fi
+          cmake --install build-s3 --prefix "$stage"
+          # The s3ls example doubles as the consumer of the installed package.
+          cmake -S libs/qbucket-s3/examples/s3ls -B build-consumer -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$stage;$qt"
+          cmake --build build-consumer
+          # Windows: s3ls finds our DLL and Qt's through PATH.
+          export PATH="$PWD/stage/bin:$(cd "$qt/bin" && pwd):$PATH"
+          ./build-consumer/s3ls --version
+
+  # ---------------------------------------------------------------------------
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang clang-tidy libgl1-mesa-dev \
+            libxkbcommon-dev libxkbcommon-x11-0 libxcb-cursor0 libfontconfig1 \
+            libsecret-1-dev pkg-config
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Configure (clang)
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+      # Build first: moc/uic/rcc output must exist for clang-tidy to parse.
+      - name: Build
+        run: cmake --build build -j
+
+      - name: clang-tidy
+        run: >
+          run-clang-tidy -p build -quiet
+          '^(?!.*_autogen).*/(src|tests)/.*\.cpp$'
+
+  # ---------------------------------------------------------------------------
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-24.04
+    container:
+      # Tag must match runtime-version in the manifest.
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: qbucket.flatpak
+          manifest-path: packaging/flatpak/io.github.theinvisible.QBucket.yml
+          cache-key: flatpak-builder-${{ github.sha }}

@@ -1,19 +1,15 @@
 name: S3 integration
 
 # qbucket-s3 against real S3 servers in Docker (Ceph RGW, VersityGW, Garage):
-# libs/qbucket-s3/tests/docker. Runs when the library changes, and on demand.
+# libs/qbucket-s3/tests/docker. Weekly, on release tags and on demand; locally
+# with tests/docker/it-up.sh (CLAUDE.md, "Build & test").
 # Hetzner credentials never go into CI.
 
 on:
+  schedule:
+    - cron: '0 5 * * 1'   # Mondays 05:00 UTC
   push:
-    branches: [main]
-    paths:
-      - 'libs/qbucket-s3/**'
-      - '.github/workflows/s3-integration.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'libs/qbucket-s3/**'
+    tags: ['v*.*.*']
   workflow_dispatch:
 
 permissions:
