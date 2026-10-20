@@ -1,5 +1,28 @@
 {
     "_comment": "VersityGW with the POSIX backend stores keys as file paths: repeated slashes collapse ('a//b' becomes 'a/b', overwriting it) and control characters come back as U+FFFD. Verified 2026-10-20 with versitygw v1.9.0.",
     "collapsesRepeatedSlashes": true,
-    "controlCharactersInKeys": false
+    "controlCharactersInKeys": false,
+    "capabilities": {
+        "bucket.acl": "Supported",
+        "bucket.cors": "Supported",
+        "bucket.encryption": "Unsupported",
+        "bucket.lifecycle": "Unsupported",
+        "bucket.logging": "Unsupported",
+        "bucket.multipart-listing": "Supported",
+        "bucket.notifications": "Unsupported",
+        "bucket.object-lock": "Supported",
+        "bucket.ownership-controls": "Supported",
+        "bucket.policy": "Supported",
+        "bucket.policy-status": "Supported",
+        "bucket.public-access-block": "Unsupported",
+        "bucket.replication": "Unsupported",
+        "bucket.tagging": "Supported",
+        "bucket.versioning": "Supported",
+        "bucket.versions-listing": "Supported",
+        "bucket.website": "Supported",
+        "object.acl": "Unsupported",
+        "object.legal-hold": "Unknown",
+        "object.retention": "Unknown",
+        "object.tagging": "Supported"
+    }
 }

@@ -46,4 +46,20 @@ QString HetznerProfile::locationConstraintFor(const QString& region) const
     return region;
 }
 
+CapabilitySet HetznerProfile::capabilities() const
+{
+    // Write-only features the probes can't see. Source: Hetzner's
+    // "supported actions" page (2026-10-20) — preliminary until confirmed
+    // against a real project (docs/providers/hetzner.md).
+    CapabilitySet set = ProviderProfile::capabilities();
+    const auto known = [&set](Feature f, CapabilityState s) {
+        set.set(f, {s, CapabilitySource::Profile, {}, 0, {}, false, 0});
+    };
+    known(Feature::CrossBucketCopy, CapabilityState::Unsupported);   // CopyObject within one bucket only
+    known(Feature::SseC, CapabilityState::Supported);                // the only encryption mode
+    known(Feature::BucketEncryption, CapabilityState::Unsupported);  // no SSE-S3 / SSE-KMS
+    known(Feature::BatchDelete, CapabilityState::Supported);
+    return set;
+}
+
 } // namespace qbucket::s3

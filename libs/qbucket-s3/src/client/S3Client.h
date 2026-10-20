@@ -2,16 +2,21 @@
 
 #include "client/RequestPipeline.h"
 
+#include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Export.h>
 #include <qbucket/s3/Presigner.h>
 #include <qbucket/s3/Result.h>
 #include <qbucket/s3/Types.h>
 
+#include <QHash>
 #include <QObject>
+#include <QTimer>
 
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
+#include <set>
 
 namespace qbucket::s3 {
 
@@ -65,14 +70,32 @@ public:
     // time and the bucket's learned region; expiry capped by the profile.
     quint64 presign(const PresignRequest& request, Done<QUrl> done);
 
+    // --- capability safeguard (PLAN.md §3.3) ---
+    // Read-only probes. Server scope: ListBuckets (fingerprint, access).
+    // Bucket scope: every GET subresource + object-level probes on one key.
+    quint64 probeServer(Done<CapabilitySet> done);
+    // objectKey: an existing object for the object-level probes; empty: the
+    // first key the bucket lists.
+    quint64 probeBucket(const QString& bucket, const QString& objectKey, Done<CapabilitySet> done);
+    // Known capabilities (server or bucket scope). A request needing a
+    // feature that is Unsupported fails at once with Error Unsupported,
+    // without being sent.
+    void setCapabilities(const CapabilitySet& set);
+
     void abort(quint64 operationId);
     void abortAll();
 
 Q_SIGNALS:
     void clockSkewDetected(qint64 offsetSecs);
+    // A real request revealed a feature as Unsupported (e.g. 501).
+    void capabilityLearned(const QString& bucket, const QString& featureId);
 
 private:
-    struct Op;
+    struct Op {
+        quint64 id = 0;
+        std::set<quint64> requests;   // in flight (probes run several at once)
+        bool cancelled = false;
+    };
 
     // Runs one request as (part of) operation `op`.
     void send(const std::shared_ptr<Op>& op, RequestSpec spec,
@@ -80,15 +103,26 @@ private:
     std::shared_ptr<Op> newOp();
     void endOp(const std::shared_ptr<Op>& op);
     template <typename T>
-    quint64 failLater(Done<T> done, Error error);
+    quint64 failLater(Done<T> done, Error error)
+    {
+        QTimer::singleShot(0, this, [done = std::move(done), error = std::move(error)] { done(error); });
+        return m_nextOpId++;   // a valid id that abort() simply won't find
+    }
     // One request → parse(RawResponse) → done.
     template <typename T, typename Parse>
     quint64 single(RequestSpec spec, Done<T> done, Parse parse);
+
+    std::optional<Error> shortCircuit(const RequestSpec& spec) const;
+    void learnFrom(const RequestSpec& spec, const Error& error);
+    struct ProbeRun;
+    void runProbes(const std::shared_ptr<ProbeRun>& run);
 
     void listBucketsPage(const std::shared_ptr<Op>& op, const QString& token, BucketList acc,
                          QSet<QString> seenTokens, Done<BucketList> done);
 
     RequestPipeline* m_pipeline;
+    CapabilitySet m_serverCapabilities;
+    QHash<QString, CapabilitySet> m_bucketCapabilities;
     std::map<quint64, std::shared_ptr<Op>> m_ops;
     quint64 m_nextOpId = 1;
 };

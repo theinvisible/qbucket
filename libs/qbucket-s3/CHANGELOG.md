@@ -48,6 +48,14 @@ version bump may break the API.
 - `AwsSharedFileCredentialsProvider` (~/.aws/credentials format, re-read on
   every fetch).
 
+- Capability safeguard (`Capabilities.h`): `Feature` (stable string ids),
+  `CapabilityState`, `CapabilitySet` with fingerprint and bucket state, JSON
+  persistence, `capabilities::effective/decide/merge/diff/isExpired`;
+  `Session::probeServer/probeBucket` (read-only GET probes, four in
+  parallel), `Session::setCapabilities` with a local short-circuit for
+  Unsupported features, `capabilityLearned` from real 501s;
+  `ProviderProfile::capabilities()` and `reviewProbe()`.
+
 ### Safety
 
 - Retries only where safe: transient failures of idempotent requests, and

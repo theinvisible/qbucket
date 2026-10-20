@@ -20,6 +20,7 @@ public:
     [[nodiscard]] QString signingRegion(const QString& region) const override;
     [[nodiscard]] QString regionFromLocationConstraint(const QString& constraint) const override;
     [[nodiscard]] QString locationConstraintFor(const QString& region) const override;
+    [[nodiscard]] CapabilitySet capabilities() const override;
 };
 
 } // namespace qbucket::s3

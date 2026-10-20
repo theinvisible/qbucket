@@ -17,6 +17,28 @@ QString GarageProfile::signingRegion(const QString& region) const
     return region.isEmpty() ? QStringLiteral("garage") : region;
 }
 
+CapabilitySet GarageProfile::capabilities() const
+{
+    // Write-only features the probes can't see (garagehq.deuxfleurs.fr,
+    // "S3 compatibility"): no versioning, no object lock, no SSE-C.
+    CapabilitySet set = ProviderProfile::capabilities();
+    const CapabilityEntry no{CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0};
+    set.set(Feature::BucketVersioning, no);
+    set.set(Feature::ObjectLock, no);
+    set.set(Feature::SseC, no);
+    return set;
+}
+
+void GarageProfile::reviewProbe(Feature feature, CapabilityEntry& entry) const
+{
+    // GET ?versioning answers an empty configuration, PUT ?versioning is 501
+    // (tests/data/garage/put-versioning-not-implemented.xml).
+    if (feature == Feature::BucketVersioning && entry.state == CapabilityState::Supported) {
+        entry.state = CapabilityState::Unsupported;
+        entry.s3Code = QStringLiteral("ProfileOverride:StubGetBucketVersioning");
+    }
+}
+
 void GarageProfile::mapError(Error& error) const
 {
     // tests/data/garage/error-invalid-signature.xml

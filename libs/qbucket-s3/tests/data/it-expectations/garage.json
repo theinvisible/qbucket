@@ -1,3 +1,26 @@
 {
-    "_comment": "Garage v2.4.1: a wrong secret comes back as 403 AccessDenied 'Forbidden: Invalid signature'; GarageProfile maps it to Authentication (tests/data/garage). Otherwise plain S3 for what it_s3_backend checks."
+    "_comment": "Garage v2.4.1: a wrong secret comes back as 403 AccessDenied 'Forbidden: Invalid signature'; GarageProfile maps it to Authentication (tests/data/garage). Otherwise plain S3 for what it_s3_backend checks.",
+    "capabilities": {
+        "bucket.acl": "Supported",
+        "bucket.cors": "Supported",
+        "bucket.encryption": "Unsupported",
+        "bucket.lifecycle": "Supported",
+        "bucket.logging": "Unsupported",
+        "bucket.multipart-listing": "Supported",
+        "bucket.notifications": "Unsupported",
+        "bucket.object-lock": "Unsupported",
+        "bucket.ownership-controls": "Unsupported",
+        "bucket.policy": "Unsupported",
+        "bucket.policy-status": "Unsupported",
+        "bucket.public-access-block": "Unsupported",
+        "bucket.replication": "Unsupported",
+        "bucket.tagging": "Unsupported",
+        "bucket.versioning": "Unsupported",
+        "bucket.versions-listing": "Unsupported",
+        "bucket.website": "Supported",
+        "object.acl": "Unsupported",
+        "object.legal-hold": "Unsupported",
+        "object.retention": "Unsupported",
+        "object.tagging": "Unsupported"
+    }
 }

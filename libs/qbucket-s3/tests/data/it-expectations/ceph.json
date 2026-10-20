@@ -1,3 +1,26 @@
 {
-    "_comment": "Ceph RGW (Squid 19.2.6, single node): plain S3 behaviour for everything it_s3_backend checks."
+    "_comment": "Ceph RGW (Squid 19.2.6, single node, teran/ceph-container): plain S3 behaviour for what it_s3_backend checks. Capabilities from the read-only probes (bucket without object lock: legal hold / retention cannot be told, hence Unknown). Website is off in RGW by default (405); ?ownershipControls is ignored and answered with a listing.",
+    "capabilities": {
+        "bucket.acl": "Supported",
+        "bucket.cors": "Supported",
+        "bucket.encryption": "Supported",
+        "bucket.lifecycle": "Supported",
+        "bucket.logging": "Supported",
+        "bucket.multipart-listing": "Supported",
+        "bucket.notifications": "Supported",
+        "bucket.object-lock": "Supported",
+        "bucket.ownership-controls": "Unsupported",
+        "bucket.policy": "Supported",
+        "bucket.policy-status": "Supported",
+        "bucket.public-access-block": "Supported",
+        "bucket.replication": "Supported",
+        "bucket.tagging": "Supported",
+        "bucket.versioning": "Supported",
+        "bucket.versions-listing": "Supported",
+        "bucket.website": "Unsupported",
+        "object.acl": "Supported",
+        "object.legal-hold": "Unknown",
+        "object.retention": "Unknown",
+        "object.tagging": "Supported"
+    }
 }

@@ -8,13 +8,9 @@
 #include <QSet>
 #include <QTimer>
 
-namespace qbucket::s3 {
+#include <set>
 
-struct S3Client::Op {
-    quint64 id = 0;
-    quint64 currentRequest = 0;
-    bool cancelled = false;
-};
+namespace qbucket::s3 {
 
 namespace {
 
@@ -108,13 +104,6 @@ void S3Client::endOp(const std::shared_ptr<Op>& op)
     m_ops.erase(op->id);
 }
 
-template <typename T>
-quint64 S3Client::failLater(Done<T> done, Error error)
-{
-    QTimer::singleShot(0, this, [done = std::move(done), error = std::move(error)] { done(error); });
-    return m_nextOpId++;   // a valid id that abort() simply won't find
-}
-
 template <typename T, typename Parse>
 quint64 S3Client::single(RequestSpec spec, Done<T> done, Parse parse)
 {
@@ -138,13 +127,68 @@ void S3Client::send(const std::shared_ptr<Op>& op, RequestSpec spec,
         QTimer::singleShot(0, this, [next = std::move(next)] { next(cancelledError()); });
         return;
     }
-    op->currentRequest = m_pipeline->execute(
-        std::move(spec), [op, next = std::move(next)](Result<RawResponse> r) {
-            op->currentRequest = 0;
+    if (std::optional<Error> blocked = shortCircuit(spec)) {
+        QTimer::singleShot(0, this, [next = std::move(next), e = std::move(*blocked)] { next(e); });
+        return;
+    }
+    const RequestSpec sent = spec;   // operation + bucket, for learning
+    auto holder = std::make_shared<quint64>(0);
+    *holder = m_pipeline->execute(
+        std::move(spec), [this, op, holder, sent, next = std::move(next)](Result<RawResponse> r) {
+            op->requests.erase(*holder);
+            if (!r)
+                learnFrom(sent, r.error());
             if (op->cancelled && r)
                 r = cancelledError();
             next(std::move(r));
         });
+    op->requests.insert(*holder);
+}
+
+std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
+{
+    const QList<Feature> needed = featuresFor(spec.operation);
+    if (needed.isEmpty())
+        return std::nullopt;
+    const CapabilitySet profile = config().profile->capabilities();
+    const auto bucketIt = m_bucketCapabilities.constFind(spec.bucket);
+    for (const Feature f : needed) {
+        CapabilityEntry e = bucketIt != m_bucketCapabilities.constEnd()
+            ? capabilities::effective(f, *bucketIt, m_serverCapabilities)
+            : m_serverCapabilities.entry(f);
+        if (e.state == CapabilityState::Unknown)
+            e = profile.entry(f);
+        if (e.state == CapabilityState::Unsupported) {
+            Error err = Error::make(ErrorCategory::Unsupported,
+                                    QStringLiteral("the server does not support %1").arg(featureId(f)));
+            err.resource = spec.bucket;
+            err.code = QStringLiteral("CapabilityUnsupported");
+            return err;
+        }
+    }
+    return std::nullopt;
+}
+
+void S3Client::learnFrom(const RequestSpec& spec, const Error& error)
+{
+    if (error.category != ErrorCategory::Unsupported || spec.bucket.isEmpty())
+        return;
+    for (const Feature f : featuresFor(spec.operation)) {
+        CapabilitySet& set = m_bucketCapabilities[spec.bucket];
+        set.scope = CapabilityScope::Bucket;
+        set.bucket = spec.bucket;
+        set.set(f, {CapabilityState::Unsupported, CapabilitySource::Learned,
+                    QDateTime::currentDateTimeUtc(), error.httpStatus, error.code, false, 0});
+        Q_EMIT capabilityLearned(spec.bucket, featureId(f));
+    }
+}
+
+void S3Client::setCapabilities(const CapabilitySet& set)
+{
+    if (set.scope == CapabilityScope::Server)
+        m_serverCapabilities = set;
+    else
+        m_bucketCapabilities.insert(set.bucket, set);
 }
 
 void S3Client::abort(quint64 operationId)
@@ -153,8 +197,9 @@ void S3Client::abort(quint64 operationId)
     if (it == m_ops.end())
         return;
     it->second->cancelled = true;
-    if (it->second->currentRequest)
-        m_pipeline->abort(it->second->currentRequest);
+    const std::set<quint64> requests = it->second->requests;
+    for (const quint64 r : requests)
+        m_pipeline->abort(r);
 }
 
 void S3Client::abortAll()

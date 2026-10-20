@@ -384,6 +384,30 @@ private Q_SLOTS:
         QVERIFY(skew.size() >= 1);
     }
 
+    void capabilitiesMatchExpectations()
+    {
+        // An object first, so the object-level probes have something to ask about.
+        const QString target = key(QStringLiteral("probe-target.txt"));
+        VERIFY_OK(put(target, "probe"));
+        const Result<CapabilitySet> set = await<CapabilitySet>([&](auto cb) { m_session->probeBucket(m_bucket, target, &m_ctx, std::move(cb)); });
+        VERIFY_OK(set);
+        QStringList report;
+        for (const auto& [f, e] : set->entries())
+            report.append(QStringLiteral("\"%1\": \"%2\"").arg(featureId(f), stateName(e.state)));
+        qInfo().noquote() << "probe results:" << report.join(QStringLiteral(", "));
+
+        const QJsonObject expected = m_expect.value(QLatin1String("capabilities")).toObject();
+        if (expected.isEmpty())
+            QSKIP("no capability expectations for this backend yet");
+        for (auto it = expected.begin(); it != expected.end(); ++it) {
+            const std::optional<Feature> f = featureFromId(it.key());
+            QVERIFY2(f, qPrintable(u"unknown feature id " + it.key()));
+            QCOMPARE(QStringLiteral("%1=%2").arg(it.key(), stateName(set->state(*f))),
+                     QStringLiteral("%1=%2").arg(it.key(), it.value().toString()));
+        }
+        deleteAllUnder(key(QStringLiteral("probe-target")));
+    }
+
     void restrictedUserIsNotPermitted()
     {
         if (env("QBUCKET_IT_RESTRICTED_ACCESS_KEY").isEmpty())

@@ -24,6 +24,16 @@ QString ProviderProfile::regionFromLocationConstraint(const QString& constraint)
     return constraint;
 }
 
+CapabilitySet ProviderProfile::capabilities() const
+{
+    CapabilitySet set;
+    // Signing is client-side: every SigV4 server accepts presigned URLs.
+    set.set(Feature::Presign, {CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0});
+    return set;
+}
+
+void ProviderProfile::reviewProbe(Feature /*feature*/, CapabilityEntry& /*entry*/) const {}
+
 QString ProviderProfile::locationConstraintFor(const QString& region) const
 {
     return region == QLatin1String("us-east-1") ? QString() : region;

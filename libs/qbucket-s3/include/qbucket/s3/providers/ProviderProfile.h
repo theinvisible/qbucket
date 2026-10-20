@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Endpoint.h>
 #include <qbucket/s3/Error.h>
 #include <qbucket/s3/Export.h>
@@ -61,6 +62,14 @@ public:
     // CreateBucket LocationConstraint for a region; empty: send no
     // CreateBucketConfiguration (S3: us-east-1).
     [[nodiscard]] virtual QString locationConstraintFor(const QString& region) const;
+
+    // --- capabilities ---
+    // Static knowledge (source Profile) — only the fallback; definitive
+    // probe results win (PLAN.md §3.3). Default: nothing known.
+    [[nodiscard]] virtual CapabilitySet capabilities() const;
+    // Correct a probe result the provider is known to answer misleadingly
+    // (e.g. a stub read endpoint for a feature it cannot enable).
+    virtual void reviewProbe(Feature feature, CapabilityEntry& entry) const;
 
     // --- limits ---
     [[nodiscard]] virtual qint64 minPartSize() const { return Q_INT64_C(5) * 1024 * 1024; }

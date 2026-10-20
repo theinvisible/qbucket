@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Credentials.h>
 #include <qbucket/s3/Endpoint.h>
 #include <qbucket/s3/Export.h>
@@ -93,6 +94,22 @@ public:
     // corrected time, the bucket's learned region, the profile's expiry cap.
     RequestId presign(const PresignRequest& request, QObject* context, Callback<QUrl> callback);
 
+    // --- capability safeguard (PLAN.md §3.3) — read-only probes ---
+    // Server scope: access + fingerprint, with the profile's static knowledge.
+    RequestId probeServer(QObject* context, Callback<CapabilitySet> callback);
+    // Bucket scope: every GET subresource, object-level probes on one key;
+    // bucket state (versioning, object lock). About one second.
+    RequestId probeBucket(const QString& bucket, QObject* context,
+                          Callback<CapabilitySet> callback);
+    // Same, with an existing object for the object-level probes (otherwise
+    // the first key the bucket lists).
+    RequestId probeBucket(const QString& bucket, const QString& objectKey, QObject* context,
+                          Callback<CapabilitySet> callback);
+    // Known capabilities (e.g. merged and persisted by the app). Requests
+    // needing an Unsupported feature then fail with ErrorCategory::Unsupported
+    // without being sent. Thread-safe.
+    void setCapabilities(const CapabilitySet& set);
+
     void cancel(RequestId id);
     void cancelAll();
 
@@ -103,6 +120,9 @@ public:
 Q_SIGNALS:
     // Local clock and server differ by offsetSecs; signing is corrected.
     void clockSkewDetected(qint64 offsetSecs);
+    // A real request showed a feature to be unsupported (e.g. 501); it is
+    // refused locally from now on. featureId as in featureId(Feature).
+    void capabilityLearned(const QString& bucket, const QString& featureId);
     void shutdownFinished();
 
 private:

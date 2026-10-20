@@ -95,7 +95,8 @@ int main(int argc, char** argv)
     const QCommandLineOption recursiveOpt({QStringLiteral("r"), QStringLiteral("recursive")},
                                           QStringLiteral("List without delimiter."));
     parser.addOptions({providerOpt, endpointOpt, regionOpt, profileOpt, pathOpt, recursiveOpt});
-    parser.addPositionalArgument(QStringLiteral("command"), QStringLiteral("buckets | ls <bucket> [prefix]"));
+    parser.addPositionalArgument(QStringLiteral("command"),
+                                 QStringLiteral("buckets | ls <bucket> [prefix] | probe <bucket>"));
     parser.process(app);
 
     const QStringList args = parser.positionalArguments();
@@ -142,6 +143,32 @@ int main(int argc, char** argv)
             params.delimiter = QStringLiteral("/");
         pager = std::make_unique<ListObjectsPager>(session, params);
         listAll(*pager, &app);
+    } else if (command == QLatin1String("probe") && args.size() >= 2) {
+        // Read-only: what can this server do for this bucket?
+        session.probeBucket(args.at(1), &app, [](Result<CapabilitySet> set) {
+            if (!set) {
+                QCoreApplication::exit(fail(set.error()));
+                return;
+            }
+            for (const auto& [feature, e] : set->entries()) {
+                out() << QStringLiteral("%1 %2 %3 %4%5")
+                             .arg(featureId(feature), -28)
+                             .arg(stateName(e.state), -13)
+                             .arg(e.httpStatus ? QString::number(e.httpStatus) : QStringLiteral("-"), 3)
+                             .arg(e.s3Code)
+                             .arg(e.configured ? QStringLiteral(" (configured)") : QString())
+                      << '\n';
+            }
+            out() << "versioning: " << (set->bucketState.versioning.isEmpty() ? QStringLiteral("never enabled")
+                                                                               : set->bucketState.versioning)
+                  << ", object lock: "
+                  << (set->bucketState.objectLockEnabled
+                          ? (*set->bucketState.objectLockEnabled ? QStringLiteral("enabled") : QStringLiteral("off"))
+                          : QStringLiteral("unknown"))
+                  << "\nserver: " << set->fingerprint.serverHeader << " ("
+                  << set->fingerprint.requestIdShape << ", " << set->fingerprint.hash() << ")" << Qt::endl;
+            QCoreApplication::exit(0);
+        });
     } else {
         parser.showHelp(2);
     }

@@ -47,6 +47,7 @@ else()
 endif()
 
 add_library(qbucket_s3 ${_s3_lib_type}
+    include/qbucket/s3/Capabilities.h
     include/qbucket/s3/Credentials.h
     include/qbucket/s3/Endpoint.h
     include/qbucket/s3/Error.h
@@ -64,6 +65,10 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/providers/HetznerProfile.h
     include/qbucket/s3/providers/ProviderProfile.h
     include/qbucket/s3/providers/ProviderRegistry.h
+    src/capabilities/Capabilities.cpp
+    src/capabilities/CapabilityProber.cpp
+    src/capabilities/ProbeInterpreter.h
+    src/capabilities/ProbeInterpreter.cpp
     src/client/RequestPipeline.h
     src/client/RequestPipeline.cpp
     src/client/RetryPolicy.h

@@ -189,6 +189,7 @@ Session::Session(SessionOptions options, QObject* parent)
     d->client->moveToThread(d->worker);
     connect(d->worker, &QThread::finished, d->client, &QObject::deleteLater);
     connect(d->client, &S3Client::clockSkewDetected, this, &Session::clockSkewDetected);
+    connect(d->client, &S3Client::capabilityLearned, this, &Session::capabilityLearned);
     d->worker->start();
 }
 
@@ -341,6 +342,32 @@ RequestId Session::deleteBucket(const QString& bucket, QObject* context, Callbac
     return d->submit<void>(context, std::move(callback), [bucket](S3Client* c, auto done) {
         return c->deleteBucket(bucket, std::move(done));
     });
+}
+
+RequestId Session::probeServer(QObject* context, Callback<CapabilitySet> callback)
+{
+    return d->submit<CapabilitySet>(context, std::move(callback), [](S3Client* c, auto done) {
+        return c->probeServer(std::move(done));
+    });
+}
+
+RequestId Session::probeBucket(const QString& bucket, QObject* context, Callback<CapabilitySet> callback)
+{
+    return probeBucket(bucket, QString(), context, std::move(callback));
+}
+
+RequestId Session::probeBucket(const QString& bucket, const QString& objectKey, QObject* context,
+                               Callback<CapabilitySet> callback)
+{
+    return d->submit<CapabilitySet>(context, std::move(callback), [bucket, objectKey](S3Client* c, auto done) {
+        return c->probeBucket(bucket, objectKey, std::move(done));
+    });
+}
+
+void Session::setCapabilities(const CapabilitySet& set)
+{
+    QMetaObject::invokeMethod(d->client, [c = d->client, set] { c->setCapabilities(set); },
+                              Qt::QueuedConnection);
 }
 
 RequestId Session::presign(const PresignRequest& request, QObject* context, Callback<QUrl> callback)
