@@ -95,6 +95,19 @@ version bump may break the API.
   `ResumeStore` with `TransferRecord` / `PartRecord`, and
   `JsonFileResumeStore` (atomic record, appended part lines, survives a torn
   last line).
+- `transfer::Uploader`: one file as a single PUT or a multipart upload with
+  parts in parallel under a shared `AdaptiveConcurrency`, hashed a part
+  ahead, Content-MD5 on every body, retries of failed parts, pause / resume /
+  cancel (abort, or keep for resume), a lost Complete answer resolved with
+  HEAD, ETag verification (MD5 / MD5-of-MD5s, else size), a source that
+  changes during the upload fails it; with a `ResumeStore` every finished
+  part is recorded and `Uploader::fromStore` continues after a crash
+  (ListParts decides; unrecorded parts are adopted when the local bytes hash
+  to their ETag; a vanished upload starts over). `flushResumeWrites()`.
+  `TransferRecord` gained content type, storage class, metadata and
+  If-None-Match. Logging category `qbucket.s3.transfer`.
+- `examples/s3cp` — resumable uploads from the command line.
+- `FakeObjectStore::setDelay()`.
 
 ### Fixed
 

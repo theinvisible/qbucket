@@ -1,5 +1,7 @@
 #include <qbucket/s3/transfer/JsonFileResumeStore.h>
 
+#include "transfer/Async.h"
+
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
@@ -13,6 +15,11 @@
 namespace qbucket::s3::transfer {
 
 ResumeStore::~ResumeStore() = default;
+
+bool flushResumeWrites(int timeoutMs)
+{
+    return detail::serialStorePool()->waitForDone(timeoutMs);
+}
 
 bool isValidTransferId(const QString& id)
 {
@@ -66,6 +73,13 @@ QJsonObject toJson(const TransferRecord& r)
     o.insert(QStringLiteral("etag"), r.etag);
     o.insert(QStringLiteral("partSize"), QString::number(r.partSize));
     o.insert(QStringLiteral("partCount"), r.partCount);
+    o.insert(QStringLiteral("contentType"), r.contentType);
+    o.insert(QStringLiteral("storageClass"), r.storageClass);
+    QJsonObject meta;
+    for (auto it = r.metadata.cbegin(); it != r.metadata.cend(); ++it)
+        meta.insert(it.key(), it.value());
+    o.insert(QStringLiteral("metadata"), meta);
+    o.insert(QStringLiteral("ifNoneMatch"), r.ifNoneMatch);
     o.insert(QStringLiteral("extra"), r.extra);
     return o;
 }
@@ -89,6 +103,12 @@ TransferRecord recordFrom(const QJsonObject& o)
     r.etag = o.value(QStringLiteral("etag")).toString();
     r.partSize = o.value(QStringLiteral("partSize")).toString().toLongLong();
     r.partCount = o.value(QStringLiteral("partCount")).toInt();
+    r.contentType = o.value(QStringLiteral("contentType")).toString();
+    r.storageClass = o.value(QStringLiteral("storageClass")).toString();
+    const QJsonObject meta = o.value(QStringLiteral("metadata")).toObject();
+    for (auto it = meta.begin(); it != meta.end(); ++it)
+        r.metadata.insert(it.key(), it.value().toString());
+    r.ifNoneMatch = o.value(QStringLiteral("ifNoneMatch")).toBool();
     r.extra = o.value(QStringLiteral("extra")).toObject();
     return r;
 }

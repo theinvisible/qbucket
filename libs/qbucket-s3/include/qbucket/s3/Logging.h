@@ -16,5 +16,6 @@ Q_DECLARE_EXPORTED_LOGGING_CATEGORY(lcSigning, QBUCKET_S3_EXPORT)       // qbuck
 Q_DECLARE_EXPORTED_LOGGING_CATEGORY(lcSession, QBUCKET_S3_EXPORT)       // qbucket.s3.session
 Q_DECLARE_EXPORTED_LOGGING_CATEGORY(lcRetry, QBUCKET_S3_EXPORT)         // qbucket.s3.retry
 Q_DECLARE_EXPORTED_LOGGING_CATEGORY(lcCapabilities, QBUCKET_S3_EXPORT)  // qbucket.s3.capabilities
+Q_DECLARE_EXPORTED_LOGGING_CATEGORY(lcTransfer, QBUCKET_S3_EXPORT)      // qbucket.s3.transfer
 
 } // namespace qbucket::s3

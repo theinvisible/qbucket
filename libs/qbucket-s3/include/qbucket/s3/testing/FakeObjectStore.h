@@ -74,6 +74,8 @@ public:
 
     void addFault(const Fault& fault);
     void clearFaults();
+    // Answers of this operation wait `ms` (after the store executed them).
+    void setDelay(const QString& operation, int ms);
 
     [[nodiscard]] std::optional<Object> object(const QString& bucket, const QString& key) const;
     [[nodiscard]] QStringList keys(const QString& bucket) const;

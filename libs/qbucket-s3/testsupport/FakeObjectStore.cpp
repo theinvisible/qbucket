@@ -136,6 +136,7 @@ struct FakeObjectStore::Impl {
     QHash<QString, int> counts;
     QList<Fault> faults;
     QList<int> faultHits;   // matches per fault
+    QHash<QString, int> delays;
     int nextUpload = 1;
     bool discard = false;
     qint64 minPartSize = Q_INT64_C(5) * 1024 * 1024;
@@ -228,6 +229,7 @@ struct FakeObjectStore::Impl {
         FakeResponse response = execute(op, req, bucket, key);
         if (const Fault* f = faultFor(op, partNumber, true))
             return f->response;
+        response.delayMs = std::max(response.delayMs, delays.value(op));
         return response;
     }
 
@@ -795,6 +797,11 @@ void FakeObjectStore::addFault(const Fault& fault)
 {
     d->faults.append(fault);
     d->faultHits.append(0);
+}
+
+void FakeObjectStore::setDelay(const QString& operation, int ms)
+{
+    d->delays.insert(operation, ms);
 }
 
 void FakeObjectStore::clearFaults()

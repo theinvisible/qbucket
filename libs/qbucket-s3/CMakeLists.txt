@@ -153,10 +153,14 @@ add_library(qbucket_s3_transfer ${_s3_lib_type}
     include/qbucket/s3/transfer/JsonFileResumeStore.h
     include/qbucket/s3/transfer/PartPlanner.h
     include/qbucket/s3/transfer/ResumeStore.h
+    include/qbucket/s3/transfer/Uploader.h
     src/transfer/AdaptiveConcurrency.cpp
+    src/transfer/Async.h
+    src/transfer/Async.cpp
     src/transfer/Hasher.cpp
     src/transfer/PartPlanner.cpp
     src/transfer/ResumeStore.cpp
+    src/transfer/Uploader.cpp
 )
 add_library(qbucket::s3_transfer ALIAS qbucket_s3_transfer)
 
@@ -177,6 +181,7 @@ set_target_properties(qbucket_s3_transfer PROPERTIES
 if(NOT QBUCKET_S3_BUILD_SHARED)
     target_compile_definitions(qbucket_s3_transfer PUBLIC QBUCKET_S3_TRANSFER_STATIC_DEFINE)
 endif()
+target_include_directories(qbucket_s3_transfer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(qbucket_s3_transfer PUBLIC qbucket::s3 Qt6::Core Qt6::Concurrent)
 qbucket_s3_apply_build_options(qbucket_s3_transfer)
 
@@ -203,6 +208,7 @@ qbucket_s3_apply_build_options(qbucket_s3_testsupport)
 # --- Examples ----------------------------------------------------------------
 if(QBUCKET_S3_BUILD_EXAMPLES)
     add_subdirectory(examples/s3ls)
+    add_subdirectory(examples/s3cp)
 endif()
 
 # --- Tests -------------------------------------------------------------------

@@ -7,6 +7,7 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <QList>
+#include <QMap>
 #include <QString>
 #include <QStringList>
 
@@ -34,6 +35,11 @@ struct TransferRecord {
     QString etag;               // download / copy source ETag (If-Match)
     qint64 partSize = 0;
     int partCount = 0;
+    // Uploads: what the object is created with / completed under.
+    QString contentType;
+    QString storageClass;
+    QMap<QString, QString> metadata;
+    bool ifNoneMatch = false;
     QJsonObject extra;          // free for the application
 };
 
@@ -73,5 +79,10 @@ protected:
 };
 
 [[nodiscard]] QBUCKET_S3_TRANSFER_EXPORT bool isValidTransferId(const QString& id);
+
+// Transfers write to their ResumeStore on a background thread, in order.
+// Waits until those writes are done (e.g. before the application exits);
+// false on timeout.
+QBUCKET_S3_TRANSFER_EXPORT bool flushResumeWrites(int timeoutMs);
 
 } // namespace qbucket::s3::transfer

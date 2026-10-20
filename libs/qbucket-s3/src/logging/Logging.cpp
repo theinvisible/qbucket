@@ -7,5 +7,6 @@ Q_LOGGING_CATEGORY(lcSigning, "qbucket.s3.signing", QtWarningMsg)
 Q_LOGGING_CATEGORY(lcSession, "qbucket.s3.session", QtWarningMsg)
 Q_LOGGING_CATEGORY(lcRetry, "qbucket.s3.retry", QtWarningMsg)
 Q_LOGGING_CATEGORY(lcCapabilities, "qbucket.s3.capabilities", QtWarningMsg)
+Q_LOGGING_CATEGORY(lcTransfer, "qbucket.s3.transfer", QtWarningMsg)
 
 } // namespace qbucket::s3

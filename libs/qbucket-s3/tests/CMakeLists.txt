@@ -102,6 +102,21 @@ qbucket_s3_add_test(test_part_planner         SOURCES test_part_planner.cpp     
 qbucket_s3_add_test(test_hasher               SOURCES test_hasher.cpp               LIBS qbucket::s3_transfer)
 qbucket_s3_add_test(test_adaptive_concurrency SOURCES test_adaptive_concurrency.cpp LIBS qbucket::s3_transfer)
 qbucket_s3_add_test(test_resume_store         SOURCES test_resume_store.cpp         LIBS qbucket::s3_transfer)
+qbucket_s3_add_test(test_uploader
+    SOURCES test_uploader.cpp
+    LIBS    qbucket::s3_transfer qbucket::s3_testsupport
+)
+
+# The crash test kills s3cp mid-upload; build it even without the examples.
+if(NOT TARGET s3cp)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/examples/s3cp ${CMAKE_CURRENT_BINARY_DIR}/s3cp)
+endif()
+qbucket_s3_add_test(test_transfer_crash
+    SOURCES test_transfer_crash.cpp
+    LIBS    qbucket::s3_transfer qbucket::s3_testsupport
+)
+target_compile_definitions(test_transfer_crash PRIVATE S3CP_PATH="$<TARGET_FILE:s3cp>")
+add_dependencies(test_transfer_crash s3cp)
 
 # --- Integration tests (opt-in) --------------------------------------------------
 # it_s3_backend runs against whatever QBUCKET_IT_* in the environment points at
