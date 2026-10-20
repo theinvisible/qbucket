@@ -1,0 +1,5 @@
+{
+    "_comment": "VersityGW with the POSIX backend stores keys as file paths: repeated slashes collapse ('a//b' becomes 'a/b', overwriting it) and control characters come back as U+FFFD. Verified 2026-10-20 with versitygw v1.9.0.",
+    "collapsesRepeatedSlashes": true,
+    "controlCharactersInKeys": false
+}

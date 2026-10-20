@@ -35,6 +35,9 @@ struct SessionOptions {
     int retryBaseDelayMs = 250;
     int captureResponseBodyBytes = 0;   // > 0: RequestRecord::responseBody (fixtures)
     QByteArray userAgent;               // empty: "qbucket-s3/<version>"
+    // Server time minus local time to start with — e.g. the offset a
+    // previous Session reported via clockSkewDetected. Corrected anyway.
+    qint64 initialClockOffsetSecs = 0;
 };
 
 // The entry point of the library: one S3 endpoint + credentials, served by

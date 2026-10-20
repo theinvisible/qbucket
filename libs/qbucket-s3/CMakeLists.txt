@@ -19,6 +19,7 @@ project(qbucket-s3
 # PROJECT_IS_TOP_LEVEL needs CMake 3.21 — covered by the minimum above.
 option(QBUCKET_S3_BUILD_SHARED        "Build qbucket-s3 as a shared library"            OFF)
 option(QBUCKET_S3_BUILD_TESTS         "Build the qbucket-s3 test suite"                 ${PROJECT_IS_TOP_LEVEL})
+option(QBUCKET_S3_BUILD_EXAMPLES      "Build the examples (s3ls)"                       ${PROJECT_IS_TOP_LEVEL})
 option(QBUCKET_S3_INSTALL             "Generate install rules and the CMake package"    ${PROJECT_IS_TOP_LEVEL})
 option(QBUCKET_S3_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors"               OFF)
 set(QBUCKET_S3_SANITIZE "" CACHE STRING
@@ -145,6 +146,11 @@ set_target_properties(qbucket_s3_testsupport PROPERTIES
 target_include_directories(qbucket_s3_testsupport PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(qbucket_s3_testsupport PUBLIC qbucket::s3 Qt6::Network)
 qbucket_s3_apply_build_options(qbucket_s3_testsupport)
+
+# --- Examples ----------------------------------------------------------------
+if(QBUCKET_S3_BUILD_EXAMPLES)
+    add_subdirectory(examples/s3ls)
+endif()
 
 # --- Tests -------------------------------------------------------------------
 if(QBUCKET_S3_BUILD_TESTS)

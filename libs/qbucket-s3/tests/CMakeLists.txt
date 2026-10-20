@@ -77,3 +77,27 @@ qbucket_s3_add_test(test_session
     SOURCES test_session.cpp
     LIBS    qbucket::s3_testsupport
 )
+
+# --- Integration tests (opt-in) --------------------------------------------------
+# it_s3_backend runs against whatever QBUCKET_IT_* in the environment points at
+# and skips when unset. With QBUCKET_S3_IT_LOCAL, one extra test per Docker
+# backend (tests/docker, start with it-up.sh) gets its settings from env/*.env.
+option(QBUCKET_S3_IT_LOCAL "Register it_s3_backend_<backend> for the Docker test backends" OFF)
+
+qbucket_s3_add_test(it_s3_backend
+    SOURCES it_s3_backend.cpp
+    LABELS  integration
+)
+set_tests_properties(it_s3_backend PROPERTIES TIMEOUT 600)
+
+if(QBUCKET_S3_IT_LOCAL)
+    foreach(backend ceph versitygw garage)
+        file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/docker/env/${backend}.env _it_env REGEX "^QBUCKET_IT_")
+        add_test(NAME it_s3_backend_${backend} COMMAND it_s3_backend)
+        set_tests_properties(it_s3_backend_${backend} PROPERTIES
+            ENVIRONMENT "${_it_env}"
+            LABELS "s3;integration;docker"
+            TIMEOUT 600
+        )
+    endforeach()
+endif()

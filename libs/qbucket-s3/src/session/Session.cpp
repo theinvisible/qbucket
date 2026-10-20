@@ -178,6 +178,7 @@ Session::Session(SessionOptions options, QObject* parent)
     cfg.captureResponseBodyBytes = d->options.captureResponseBodyBytes;
     cfg.retry.maxAttempts = std::max(1, d->options.maxAttempts);
     cfg.retry.baseDelayMs = d->options.retryBaseDelayMs;
+    cfg.clockOffsetSecs = std::make_shared<std::atomic<qint64>>(d->options.initialClockOffsetSecs);
     cfg.userAgent = d->options.userAgent.isEmpty()
         ? QByteArray("qbucket-s3/" QBUCKET_S3_VERSION_STRING)
         : d->options.userAgent;

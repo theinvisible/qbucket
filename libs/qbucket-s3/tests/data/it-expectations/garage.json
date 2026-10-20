@@ -1,0 +1,4 @@
+{
+    "_comment": "Garage answers a wrong secret with 403 AccessDenied ('Forbidden: Invalid signature') instead of SignatureDoesNotMatch. Verified 2026-10-20 with garage v2.4.1.",
+    "wrongSecretCategory": "NotPermitted"
+}

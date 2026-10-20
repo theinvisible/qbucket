@@ -37,6 +37,11 @@ version bump may break the API.
   learned clock offset and region; `clockSkewDetected` signal.
 - `ListObjectsPager` — page-by-page listing with loop detection across pages.
 
+- `SessionOptions::initialClockOffsetSecs` (carry a learned offset over).
+- `examples/s3ls` — CLI over the public API; also the install-consumer check.
+- Integration tests (`it_s3_backend`) with Docker backends (Ceph RGW,
+  VersityGW, Garage) and per-backend expectation files for known deviations.
+
 ### Safety
 
 - Retries only where safe: transient failures of idempotent requests, and

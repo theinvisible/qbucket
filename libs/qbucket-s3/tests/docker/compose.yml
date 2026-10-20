@@ -1,0 +1,76 @@
+# Local S3 backends for qbucket-s3 integration tests (PLAN.md §7).
+#
+#   libs/qbucket-s3/tests/docker/it-up.sh      # start + bootstrap, waits until healthy
+#   libs/qbucket-s3/tests/docker/it-down.sh    # stop and delete all data
+#
+# Roles: Ceph RGW ≈ Hetzner (RGW underneath), VersityGW = broad S3 feature
+# set, Garage = deliberately limited (the "unsupported" side). Test-only
+# credentials; everything binds to 127.0.0.1.
+name: qbucket-it
+
+services:
+  ceph:
+    # Stop-gap single-node cluster (mon, mgr, osd, rgw) on the official
+    # quay.io/ceph/ceph image — own Containerfile later (PLAN.md §7).
+    image: ghcr.io/teran/ceph-container/ceph:v19.2.6@sha256:dffa491bc55d22c484527637923061a2972c45c26669157eb5b136a01ac8d4aa
+    env_file: env/ceph.env
+    environment:
+      MON_IP: 127.0.0.1
+      CEPH_PUBLIC_NETWORK: 0.0.0.0/0
+      CEPH_DEMO_UID: qbucket-it
+      # No admin caps: closer to a provider account.
+      CEPH_DEMO_CAPS: ""
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+    ports:
+      - "127.0.0.1:7480:8080"
+    volumes:
+      - ceph-data:/var/lib/ceph
+    healthcheck:
+      # Anonymous ListBuckets answers once RGW is up.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+
+  versitygw:
+    image: versity/versitygw:v1.9.0@sha256:eb7f786fcd91e72194e48fcf1ac16302d686bf8e3a71434bdbc067a6efd3fdc7
+    env_file: env/versitygw.env
+    environment:
+      VGW_BACKEND: posix
+      VGW_BACKEND_ARG: /data/objects
+      VGW_VERSIONING_DIR: /data/versions
+      VGW_PORT: ":7070"
+      VGW_QUIET: "true"
+    # The posix backend needs the directories and xattr support (volume).
+    entrypoint: ["/bin/sh", "-c", "mkdir -p /data/objects /data/versions && exec /usr/local/bin/docker-entrypoint.sh"]
+    ports:
+      - "127.0.0.1:7070:7070"
+    volumes:
+      - versitygw-data:/data
+    healthcheck:
+      # Any HTTP answer (an anonymous request gets 403) means it is serving.
+      test: ["CMD-SHELL", "wget -S -O /dev/null http://127.0.0.1:7070/ 2>&1 | grep -q 'HTTP/'"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  garage:
+    image: dxflrs/garage:v2.4.1@sha256:9c96caa2612d3411acc5b0e6701fb238dbfba33e533a6d7d3d811a4b12d0d020
+    ports:
+      - "127.0.0.1:3900:3900"
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-data:/var/lib/garage
+    healthcheck:
+      # Scratch image without a shell: exec form only.
+      test: ["CMD", "/garage", "status"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  ceph-data:
+  versitygw-data:
+  garage-data:

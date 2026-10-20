@@ -237,12 +237,13 @@ jobs:
             stage="$(cygpath -m "$stage")"
           fi
           cmake --install build-s3 --prefix "$stage"
-          cmake -S libs/qbucket-s3/tests/install-consumer -B build-consumer -G Ninja \
+          # The s3ls example doubles as the consumer of the installed package.
+          cmake -S libs/qbucket-s3/examples/s3ls -B build-consumer -G Ninja \
             -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$stage;$qt"
           cmake --build build-consumer
-          # Windows: the consumer finds our DLL and Qt's through PATH.
+          # Windows: s3ls finds our DLL and Qt's through PATH.
           export PATH="$PWD/stage/bin:$(cd "$qt/bin" && pwd):$PATH"
-          ./build-consumer/consumer
+          ./build-consumer/s3ls --version
 
   # ---------------------------------------------------------------------------
   clang-tidy:

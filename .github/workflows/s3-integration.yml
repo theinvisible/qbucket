@@ -1,0 +1,66 @@
+name: S3 integration
+
+# qbucket-s3 against real S3 servers in Docker (Ceph RGW, VersityGW, Garage):
+# libs/qbucket-s3/tests/docker. Runs when the library changes, and on demand.
+# Hetzner credentials never go into CI.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'libs/qbucket-s3/**'
+      - '.github/workflows/s3-integration.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'libs/qbucket-s3/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.10.2
+
+jobs:
+  docker-backends:
+    name: Ceph RGW, VersityGW, Garage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Start backends
+        run: libs/qbucket-s3/tests/docker/it-up.sh
+
+      - name: Configure
+        run: >
+          cmake -S libs/qbucket-s3 -B build-s3 -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DQBUCKET_S3_WARNINGS_AS_ERRORS=ON -DQBUCKET_S3_IT_LOCAL=ON
+
+      - name: Build
+        run: cmake --build build-s3 -j
+
+      - name: Integration tests
+        run: ctest --test-dir build-s3 -L docker --output-on-failure
+
+      - name: Backend logs on failure
+        if: failure()
+        run: docker compose -f libs/qbucket-s3/tests/docker/compose.yml logs --tail 200
+
+      - name: Stop backends
+        if: always()
+        run: libs/qbucket-s3/tests/docker/it-down.sh

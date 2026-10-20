@@ -52,6 +52,26 @@ target_link_libraries(myapp PRIVATE qbucket::s3)
 Headers are included as `<qbucket/s3/…>`; everything is in namespace
 `qbucket::s3`.
 
+## Testing
+
+Unit tests need nothing but Qt: `ctest --test-dir build-s3`. They run the
+real client against `testing::FakeS3Server` (target `qbucket::s3_testsupport`,
+available to your own tests too), which verifies SigV4 signatures from the
+received bytes and injects faults.
+
+Integration tests run against real S3 servers. Local ones in Docker:
+
+```sh
+libs/qbucket-s3/tests/docker/it-up.sh          # Ceph RGW, VersityGW, Garage
+cmake -S libs/qbucket-s3 -B build-s3 -DQBUCKET_S3_IT_LOCAL=ON
+cmake --build build-s3 && ctest --test-dir build-s3 -L docker
+libs/qbucket-s3/tests/docker/it-down.sh        # stop + delete data
+```
+
+Any other endpoint (Hetzner, AWS, …) via environment variables — see the
+header of `tests/it_s3_backend.cpp`. The test only touches buckets named
+`qbucket-it-*`, and only below a per-run prefix.
+
 ## Rules
 
 - Public API is `include/qbucket/s3/**`; everything under `src/` is private
