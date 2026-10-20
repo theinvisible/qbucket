@@ -35,7 +35,7 @@ the robustness work from §12).
 | Language / UI | C++20, Qt 6.5+ Widgets, CMake ≥ 3.22 | Same stack as xyz-profiler; tables, trees, forms, D&D are built in |
 | S3 client | **Own client on `QNetworkAccessManager`** — SigV4 signer + `QXmlStreamReader` parsers | Async Qt-native networking that runs on worker threads (one QNAM per thread), no aws-sdk-cpp build pain, full control over provider quirks |
 | TLS | Qt's default backend (Schannel on Windows, OpenSSL on Linux) | Nothing extra to ship on Windows |
-| Secrets | **All passwords / secret keys via QtKeychain** (FetchContent) → Windows Credential Manager, Secret Service / KWallet on Linux. Wrapped in `SecretStore`; **no plaintext fallback** | Never store secrets in the INI, a JSON file or the resume store |
+| Secrets | **All passwords / secret keys via QtKeychain** (installed package if built for our Qt, else FetchContent; Flatpak module) → Windows Credential Manager, Secret Service / KWallet on Linux. Wrapped in `SecretStore`; **no plaintext fallback** | Never store secrets in the INI, a JSON file or the resume store |
 | Settings | `QSettings` INI via a `SettingsController` (pattern from xyz-profiler) | Proven, including the debounce lesson |
 | Theme | Port `Theme`, `DarkFusionStyle`, `IconFactory` from xyz-profiler, namespace `qbucket` | One design language across the user's apps |
 | Namespace / naming | `namespace qbucket`, **no `Q` class prefix** (that looks like Qt API) | Mirrors xyz-profiler's `xyz::` |
@@ -92,7 +92,7 @@ The repository holds two things with a hard boundary between them:
 ```
 qbucket/
 ├── CMakeLists.txt            Qt auto-detect (copied from xyz-profiler), add_subdirectory(libs/qbucket-s3),
-│                             FetchContent QtKeychain (app only)
+│                             QtKeychain (app only: cmake/QBucketQtKeychain.cmake)
 ├── libs/qbucket-s3/          reusable library — layout in §3.0
 ├── src/                      the application (consumes the library's public API only)
 │   ├── domain/               App-level header-only structs (qbucket_domain INTERFACE)
@@ -158,7 +158,8 @@ libs/qbucket-s3/
 │   ├── Endpoint.h            URL, region, addressing style, TLS options (pinned certificate)
 │   ├── Credentials.h         CredentialsProvider interface + StaticCredentials,
 │   │                         EnvCredentials, AwsSharedFileCredentials
-│   ├── Client.h              S3Client — async, lives on one thread with its own QNAM
+│   ├── (S3Client)            private in M1 (src/client/): async, one thread, own QNAM —
+│   │                         Session is the only public entry point
 │   ├── Session.h             thread-safe proxy: worker threads, RequestId, value-type results
 │   ├── Presigner.h           presigned URLs without a network round-trip
 │   ├── RequestObserver.h     hook: every request/response (redacted) → e.g. an app's journal
@@ -450,8 +451,11 @@ Rules:
   proxy**: each
   call posts a request (queued invocation) with a `RequestId` and returns
   immediately; the result arrives as a **value type** (implicitly shared
-  Qt containers, cheap to pass) via a queued signal. Cancellation by
-  `RequestId`, honoured at the next I/O boundary.
+  Qt containers, cheap to pass) in a **callback run on the caller's
+  context object's thread** (`listObjects(params, context, callback)`) —
+  exactly once, never synchronously, dropped when the context is gone.
+  Cancellation by `RequestId` delivers *Cancelled* at once and aborts the
+  request on the worker.
 - Workers never touch widgets or models; models are only mutated on the
   GUI thread with whole batches.
 - Shared state between threads is avoided; where unavoidable (adaptive
@@ -556,7 +560,16 @@ updated.
 **Done when:** the empty app starts on Windows and as a Flatpak on Linux,
 theme switches live, CI is green.
 
-### M1 — S3 protocol core — **L** (1–1.5 weeks)
+### M1 — S3 protocol core — **L** (1–1.5 weeks) — stages 1–14 done (devlog 003), Hetzner run open
+
+Implemented in 15 stages on `main`; changes against the text below:
+Session API is callback + context (§3 threading); `S3Client` is private;
+`tests/docker/` lives under `libs/qbucket-s3/`; the Ceph backend is the
+stop-gap image (no HTTPS yet → no SSE-C probe); only **one** Hetzner region
+is available, so the done criterion verifies one region and the others per
+docs; QtKeychain is found first, FetchContent second, a manifest module in
+the Flatpak; 405 means "unsupported" only inside the capability prober;
+the TSan job is deferred until a TSan-instrumented Qt is built in CI.
 
 - `SigV4Signer`: header signing + query presigning; validated against the AWS
   SigV4 test suite vectors and the S3 documentation examples
@@ -611,7 +624,7 @@ theme switches live, CI is green.
 
 **Done when:** the Docker backends come up healthy with one command and the
 integration suite passes against Ceph RGW; listing a bucket works against
-Hetzner (all three regions),
+Hetzner (one region available; the others per Hetzner's docs),
 all unit tests green, the Hetzner capability matrix is checked in, and
 `s3ls` lists a Hetzner bucket from a standalone library build.
 
@@ -912,6 +925,17 @@ release time:
 - 2026-10-19 — Flatpak / AppStream app id **`io.github.theinvisible.QBucket`**
   (permanent once on Flathub; also used for the `.desktop` file, metainfo
   and icon names).
+- 2026-10-20 — **Session API = callback + context** (`RequestId`,
+  exactly-once queued delivery on the context's thread), not signals per
+  operation or QFuture. `S3Client` stays private before 1.0.
+- 2026-10-20 — Early phase: work **directly on `main`**, one commit per M1
+  stage with green ctest.
+- 2026-10-20 — Ceph test backend: **stop-gap teran/ceph-container** image
+  first, own Containerfile later. Known backend deviations are recorded in
+  `tests/data/it-expectations/` and asserted by the integration test.
+- 2026-10-20 — Object keys with `.` / `..` path segments are **refused**:
+  QNAM normalises them on the wire, the request would address another
+  object.
 
 ## 11. Open questions
 

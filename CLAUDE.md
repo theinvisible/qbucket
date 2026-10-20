@@ -44,33 +44,38 @@ convenient):
 
 ## Status
 
-**M0 (skeleton) done** — devlog 001; verified on Linux in devlog 002. The
-full plan — decisions, scope, architecture, milestones M0–M8, test
-strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and update this section as milestones land.
+**M0 (skeleton) done** — devlog 001; verified on Linux in devlog 002.
+**M1 stages 1–14 done** — devlog 003; stage 15 (Hetzner validation) open.
+The full plan — decisions, scope, architecture, milestones M0–M8, test
+strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
+update this section as milestones land.
 
 What exists:
 
-- CMake skeleton (Qt auto-detect, `qbucket::compile_options` with Qt
-  strictness defines, `/W4` / `-Wall -Wextra`, optional `-Werror` and
-  ASan/UBSan), static libs `qbucket_diagnostics`, `qbucket_controllers`,
-  `qbucket_ui_foundation`, `qbucket_app_ui`, executable `qbucket`
-- Design system ported from xyz-profiler: `ui/Theme`, `ui/DarkFusionStyle`,
-  `ui/IconFactory` (+ S3 icons), plus `ui/ThemeManager` (follows the OS
-  scheme live for "System")
-- `MainWindow` with the full §4 layout on placeholder models (every
-  mutating action disabled), `SettingsDialog` (Appearance),
-  `SettingsController` (theme, browse mode, window/splitter state with
-  debounce)
-- `diagnostics/StallWatchdog` (debug builds / `QBUCKET_STALL_WATCHDOG=1`)
-- German translation, app icon (`resources/make_icon.ps1` → `app.ico`, SVG
-  master for Linux), `.desktop` + AppStream metainfo, Flatpak manifest
-- CI: Windows, Linux, ASan/UBSan, clang-tidy, Flatpak
-  (`.github/workflows/ci.yml`)
-- 4 test binaries: ui foundation, settings, stall watchdog, main window
+- App skeleton (M0): CMake with Qt auto-detect and `qbucket::compile_options`,
+  design system (`ui/Theme`, `ui/DarkFusionStyle`, `ui/IconFactory`,
+  `ui/ThemeManager`), `MainWindow` with the full §4 layout on placeholder
+  models (every mutating action disabled), `SettingsDialog`,
+  `SettingsController`, `diagnostics/StallWatchdog`, German translation,
+  packaging (icon, `.desktop`, AppStream, Flatpak).
+- **`libs/qbucket-s3`** (M1): `Session` (worker thread, callback + context,
+  cancel/shutdown), SigV4 + `Presigner`, read/write object and bucket
+  operations, safe retries, clock skew, region redirects,
+  `ListObjectsPager`, provider registry (Hetzner, AWS, Garage, generic),
+  capability safeguard (probes, `CapabilitySet`, short-circuit, learning),
+  `testing::FakeS3Server`, `examples/s3ls`. See its README and CHANGELOG.
+- Docker test backends: `libs/qbucket-s3/tests/docker/it-up.sh` (Ceph RGW,
+  VersityGW, Garage), integration test `it_s3_backend`
+  (`-DQBUCKET_S3_IT_LOCAL=ON`, `ctest -L docker`), known backend deviations in
+  `tests/data/it-expectations/`.
+- App accounts (M1): `accounts/SecretStore` (QtKeychain, session-only mode),
+  `accounts/AccountStore`, `accounts/KeychainCredentialsProvider`,
+  `controllers/ConnectionTester`, `ui/AccountDialog`.
+- CI: Windows, Linux, ASan/UBSan, clang-tidy, Flatpak, `s3-standalone`
+  (static/shared/Windows/ASan+LSan), `s3-integration.yml` (Docker backends).
 
-Next: **M1** (library skeleton `libs/qbucket-s3`, SigV4, worker-thread
-client, provider profiles, capability prober, Docker test backends,
-QtKeychain) — developed on Linux.
+Next: **M1 stage 15** — Hetzner integration run (one region), fixtures,
+`docs/providers/hetzner.md`; then **M2** (browser UI).
 
 ## Devlog
 
@@ -152,7 +157,8 @@ Inherited from xyz-profiler — keep both projects consistent.
   `libs/qbucket-s3/tests/`, app tests in `tests/`.
 - New UI strings: run `lupdate` and add the German entry to
   `translations/qbucket_de.ts`.
-- Commits: Conventional Commits; feature branches `feat/<slug>`.
+- Commits: Conventional Commits. Early phase: directly on `main` (one
+  commit per stage, ctest green); feature branches `feat/<slug>` later.
 
 ## Lessons carried over from xyz-profiler
 
