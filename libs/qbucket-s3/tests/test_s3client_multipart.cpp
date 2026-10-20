@@ -92,14 +92,15 @@ private:
     QByteArray m_data;
     QString m_path;
 
-    std::unique_ptr<Session> makeSession(int lanes = 2)
+    std::unique_ptr<Session> makeSession(int lanes = 2, int transferTimeoutMs = 10000, int serverWorkTimeoutMs = 10000)
     {
         SessionOptions o;
         o.endpoint.url = m_server->endpointUrl();
         o.endpoint.region = QStringLiteral("test-1");
         o.profile = std::make_shared<GenericS3Profile>();
         o.credentials = std::make_shared<StaticCredentialsProvider>(testCredentials());
-        o.transferTimeoutMs = 10000;
+        o.transferTimeoutMs = transferTimeoutMs;
+        o.serverWorkTimeoutMs = serverWorkTimeoutMs;
         o.retryBaseDelayMs = 10;
         o.transferLanes = lanes;
         return std::make_unique<Session>(o);
@@ -394,6 +395,26 @@ private Q_SLOTS:
         });
         REQUIRE_OK(meta);
         QVERIFY(meta->etag.endsWith(QStringLiteral("-3\"")));
+    }
+
+    // Assembling a big object takes the server minutes without a byte on the
+    // wire (VersityGW, 50 GiB): Complete gets the longer server-work timeout,
+    // ordinary requests keep theirs.
+    void slowCompleteGetsTheServerWorkTimeout()
+    {
+        QString uploadId;
+        const QList<CompletedPart> parts = uploadThreeParts(QStringLiteral("slow"), &uploadId);
+        m_session = makeSession(2, 400, 10000);
+        m_store->setDelay(QStringLiteral("CompleteMultipartUpload"), 1500);
+        REQUIRE_OK(complete(QStringLiteral("slow"), uploadId, parts));
+        QCOMPARE(m_store->count(QStringLiteral("CompleteMultipartUpload")), 1);
+
+        m_store->setDelay(QStringLiteral("HeadObject"), 1500);
+        const auto meta = await<ObjectMeta>([&](auto cb) {
+            m_session->headObject(kBucket, QStringLiteral("slow"), {}, &m_context, cb);
+        });
+        QVERIFY(!meta);
+        QVERIFY(meta.error().isTransient());
     }
 
     void ifNoneMatchRefusesOverwrites()

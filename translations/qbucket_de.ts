@@ -2365,7 +2365,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ui/OperationPreviewDialog.cpp" line="69"/>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="84"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="85"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… und %n weiteres</numerusform>
@@ -2373,7 +2373,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="77"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="78"/>
         <source>%n of them exist already:</source>
         <translation>
             <numerusform>%n davon existiert bereits:</numerusform>
@@ -2381,37 +2381,37 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="89"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="90"/>
         <source>Existing objects:</source>
         <translation>Vorhandene Objekte:</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="92"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="93"/>
         <source>Skip them</source>
         <translation>Überspringen</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="93"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="94"/>
         <source>Overwrite them</source>
         <translation>Überschreiben</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="94"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="95"/>
         <source>Keep both (upload as “name (1)”)</source>
         <translation>Beide behalten (als „Name (1)“ hochladen)</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="110"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="111"/>
         <source>This cannot be undone: the bucket keeps no earlier versions.</source>
         <translation>Das lässt sich nicht rückgängig machen: Der Bucket behält keine früheren Versionen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="114"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="115"/>
         <source>This is a production account — I have checked the scope above.</source>
         <translation>Das ist ein Produktivkonto — ich habe den Umfang oben geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="119"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="120"/>
         <source>Type “%1” to confirm:</source>
         <translation>Zur Bestätigung „%1“ eintippen:</translation>
     </message>
@@ -2754,36 +2754,71 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <source>State</source>
         <translation>Zustand</translation>
     </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="243"/>
+        <source>done</source>
+        <translation>fertig</translation>
+    </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="243"/>
+        <source>done — %1</source>
+        <translation>fertig — %1</translation>
+    </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="246"/>
+        <source>%1 failed, %2 done</source>
+        <translation>%1 fehlgeschlagen, %2 erledigt</translation>
+    </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="249"/>
+        <source>failed: %1</source>
+        <translation>fehlgeschlagen: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="252"/>
+        <source>stopped — continues next time</source>
+        <translation>angehalten — geht beim nächsten Start weiter</translation>
+    </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="252"/>
+        <source>cancelled</source>
+        <translation>abgebrochen</translation>
+    </message>
+    <message>
+        <location filename="../src/models/TransferModel.cpp" line="255"/>
+        <source>refused: %1</source>
+        <translation>abgelehnt: %1</translation>
+    </message>
 </context>
 <context>
     <name>qbucket::TransferPanel</name>
     <message>
-        <location filename="../src/ui/TransferPanel.cpp" line="77"/>
+        <location filename="../src/ui/TransferPanel.cpp" line="81"/>
         <source>Pause</source>
         <translation>Pausieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/TransferPanel.cpp" line="78"/>
+        <location filename="../src/ui/TransferPanel.cpp" line="82"/>
         <source>Resume</source>
         <translation>Fortsetzen</translation>
     </message>
     <message>
-        <location filename="../src/ui/TransferPanel.cpp" line="79"/>
+        <location filename="../src/ui/TransferPanel.cpp" line="83"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/TransferPanel.cpp" line="80"/>
+        <location filename="../src/ui/TransferPanel.cpp" line="84"/>
         <source>Retry Failed</source>
         <translation>Fehlgeschlagene wiederholen</translation>
     </message>
     <message>
-        <location filename="../src/ui/TransferPanel.cpp" line="81"/>
+        <location filename="../src/ui/TransferPanel.cpp" line="85"/>
         <source>Clear Finished</source>
         <translation>Fertige entfernen</translation>
     </message>
     <message>
-        <location filename="../src/ui/TransferPanel.cpp" line="89"/>
+        <location filename="../src/ui/TransferPanel.cpp" line="93"/>
         <source>No transfers yet. Upload files with the toolbar, or download a selection.</source>
         <translation>Noch keine Übertragungen. Dateien über die Werkzeugleiste hochladen oder eine Auswahl herunterladen.</translation>
     </message>

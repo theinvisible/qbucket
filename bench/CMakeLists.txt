@@ -13,3 +13,16 @@ if(WIN32)
     target_compile_definitions(bench_listing PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
 endif()
 set_target_properties(bench_listing PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+qt_add_executable(bench_transfer bench_transfer.cpp)
+target_include_directories(bench_transfer PRIVATE ${CMAKE_SOURCE_DIR}/tests)
+target_link_libraries(bench_transfer PRIVATE
+    qbucket_app_ui
+    qbucket::s3_testsupport
+    qbucket::compile_options
+)
+if(WIN32)
+    target_link_libraries(bench_transfer PRIVATE psapi)
+    target_compile_definitions(bench_transfer PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
+set_target_properties(bench_transfer PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")

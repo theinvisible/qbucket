@@ -37,6 +37,10 @@ struct SessionOptions {
     std::shared_ptr<RequestObserver> observer;          // optional
 
     int transferTimeoutMs = 120'000;    // no progress for this long → Transient error
+    // The same for requests the server works on before it answers —
+    // CompleteMultipartUpload (VersityGW took minutes to assemble 50 GiB
+    // without sending a byte), CopyObject, UploadPartCopy.
+    int serverWorkTimeoutMs = 900'000;
     qint64 maxInMemoryBytes = Q_INT64_C(64) * 1024 * 1024;   // GetObject / responses
     int maxAttempts = 4;                // per request, for retryable failures
     int retryBaseDelayMs = 250;

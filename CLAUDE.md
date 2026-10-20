@@ -49,6 +49,8 @@ convenient):
 validation, nbg1).
 **M2 done** — devlog 005 (browser UI, the mutation gate, create folder /
 delete / rename, Hetzner run).
+**M3 done** — devlog 006 (transfer engine: multipart, resume after a crash,
+uploads / downloads, transfer panel, drag & drop in, incomplete uploads).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -89,6 +91,18 @@ What exists:
   `PlanFile`, `ui/OperationPreviewDialog`; jobs `CreateFolderJob`,
   `DeleteJob`, `RenameJob`. `tools/check-mutation-gate.sh` (ctest
   `mutation_gate`).
+- Transfers (M3), library: `Session` streams file ranges / into files on
+  transfer lanes, multipart + part-number reads, `testing::FakeObjectStore`;
+  `qbucket::s3_transfer` with `Uploader`, `Downloader`, `Copier`,
+  `PartPlanner`, `AdaptiveConcurrency`, `JsonFileResumeStore`;
+  `examples/s3cp`.
+- Transfers (M3), app: `controllers/TransferService` (limiter per account,
+  resume store), `UploadJob` (`LocalScanner`, conflict merge, policies),
+  `DownloadJob` (`LocalPathMapper`), `TransferJobStore` (resume after quit /
+  crash), `DiscardTransfersJob`, `AbortUploadsJob`; `models/TransferModel`,
+  `ui/TransferPanel`, `models/MultipartUploadModel`,
+  `ui/IncompleteUploadsDialog`; drag & drop in (browser, sidebar);
+  Settings → Transfers. `bench/bench_transfer`.
 - `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
   with the tests, run by hand, release builds only).
 - CI per push (`ci.yml`): Linux Release, Windows app, library as Windows DLL.
@@ -98,7 +112,7 @@ What exists:
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M3** (transfer engine).
+Next: **M4** (object operations).
 
 ## Devlog
 
@@ -174,6 +188,11 @@ ctest --test-dir build -L docker
 #   build/tests/it_operations; build/tests/it_browser   (it_browser: read-only account)
 # listing budgets (release build)
 build-release/bench/bench_listing --keys 100000 --flat-keys 1000000
+# transfer budgets: GUI stalls while planning 1M files / uploading / browsing
+build-release/bench/bench_transfer --files 1000000 --upload-mib 2048
+# a transfer by hand, killable and resumable (credentials from AWS_* env)
+build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR --id X upload FILE BUCKET KEY
+build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR resume X
 ```
 
 The extended CI (`ci-extended.yml`, `s3-integration.yml`) can be started by
@@ -281,6 +300,17 @@ Each of these cost time there; don't relearn them.
 - **Plural forms need `translations/qbucket_en.ts`** (plurals only, loaded
   before the locale's file), or English shows "1 object(s)". New `%n`
   strings: run `update_translations`, fill both `.ts` files.
+- **`QSignalSpy::wait()` waits for the *next* emission.** A job that
+  finished while a `QTRY_*` loop spun has already emitted: check
+  `spy.size() == 1 || spy.wait()`. And jobs are `deleteLater`'d after
+  `finished` — never read one in a failure message after waiting.
+- **A request still under way must not re-create a file its owner
+  removed.** The download sink opens `.qbpart` with `ExistingOnly`
+  (`GetObjectToFileParams::createFile = false`); otherwise a range started
+  just before a cancel brought the deleted partial file back.
+- **Debugging a hanging QtTest binary:** after an abort, QtTest's crash
+  handler forks to print a stack and can deadlock on the malloc lock —
+  `QTEST_DISABLE_STACK_DUMP=1` shows the real failure.
 - **The tab-bar base ignores the palette.** With `setDocumentMode(true)`
   the style paints the tab bar's base line in a fixed `#393e43` in both
   themes, and `QTabWidget::pane { border-top }` has no effect. The QSS
@@ -379,6 +409,21 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
   deleting a source.
 - Hetzner copies between buckets of one project, although its docs say
   otherwise (devlog 005; `it_s3_backend crossBucketCopy`).
+- **Hetzner and Garage ignore `If-None-Match: *`** — the PUT overwrites.
+  Their profiles know `ConditionalWrites` as Unsupported; uploads check an
+  existing key with HEAD right before writing instead (devlog 006).
+- Multipart requests keep their query string through Hetzner's proxy
+  (UploadPart / Abort on an existing key leave it intact); HEAD / GET
+  `?partNumber=` work on Hetzner, Ceph, VersityGW and Garage.
+- A multipart object's MD5-of-MD5s can be checked after a download when
+  the ranges follow its part layout (HEAD `?partNumber=1`); otherwise only
+  the size — reported as such.
+- **CompleteMultipartUpload can take minutes without a byte on the wire**
+  (VersityGW: ~6 min for 50 GiB). Complete / CopyObject / UploadPartCopy
+  use `SessionOptions::serverWorkTimeoutMs` (15 min), not the 120 s
+  transfer timeout — a client that hangs up makes the server cancel.
+- **VersityGW on ext4 fails Completes above ~640 parts** (500, ENOSPC from
+  an xattr in its log). Big multipart runs locally: Garage.
 - "Folders" are prefixes; a `prefix/` marker object may or may not exist.
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.

@@ -621,6 +621,7 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
         spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
     // A copy can fail after the 200 has been sent: the body says so.
     spec.mayReturn200Error = true;
+    spec.serverWork = true;
 
     return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<CopyObjectResult> {
         Result<CopyObjectResult> parsed = xml::parseCopyObjectResult(r.body);
@@ -726,6 +727,7 @@ quint64 S3Client::completeMultipartUpload(const CompleteMultipartUploadParams& p
     // and a lost answer leaves it open whether the object now exists.
     spec.mayReturn200Error = true;
     spec.idempotent = false;
+    spec.serverWork = true;
     return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<CompleteMultipartUploadResult> {
         Result<CompleteMultipartUploadResult> parsed = xml::parseCompleteMultipartUpload(r.body);
         if (!parsed)
@@ -832,6 +834,7 @@ quint64 S3Client::uploadPartCopy(const UploadPartCopyParams& params, Done<Upload
         spec.headers.append({"x-amz-copy-source-if-match", params.ifMatch.toLatin1()});
     spec.mayReturn200Error = true;
     spec.idempotent = true;   // replaces the part of an unfinished upload
+    spec.serverWork = true;
     return single(std::move(spec), std::move(done), [n = params.partNumber](const RawResponse& r) -> Result<UploadPartCopyResult> {
         Result<UploadPartCopyResult> parsed = xml::parseCopyPartResult(r.body);
         if (!parsed)

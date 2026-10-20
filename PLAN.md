@@ -667,7 +667,23 @@ are in.
 **Done when:** a 100k-object prefix scrolls smoothly in a release build and
 navigation feels like a file manager.
 
-### M3 — Transfer engine — **L** (1–1.5 weeks)
+### M3 — Transfer engine — **L** (1–1.5 weeks) — ✅ done (devlog 006)
+
+Implemented in 12 stages on `main` (library first); changes against the
+text below: the tasks are `transfer::Uploader` / `Downloader` / `Copier` in
+`qbucket::s3_transfer`, built on the public `Session` (which gained file
+bodies, downloads into files, transfer lanes and the multipart calls);
+downloads of multipart objects follow the object's own part layout so the
+MD5-of-MD5s is checked; resume is two layers — part records per file in
+the library's `ResumeStore`, the job's plan and done list in the app's
+`TransferJobStore` — and quitting suspends instead of aborting; UploadPartCopy
+(planned for M4) came along, so renames above 5 GiB work; Hetzner and Garage
+ignore `If-None-Match`, so overwrite protection there is a HEAD right before
+the write. The Flatpak portal check moves to M7 / M8. The kill / resume
+proof ran with 10 GiB (Garage) instead of 50 GB — VersityGW on ext4 can't
+complete uploads of more than ~640 parts (devlog 006). The §13.5 M3 items
+(Content-MD5 per part, download verification, `.qbpart` finalize, conflict
+dialog, journal + crash/resume tests, a QNAM per transfer lane, AIMD) are in.
 
 - `PartPlanner` (pure, tested): threshold 64 MiB, part size ≥ 8 MiB,
   ≤ 10 000 parts, ≤ 5 GiB per part
@@ -974,6 +990,23 @@ release time:
   plurals-only translation.
 - 2026-10-20 — Hetzner: **CrossBucketCopy is Supported** in the profile —
   verified by writing (devlog 005), against Hetzner's own page.
+- 2026-10-20 — **Transfers stream** (`FileBody`, downloads into files) on
+  **transfer lanes** (own thread + QNAM each); `UNSIGNED-PAYLOAD` over TLS
+  with Content-MD5 on every body; **one AIMD limit per account** for all
+  transfers (devlog 006).
+- 2026-10-20 — **Resume = part records per file + plan / done list per
+  job**; ListParts decides what the server has; unrecorded parts are
+  adopted only when the local bytes hash to their ETag; quitting suspends.
+- 2026-10-20 — Hetzner and Garage **ignore `If-None-Match`**:
+  `ConditionalWrites` Unsupported in their profiles, uploads check with HEAD
+  right before writing. `Feature::MultipartUpload` is profile knowledge
+  (Supported by default) — the per-provider kill switch.
+- 2026-10-20 — **Complete / CopyObject / UploadPartCopy get a 15-minute
+  transfer timeout** (`SessionOptions::serverWorkTimeoutMs`): servers
+  assemble or copy for minutes without sending a byte (devlog 006).
+- 2026-10-20 — Downloads **never leave the target folder**
+  (`LocalPathMapper`) and run on read-only accounts; drops always show the
+  preview.
 
 ## 11. Open questions
 
@@ -1177,7 +1210,7 @@ regressions show up.
 | M0 | Warnings-as-errors, Qt strictness defines, ASan/UBSan + clang-tidy CI jobs, stall watchdog |
 | M1 | Library skeleton + standalone CI job, worker-thread `S3Client` + `s3::Session` proxy (TSan job on Linux CI), `FakeS3Server` fault injection, 200-with-error handling, safe-retry rules, listing loop detection, log redaction |
 | M2 | Capability enforcement in `OperationController` (`requires()`) + UI reasons/tooltips + "Server capabilities" page with change history, background re-validation timer + change notifications, `OperationController` skeleton, read-only + environment marker, plan/preview/verify for delete/rename, compact model, paging budgets, `bench/` |
-| M3 | Content-MD5 per part, download verification, `.qbpart` atomic finalize, conflict dialog, journal + crash/resume tests, QNAM pool, adaptive concurrency |
+| M3 ✅ | Content-MD5 per part, download verification, `.qbpart` atomic finalize, conflict dialog, journal + crash/resume tests, QNAM pool, adaptive concurrency |
 | M4 | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
 | M5 | Versioning-aware confirmations, separate permanent-delete flow |
 | M6 | Read-back verification of every bucket config write, object-lock/governance safeguards |

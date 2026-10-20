@@ -63,7 +63,7 @@ QString TransferModel::formatRemaining(qint64 seconds)
 QString TransferModel::stateText_(const Row& r) const
 {
     if (r.finished)
-        return r.summary;
+        return r.outcomeText;
     const Job* job = r.job;
     if (!job)
         return {};
@@ -112,7 +112,7 @@ QVariant TransferModel::data(const QModelIndex& index, int role) const
             return {};
         }
     case Qt::ToolTipRole:
-        return index.column() == StateColumn ? stateText_(r) : r.title;
+        return r.finished ? r.summary : (index.column() == StateColumn ? stateText_(r) : r.title);
     case ProgressRole:
         if (r.finished && r.outcome == Job::Outcome::Succeeded)
             return 1000;
@@ -217,9 +217,16 @@ void TransferModel::add_(Job* job)
         if (i >= 0)
             m_rows[i].dirty = true;
     };
+    // Progress is shown with the next tick; a phase or pause change at once
+    // (rare, and the panel's buttons depend on it).
+    const auto changed = [this, job] {
+        const int i = rowOf_(job);
+        if (i >= 0)
+            emit dataChanged(index(i, 0), index(i, ColumnCount - 1));
+    };
     connect(job, &Job::progressChanged, this, dirty);
-    connect(job, &Job::phaseChanged, this, dirty);
-    connect(job, &Job::pausedChanged, this, dirty);
+    connect(job, &Job::phaseChanged, this, changed);
+    connect(job, &Job::pausedChanged, this, changed);
     if (!m_tick.isActive())
         m_tick.start();
     emit transferStarted();
@@ -237,6 +244,26 @@ void TransferModel::finished_(Job* job)
     r.bytesTotal = job->bytesTotal();
     r.summary = OperationController::summary(*job);
     r.title = job->title();
+    const Job::Report& rep = job->report();
+    switch (r.outcome) {
+    case Job::Outcome::Succeeded:
+        r.outcomeText = rep.verification.isEmpty() ? tr("done") : tr("done — %1").arg(rep.verification);
+        break;
+    case Job::Outcome::PartlyFailed:
+        r.outcomeText = tr("%1 failed, %2 done").arg(rep.failed).arg(rep.succeeded);
+        break;
+    case Job::Outcome::Failed:
+        r.outcomeText = tr("failed: %1").arg(!job->errorText().isEmpty() ? job->errorText() : rep.failures.value(0));
+        break;
+    case Job::Outcome::Cancelled:
+        r.outcomeText = job->isSuspended() ? tr("stopped — continues next time") : tr("cancelled");
+        break;
+    case Job::Outcome::Refused:
+        r.outcomeText = tr("refused: %1").arg(job->errorText());
+        break;
+    case Job::Outcome::None:
+        break;
+    }
     // Retry exactly what failed, with the same settings.
     const Account account = job->account();
     const QString bucket = job->bucket();

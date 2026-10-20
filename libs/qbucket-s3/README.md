@@ -3,14 +3,27 @@
 A threaded, provider-aware S3 client library for Qt 6 — the protocol core of
 [QBucket](https://github.com/theinvisible/qbucket), usable on its own.
 
-- Depends on **Qt 6.5+ Core and Network** only (the transfer engine later adds
-  Concurrent). No Widgets, no QSettings, no keychain.
+- Depends on **Qt 6.5+ Core and Network** only; the transfer engine
+  (`qbucket::s3_transfer`) adds Concurrent. No Widgets, no QSettings, no
+  keychain.
 - Own SigV4 signing on `QNetworkAccessManager` — no AWS SDK.
 - Provider quirks live in provider profiles, never in the protocol core.
 - Errors are values (`Result<T>` / `Error`), no exceptions.
 
-> Status: **pre-1.0, under construction** (QBucket milestone M1). The API
-> changes between minor versions; see [CHANGELOG.md](CHANGELOG.md).
+> Status: **pre-1.0, under construction** (QBucket milestones M1–M3). The
+> API changes between minor versions; see [CHANGELOG.md](CHANGELOG.md).
+
+Two targets:
+
+- **`qbucket::s3`** — `Session` (worker thread, optional transfer lanes),
+  SigV4, every object and multipart request, ranged / part-number reads
+  streamed into files, uploads streamed from file ranges, capabilities,
+  provider profiles.
+- **`qbucket::s3_transfer`** — `Uploader`, `Downloader`, `Copier` (multipart
+  in parallel, Content-MD5 on every part, ETag verification, pause / cancel),
+  `AdaptiveConcurrency` (AIMD on SlowDown / 503), `PartPlanner`, hashing,
+  and `ResumeStore` / `JsonFileResumeStore`: a transfer killed with SIGKILL
+  continues where it stopped (`examples/s3cp`, `tests/test_transfer_crash`).
 
 ## Building
 
@@ -39,7 +52,7 @@ As a subdirectory (preset options with `set()` before adding it):
 ```cmake
 set(QBUCKET_S3_BUILD_TESTS OFF)
 add_subdirectory(third_party/qbucket-s3)
-target_link_libraries(myapp PRIVATE qbucket::s3)
+target_link_libraries(myapp PRIVATE qbucket::s3)            # or qbucket::s3_transfer
 ```
 
 From an installed copy:
@@ -50,14 +63,23 @@ target_link_libraries(myapp PRIVATE qbucket::s3)
 ```
 
 Headers are included as `<qbucket/s3/…>`; everything is in namespace
-`qbucket::s3`.
+`qbucket::s3` (transfers: `qbucket::s3::transfer`). `examples/s3ls` lists,
+`examples/s3cp` uploads and downloads with resume:
+
+```sh
+export AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=…
+s3cp --provider hetzner --region nbg1 --resume-dir ~/.s3cp --id iso upload big.iso my-bucket isos/big.iso
+s3cp --provider hetzner --region nbg1 --resume-dir ~/.s3cp resume iso      # after a crash or kill
+```
 
 ## Testing
 
 Unit tests need nothing but Qt: `ctest --test-dir build-s3`. They run the
 real client against `testing::FakeS3Server` (target `qbucket::s3_testsupport`,
 available to your own tests too), which verifies SigV4 signatures from the
-received bytes and injects faults.
+received bytes and injects faults, and `testing::FakeObjectStore`, a stateful
+store behind it (objects with data, multipart, ranges, part numbers, copies,
+listings, scripted faults, a discard mode for uploads of any size).
 
 Integration tests run against real S3 servers. Local ones in Docker:
 

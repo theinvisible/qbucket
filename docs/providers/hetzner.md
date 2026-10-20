@@ -6,7 +6,8 @@ QBucket's first-class provider (PLAN.md §3.2). Encoded in
 `libs/qbucket-s3/tests/data/it-expectations/hetzner.json`.
 
 **Verified:** 2026-10-20 against a real project, location **nbg1**, with
-`it_s3_backend` (12/12 on each bucket) and `s3ls probe`; fsn1 and hel1
+`it_s3_backend` (12/12 on each bucket; with the M3 multipart tests 17
+passed, 3 skipped for missing optional setup) and `s3ls probe`; fsn1 and hel1
 follow Hetzner's documentation and have not been probed. Test buckets:
 
 | Bucket | Set up | it-expectations |
@@ -78,6 +79,14 @@ Multipart uploads (`it_s3_backend`, nbg1, 2026-10-20):
   existing object. The profile knows `ConditionalWrites` as Unsupported, so
   the library refuses the header locally and uploads check for an existing
   target with HEAD (a small race window, documented in the app).
+- UploadPartCopy with byte ranges and `x-amz-copy-source-if-match` works
+  (`multipartCopy`) — renames above 5 GiB copy in parts.
+- **Kill / resume** (devlog 006): a 2 GiB `s3cp` upload (256 parts) killed
+  at 45 % and a download killed at 40 % both resumed and verified (MD5 of
+  MD5s, copy == source); nothing stayed open. Upload speed equalled a plain
+  `curl` PUT from the same line (≈ 2 MiB/s uplink), so the line is the
+  limit. `it_operations` uploads a folder (one file multipart) and
+  downloads it back, MD5-verified.
 
 Writes verified by the app's own jobs (`tests/it_operations`, both
 buckets, 2026-10-20): creating a folder marker, deleting a folder

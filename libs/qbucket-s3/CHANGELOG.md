@@ -125,6 +125,11 @@ version bump may break the API.
 - `AdaptiveConcurrency::setMaximum()`.
 - `examples/s3cp` — resumable uploads and downloads from the command line.
 - `FakeObjectStore::setDelay()`.
+- `SessionOptions::serverWorkTimeoutMs` (default 15 min): the transfer timeout
+  of CompleteMultipartUpload, CopyObject and UploadPartCopy, which the server
+  works on before it sends a byte. With the 120 s default a 50 GiB Complete
+  against VersityGW timed out, the server cancelled the assembly, and the
+  upload stayed open.
 
 ### Fixed
 

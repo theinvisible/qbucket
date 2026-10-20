@@ -74,6 +74,7 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
 
     // Targets that exist already, and what to do with them.
     if (p.conflicts > 0) {
+        setMinimumWidth(720);   // both sides of a conflict on one line
         auto* head = new QLabel(tr("%n of them exist already:", nullptr, int(p.conflicts)));
         head->setStyleSheet(QStringLiteral("color: %1;").arg(Theme::warningColor().name()));
         lay->addWidget(head);

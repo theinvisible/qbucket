@@ -19,9 +19,11 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
+#include <QDialog>
 #include <QFile>
 #include <QPushButton>
 #include <QSignalSpy>
+#include <QTranslator>
 #include <QtTest>
 
 #include <optional>
@@ -445,6 +447,31 @@ private slots:
         m_transfers->jobs()->load(&ctx, [&](const QList<TransferJobStore::Record>& r) { after = r; });
         QTRY_VERIFY(after.has_value());
         QVERIFY(after->isEmpty());
+    }
+
+    // QBUCKET_SCREENSHOT_DIR (with a real platform): upload-conflicts.png.
+    void screenshotOfTheConflictPreview()
+    {
+        const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
+        if (dir.isEmpty())
+            QSKIP("QBUCKET_SCREENSHOT_DIR not set");
+        QTranslator plurals;   // as the app does
+        if (plurals.load(QStringLiteral(QBUCKET_QM_DIR "/qbucket_en.qm")))
+            QCoreApplication::installTranslator(&plurals);
+        for (int i = 0; i < 6; ++i)
+            writeLocal(QStringLiteral("site/page%1.html").arg(i), content(i, 2000 + 300 * i));
+        m_objects->putObject(kBucket, QStringLiteral("backup/site/page1.html"), "old");
+        m_objects->putObject(kBucket, QStringLiteral("backup/site/page4.html"), "older");
+        auto* job = make({m_local + QStringLiteral("/site")});
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        m_ops->start(job);
+        QVERIFY(preview.wait(20000));
+        OperationPreviewDialog dlg(job);
+        dlg.show();
+        QTest::qWait(300);
+        QDir().mkpath(dir);
+        QVERIFY(dlg.grab().save(QDir(dir).filePath(QStringLiteral("upload-conflicts.png"))));
+        dlg.reject();
     }
 
     void emptySelectionUploadsNothing()

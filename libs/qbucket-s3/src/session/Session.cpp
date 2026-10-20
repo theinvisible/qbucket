@@ -280,6 +280,7 @@ Session::Session(SessionOptions options, QObject* parent)
     cfg.credentials = d->options.credentials;
     cfg.observer = d->options.observer;
     cfg.transferTimeoutMs = d->options.transferTimeoutMs;
+    cfg.serverWorkTimeoutMs = d->options.serverWorkTimeoutMs;
     cfg.maxResponseBytes = d->options.maxInMemoryBytes;
     cfg.captureResponseBodyBytes = d->options.captureResponseBodyBytes;
     cfg.retry.maxAttempts = std::max(1, d->options.maxAttempts);

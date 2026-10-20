@@ -35,6 +35,7 @@ struct ClientConfig {
     std::shared_ptr<CredentialsProvider> credentials;
     std::shared_ptr<RequestObserver> observer;   // optional
     int transferTimeoutMs = 120'000;             // no progress for this long → Transient
+    int serverWorkTimeoutMs = 900'000;           // the same for RequestSpec::serverWork
     qint64 maxResponseBytes = Q_INT64_C(64) * 1024 * 1024;   // in-memory bodies
     int captureResponseBodyBytes = 0;            // > 0: RequestRecord::responseBody
     QByteArray userAgent = "qbucket-s3";
@@ -74,6 +75,9 @@ struct RequestSpec {
     // CopyObject / UploadPartCopy / CompleteMultipartUpload can answer 200
     // with an <Error> document. Never set for GetObject (user data).
     bool mayReturn200Error = false;
+    // The server works before it sends a byte (assembling a multipart
+    // object, copying): ClientConfig::serverWorkTimeoutMs applies.
+    bool serverWork = false;
 };
 
 struct RawResponse {

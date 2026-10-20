@@ -22,6 +22,7 @@
 #include <QSignalSpy>
 #include <QTableView>
 #include <QToolButton>
+#include <QTranslator>
 #include <QtTest>
 
 using namespace qbucket;
@@ -107,9 +108,10 @@ private slots:
         panel.resize(900, 300);
         panel.show();
         QVERIFY(!panel.clearButton()->isEnabled());
+        // Long enough (≥ 1.5 s) to be paused while it runs, also on a busy machine.
         for (int i = 0; i < 12; ++i)
             writeLocal(QStringLiteral("set/f%1").arg(i), QByteArray(20000, char('a' + i)));
-        m_objects->setDelay(QStringLiteral("PutObject"), 120);
+        m_objects->setDelay(QStringLiteral("PutObject"), 500);
         QSignalSpy started(m_model.get(), &TransferModel::transferStarted);
         UploadJob* job = startUpload({m_h->path(QStringLiteral("local/set"))});
         QSignalSpy done(job, &Job::finished);
@@ -119,7 +121,7 @@ private slots:
         QCOMPARE(panel.view()->selectionModel()->selectedRows().size(), 1);   // the newest is selected
 
         QTRY_VERIFY_WITH_TIMEOUT(m_model->index(0, 0).data(TransferModel::CanPauseRole).toBool(), 20000);
-        QTRY_VERIFY(panel.pauseButton()->isEnabled());
+        QVERIFY(panel.pauseButton()->isEnabled());   // the phase change reached the panel at once
         panel.pauseButton()->click();
         QVERIFY(job->isPaused());
         QTRY_VERIFY(panel.resumeButton()->isEnabled());
@@ -175,6 +177,48 @@ private slots:
         QVERIFY(done.size() == 1 || done.wait(20000));
         QTRY_VERIFY(m_model->index(0, 0).data(TransferModel::FinishedRole).toBool());
         QCOMPARE(m_model->runningCount(), 0);
+    }
+
+    // QBUCKET_SCREENSHOT_DIR (with a real platform): transfers-<theme>.png.
+    void screenshot()
+    {
+        const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
+        if (dir.isEmpty())
+            QSKIP("QBUCKET_SCREENSHOT_DIR not set");
+        QTranslator plurals;   // as the app does
+        if (plurals.load(QStringLiteral(QBUCKET_QM_DIR "/qbucket_en.qm")))
+            QCoreApplication::installTranslator(&plurals);
+        for (const QString& themeName : {QStringLiteral("Dark"), QStringLiteral("Light")}) {
+            m_theme.apply(themeName);
+            init();
+            TransferPanel panel(m_model.get());
+            panel.resize(1100, 230);
+            panel.show();
+            // A finished upload, one that partly failed, one running.
+            for (int i = 0; i < 5; ++i)
+                writeLocal(QStringLiteral("photos/IMG_%1.jpg").arg(4400 + i), QByteArray(300000, 'p'));
+            Job* done = startUpload({m_h->path(QStringLiteral("local/photos"))});
+            QSignalSpy doneSpy(done, &Job::finished);
+            QVERIFY(doneSpy.size() == 1 || doneSpy.wait(20000));
+            writeLocal(QStringLiteral("reports/q3.pdf"), "pdf");
+            writeLocal(QStringLiteral("reports/locked.xlsx"), "xls");
+            m_h->server->addRoute({"PUT", QRegularExpression(QStringLiteral("locked\\.xlsx$")), {}, {}},
+                                  {FakeResponse::s3Error(403, "AccessDenied")}, 1);
+            Job* partly = startUpload({m_h->path(QStringLiteral("local/reports"))});
+            QSignalSpy partlySpy(partly, &Job::finished);
+            QVERIFY(partlySpy.size() == 1 || partlySpy.wait(20000));
+            for (int i = 0; i < 30; ++i)
+                writeLocal(QStringLiteral("backup/part-%1.bin").arg(i, 3, 10, QLatin1Char('0')), QByteArray(400000, 'b'));
+            m_objects->setDelay(QStringLiteral("PutObject"), 1500);
+            startUpload({m_h->path(QStringLiteral("local/backup"))});
+            QTest::qWait(3200);
+            panel.view()->selectRow(2);
+            QTest::qWait(600);
+            QDir().mkpath(dir);
+            QVERIFY(panel.grab().save(QDir(dir).filePath(QStringLiteral("transfers-%1.png").arg(themeName.toLower()))));
+            cleanup();
+        }
+        init();
     }
 
     void formats()

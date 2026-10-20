@@ -279,7 +279,8 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     req.setAttribute(QNetworkRequest::CacheSaveControlAttribute, false);
     req.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
     req.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
-    req.setTransferTimeout(m_config.transferTimeoutMs);
+    req.setTransferTimeout(spec.serverWork ? std::max(m_config.serverWorkTimeoutMs, m_config.transferTimeoutMs)
+                                           : m_config.transferTimeoutMs);
     for (const auto& [name, value] : in.headers) {
         if (name != "host")   // QNAM derives Host from the URL — identical by construction
             req.setRawHeader(name, value);

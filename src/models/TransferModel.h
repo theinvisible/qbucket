@@ -71,7 +71,8 @@ private:
         std::deque<std::pair<qint64, qint64>> samples;   // (ms, bytes)
         bool finished = false;
         Job::Outcome outcome = Job::Outcome::None;
-        QString summary;
+        QString summary;     // the Log line, for the tooltip
+        QString outcomeText; // short, for the State column
         std::function<Job*()> retry;
         bool dirty = false;
     };

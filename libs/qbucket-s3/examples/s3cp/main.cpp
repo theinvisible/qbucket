@@ -194,14 +194,21 @@ int main(int argc, char** argv)
     QElapsedTimer clock;
     clock.start();
     const bool progressLines = parser.isSet(progressOpt);
+    // A resumed transfer starts with the bytes of an earlier run done; the
+    // rate counts only what this run moved.
+    qint64 firstDone = -1;
     const auto onProgress = [&](qint64 done, qint64 total) {
+        if (firstDone < 0)
+            firstDone = done;
         if (progressLines)
             out() << "progress " << done << ' ' << total << Qt::endl;
     };
     const auto rate = [&](qint64 size) {
         const double secs = std::max<double>(0.001, double(clock.elapsed()) / 1000.0);
-        return QStringLiteral("%1 in %2 s, %3/s")
-            .arg(humanBytes(size), QString::number(secs, 'f', 1), humanBytes(qint64(double(size) / secs)));
+        const qint64 moved = size - std::max<qint64>(0, firstDone);
+        const QString earlier = moved < size ? QStringLiteral(" (%1 this run)").arg(humanBytes(moved)) : QString();
+        return QStringLiteral("%1%2 in %3 s, %4/s")
+            .arg(humanBytes(size), earlier, QString::number(secs, 'f', 1), humanBytes(qint64(double(moved) / secs)));
     };
     if (uploader) {
         QObject::connect(uploader.get(), &Uploader::progress, &app, onProgress);

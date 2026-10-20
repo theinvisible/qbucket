@@ -256,7 +256,7 @@
     </message>
     <message numerus="yes">
         <location filename="../../src/ui/OperationPreviewDialog.cpp" line="69"/>
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="84"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="85"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… and %n more</numerusform>
@@ -264,7 +264,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="77"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="78"/>
         <source>%n of them exist already:</source>
         <translation>
             <numerusform>%n of them exists already:</numerusform>

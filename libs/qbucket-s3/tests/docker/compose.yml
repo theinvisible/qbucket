@@ -35,6 +35,9 @@ services:
       start_period: 120s
 
   versitygw:
+    # The posix backend keeps object metadata in xattrs: on ext4 without
+    # ea_inode (~4 KB per inode) a Complete of more than ~640 parts fails
+    # with 500 InternalError (ENOSPC). Big multipart runs: use Garage.
     image: versity/versitygw:v1.9.0@sha256:eb7f786fcd91e72194e48fcf1ac16302d686bf8e3a71434bdbc067a6efd3fdc7
     env_file: env/versitygw.env
     environment:

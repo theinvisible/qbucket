@@ -3,6 +3,7 @@
 #include "models/TransferModel.h"
 #include "ui/Theme.h"
 
+#include <QApplication>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
@@ -28,7 +29,10 @@ public:
         initStyleOption(&opt, index);
         const QString text = opt.text;
         opt.text.clear();
-        QStyledItemDelegate::paint(painter, opt, index);
+        // Background and selection only; the text comes below, over the bar.
+        const QWidget* widget = option.widget;
+        QStyle* style = widget ? widget->style() : QApplication::style();
+        style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, widget);
 
         const Palette& pal = Theme::current();
         const int permille = index.data(TransferModel::ProgressRole).toInt();
@@ -45,8 +49,8 @@ public:
             painter->setBrush(finished && permille >= 1000 ? Theme::successColor() : pal.accent);
             painter->drawRoundedRect(done, 2, 2);
         }
-        painter->setPen(opt.palette.color(QPalette::Text));
-        painter->drawText(option.rect.adjusted(6, 2, -6, -10), Qt::AlignLeft | Qt::AlignVCenter,
+        painter->setPen(opt.palette.color(option.state & QStyle::State_Selected ? QPalette::HighlightedText : QPalette::Text));
+        painter->drawText(option.rect.adjusted(6, 1, -6, -9), Qt::AlignLeft | Qt::AlignVCenter,
                           painter->fontMetrics().elidedText(text, Qt::ElideRight, option.rect.width() - 12));
         painter->restore();
     }
@@ -104,8 +108,8 @@ TransferPanel::TransferPanel(TransferModel* model, QWidget* parent)
     m_view->horizontalHeader()->setStretchLastSection(true);
     m_view->setColumnWidth(TransferModel::NameColumn, 360);
     m_view->setColumnWidth(TransferModel::ProgressColumn, 200);
-    m_view->setColumnWidth(TransferModel::SpeedColumn, 90);
-    m_view->setColumnWidth(TransferModel::RemainingColumn, 80);
+    m_view->setColumnWidth(TransferModel::SpeedColumn, 100);
+    m_view->setColumnWidth(TransferModel::RemainingColumn, 110);
     m_view->setItemDelegateForColumn(TransferModel::ProgressColumn, new ProgressDelegate(m_view));
     m_stack->addWidget(m_view);
     lay->addWidget(m_stack, 1);
