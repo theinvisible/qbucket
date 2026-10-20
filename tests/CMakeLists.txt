@@ -74,6 +74,17 @@ qbucket_add_test(test_connection_tester
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_capability_store
+    test_capability_store.cpp
+    qbucket_accounts
+)
+
+qbucket_add_test(test_account_sessions
+    test_account_sessions.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

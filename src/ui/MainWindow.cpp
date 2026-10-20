@@ -2,6 +2,7 @@
 
 #include "accounts/AccountStore.h"
 #include "accounts/SecretStore.h"
+#include "controllers/AccountSessions.h"
 #include "controllers/SettingsController.h"
 #include "ui/AccountDialog.h"
 #include "ui/IconFactory.h"
@@ -118,6 +119,7 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     m_addAccountBtn->setEnabled(accountsAvailable);
     m_addAccountBtn->setToolTip(QString());
     if (accountsAvailable) {
+        m_sessions = new AccountSessions(m_accounts, m_secrets, this);
         connect(m_actAddAccount, &QAction::triggered, this, &MainWindow::showAddAccountDialog_);
         connect(m_addAccountBtn, &QPushButton::clicked, this, &MainWindow::showAddAccountDialog_);
         connect(m_accounts, &AccountStore::accountsChanged, this, &MainWindow::refreshAccountSummary_);
@@ -629,7 +631,19 @@ void MainWindow::saveWindowState_()
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-    saveWindowState_();
+    // Let the account sessions stop their worker threads without blocking
+    // (PLAN.md §3, orderly shutdown), then close for real.
+    if (m_sessions && !m_sessions->isShutDown()) {
+        event->ignore();
+        saveWindowState_();
+        connect(m_sessions, &AccountSessions::allStopped, this, &QWidget::close, Qt::QueuedConnection);
+        // A worker that doesn't end in time is left to ~AccountSessions.
+        QTimer::singleShot(3000, this, &QWidget::close);
+        m_sessions->shutdown();
+        return;
+    }
+    if (!m_sessions)
+        saveWindowState_();
     QMainWindow::closeEvent(event);
 }
 

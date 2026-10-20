@@ -20,6 +20,8 @@ target_link_libraries(qbucket_domain INTERFACE qbucket::s3 Qt6::Core)
 add_library(qbucket_accounts STATIC
     accounts/AccountStore.h
     accounts/AccountStore.cpp
+    accounts/CapabilityStore.h
+    accounts/CapabilityStore.cpp
     accounts/KeychainBackend.h
     accounts/KeychainCredentialsProvider.h
     accounts/KeychainCredentialsProvider.cpp
@@ -37,6 +39,8 @@ target_link_libraries(qbucket_accounts
 
 # --- Controllers (application logic, no widgets) ---------------------------
 add_library(qbucket_controllers STATIC
+    controllers/AccountSessions.h
+    controllers/AccountSessions.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h
@@ -44,7 +48,7 @@ add_library(qbucket_controllers STATIC
 )
 target_include_directories(qbucket_controllers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_controllers
-    PUBLIC  qbucket_domain qbucket::s3 Qt6::Core
+    PUBLIC  qbucket_domain qbucket_accounts qbucket::s3 Qt6::Core
     PRIVATE qbucket::compile_options
 )
 

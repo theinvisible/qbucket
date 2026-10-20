@@ -17,6 +17,7 @@ class QTreeView;
 
 namespace qbucket {
 
+class AccountSessions;
 class AccountStore;
 class SecretStore;
 class SettingsController;
@@ -63,6 +64,7 @@ private:
     ThemeManager*       m_theme;
     AccountStore*       m_accounts;
     SecretStore*        m_secrets;
+    AccountSessions*    m_sessions = nullptr;   // with account management only
 
     // Menu actions
     QMenu*        m_viewMenu        = nullptr;
