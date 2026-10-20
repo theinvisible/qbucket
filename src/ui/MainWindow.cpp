@@ -3,6 +3,7 @@
 #include "accounts/AccountStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
+#include "ui/AccountSidebar.h"
 #include "controllers/SettingsController.h"
 #include "ui/AccountDialog.h"
 #include "ui/IconFactory.h"
@@ -101,6 +102,8 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
       m_secrets(secrets)
 {
     setWindowTitle(QStringLiteral("QBucket"));
+    if (m_accounts && m_secrets)
+        m_sessions = new AccountSessions(m_accounts, m_secrets, this);
 
     buildMenuBar_();
     buildToolBar_();
@@ -114,21 +117,22 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     applyThemeChoice_();
     refreshIcons_();
 
-    const bool accountsAvailable = m_accounts && m_secrets;
+    const bool accountsAvailable = m_sessions != nullptr;
     m_actAddAccount->setEnabled(accountsAvailable);
-    m_addAccountBtn->setEnabled(accountsAvailable);
-    m_addAccountBtn->setToolTip(QString());
     if (accountsAvailable) {
-        m_sessions = new AccountSessions(m_accounts, m_secrets, this);
         connect(m_actAddAccount, &QAction::triggered, this, &MainWindow::showAddAccountDialog_);
-        connect(m_addAccountBtn, &QPushButton::clicked, this, &MainWindow::showAddAccountDialog_);
-        connect(m_accounts, &AccountStore::accountsChanged, this, &MainWindow::refreshAccountSummary_);
+        connect(m_sidebar, &AccountSidebar::addAccountRequested, this, &MainWindow::showAddAccountDialog_);
         connect(m_secrets, &SecretStore::sessionOnlyModeEntered, this, [this](const QString& reason) {
             statusBar()->showMessage(
                 tr("No system keychain available — secrets are kept for this session only (%1).").arg(reason));
         });
     }
-    refreshAccountSummary_();
+    connect(m_sidebar, &AccountSidebar::statusMessage, this,
+            [this](const QString& text, int timeoutMs) { statusBar()->showMessage(text, timeoutMs); });
+    connect(m_sidebar, &AccountSidebar::bucketSelected, this, [this](const QUuid& id, const QString& bucket) {
+        const std::optional<Account> a = m_accounts->account(id);
+        m_pathText->setText(a ? tr("%1 › %2").arg(a->name, bucket) : bucket);
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -365,38 +369,8 @@ void MainWindow::buildCentralWidget_()
 
 QWidget* MainWindow::buildSidebar_()
 {
-    auto* sidebar = new QWidget;
-    sidebar->setObjectName(QStringLiteral("sidebar"));
-    sidebar->setMinimumWidth(180);
-    auto* lay = new QVBoxLayout(sidebar);
-    lay->setContentsMargins(0, 0, 0, 0);
-    lay->setSpacing(0);
-
-    auto* header = new QLabel(tr("ACCOUNTS"));
-    header->setObjectName(QStringLiteral("sectionHeader"));
-    lay->addWidget(header);
-
-    // Accounts → buckets. Placeholder model until AccountTreeModel (M2).
-    m_accountTree = new QTreeView;
-    m_accountTree->setHeaderHidden(true);
-    m_accountTree->setModel(new QStandardItemModel(this));
-    m_accountTree->setVisible(false);
-    lay->addWidget(m_accountTree, 1);
-
-    auto* empty = makeEmptyState(tr("No accounts yet."));
-    m_accountSummary = empty;
-    lay->addWidget(empty, 1);
-
-    m_addAccountBtn = new QPushButton(tr("Add Account…"));
-    m_addAccountBtn->setObjectName(QStringLiteral("ghost"));
-    m_addAccountBtn->setEnabled(false);
-    m_addAccountBtn->setToolTip(tr("Not available yet"));
-    auto* btnRow = new QHBoxLayout;
-    btnRow->setContentsMargins(10, 6, 10, 12);
-    btnRow->addWidget(m_addAccountBtn);
-    lay->addLayout(btnRow);
-
-    return sidebar;
+    m_sidebar = new AccountSidebar(m_accounts, m_secrets, m_sessions);
+    return m_sidebar;
 }
 
 QWidget* MainWindow::buildObjectArea_()
@@ -528,7 +502,7 @@ void MainWindow::connectSettings_()
     connect(m_theme, &ThemeManager::themeChanged, this, [this] {
         refreshIcons_();
         if (m_objectView)  m_objectView->viewport()->update();
-        if (m_accountTree) m_accountTree->viewport()->update();
+        if (m_sidebar) m_sidebar->refreshIcons();
     });
 }
 
@@ -585,14 +559,6 @@ void MainWindow::showAddAccountDialog_()
             : tr("Account “%1” saved.").arg(a.name), 8000);
     });
     dlg->open();
-}
-
-void MainWindow::refreshAccountSummary_()
-{
-    const qsizetype n = m_accounts ? m_accounts->accounts().size() : 0;
-    // The account tree arrives with browsing (M2); until then, a count.
-    m_accountSummary->setText(n == 0 ? tr("No accounts yet.")
-                                     : tr("%n account(s) configured.", nullptr, int(n)));
 }
 
 void MainWindow::showAbout_()

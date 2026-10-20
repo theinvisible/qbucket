@@ -85,7 +85,7 @@ void AccountSessions::onAccountsChanged_()
     QList<QUuid> outdated;
     for (const auto& [id, entry] : m_sessions) {
         const std::optional<Account> now = m_accounts->account(id);
-        if (!now || !sameConnection_(entry.account, *now))
+        if (!now || !sameConnection(entry.account, *now))
             outdated.append(id);
     }
     for (const QUuid& id : std::as_const(outdated))
@@ -118,12 +118,6 @@ void AccountSessions::maybeAllStopped_()
         m_allStoppedSent = true;
         emit allStopped();
     }
-}
-
-bool AccountSessions::sameConnection_(const Account& a, const Account& b)
-{
-    return a.providerId == b.providerId && a.region == b.region && a.endpoint == b.endpoint
-        && a.addressing == b.addressing && a.accessKeyId == b.accessKeyId;
 }
 
 } // namespace qbucket

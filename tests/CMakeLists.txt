@@ -85,6 +85,18 @@ qbucket_add_test(test_account_sessions
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_account_tree_model
+    test_account_tree_model.cpp
+    qbucket_models
+    qbucket::s3_testsupport
+)
+
+qbucket_add_test(test_account_sidebar
+    test_account_sidebar.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

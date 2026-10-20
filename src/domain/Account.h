@@ -34,4 +34,11 @@ struct Account {
     }
 };
 
+// Same endpoint and identity: a session built for one serves the other.
+inline bool sameConnection(const Account& a, const Account& b)
+{
+    return a.providerId == b.providerId && a.region == b.region && a.endpoint == b.endpoint
+        && a.addressing == b.addressing && a.accessKeyId == b.accessKeyId;
+}
+
 } // namespace qbucket

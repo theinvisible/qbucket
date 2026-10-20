@@ -71,7 +71,6 @@ private:
     void onAccountsChanged_();
     void stop_(const QUuid& account);
     void maybeAllStopped_();
-    [[nodiscard]] static bool sameConnection_(const Account& a, const Account& b);
 
     AccountStore* m_accounts;
     SecretStore* m_secrets;

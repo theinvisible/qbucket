@@ -18,6 +18,7 @@ class QTreeView;
 namespace qbucket {
 
 class AccountSessions;
+class AccountSidebar;
 class AccountStore;
 class SecretStore;
 class SettingsController;
@@ -57,7 +58,6 @@ private:
     void applyThemeChoice_();
     void showSettingsDialog_();
     void showAddAccountDialog_();
-    void refreshAccountSummary_();
     void showAbout_();
 
     SettingsController* m_settings;
@@ -99,9 +99,7 @@ private:
 
     // Central
     QSplitter*      m_splitter      = nullptr;
-    QTreeView*      m_accountTree   = nullptr;
-    QLabel*         m_accountSummary = nullptr;
-    QPushButton*    m_addAccountBtn  = nullptr;
+    AccountSidebar* m_sidebar       = nullptr;
     QStackedWidget* m_objectStack   = nullptr;
     QTreeView*      m_objectView    = nullptr;
     QLabel*         m_pathText      = nullptr;

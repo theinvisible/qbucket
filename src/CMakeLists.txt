@@ -52,6 +52,17 @@ target_link_libraries(qbucket_controllers
     PRIVATE qbucket::compile_options
 )
 
+# --- Models (Qt item models over the controllers' data, no widgets) -------
+add_library(qbucket_models STATIC
+    models/AccountTreeModel.h
+    models/AccountTreeModel.cpp
+)
+target_include_directories(qbucket_models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(qbucket_models
+    PUBLIC  qbucket_controllers Qt6::Core
+    PRIVATE qbucket::compile_options
+)
+
 # --- UI foundation: design tokens, stylesheet, icons, theme switching ------
 # Ported from xyz-profiler. Kept in its own library so the tests can check the
 # design system without building the main window.
@@ -77,6 +88,10 @@ target_link_libraries(qbucket_ui_foundation
 add_library(qbucket_app_ui STATIC
     ui/AccountDialog.h
     ui/AccountDialog.cpp
+    ui/AccountSidebar.h
+    ui/AccountSidebar.cpp
+    ui/AccountTreeDelegate.h
+    ui/AccountTreeDelegate.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
     ui/SettingsDialog.h
@@ -87,7 +102,7 @@ target_compile_definitions(qbucket_app_ui PRIVATE
     QBUCKET_VERSION_STRING="${PROJECT_VERSION}"
 )
 target_link_libraries(qbucket_app_ui
-    PUBLIC  qbucket_accounts qbucket_controllers qbucket_ui_foundation Qt6::Widgets
+    PUBLIC  qbucket_accounts qbucket_controllers qbucket_models qbucket_ui_foundation Qt6::Widgets
     PRIVATE qbucket::compile_options
 )
 
