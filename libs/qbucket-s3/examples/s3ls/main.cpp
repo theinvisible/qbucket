@@ -15,6 +15,9 @@
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QMutex>
 #include <QTextStream>
 #include <QTimer>
 
@@ -35,6 +38,33 @@ QTextStream& err()
     static QTextStream s(stderr);
     return s;
 }
+
+// --dump-responses: every response body (already free of secrets — request
+// headers are never recorded) as <n>-<operation>-<status>.xml, for test
+// fixtures of a provider.
+class ResponseDumper final : public RequestObserver {
+public:
+    explicit ResponseDumper(QString dir) : m_dir(std::move(dir)) { QDir().mkpath(m_dir); }
+    void onRequestFinished(const RequestRecord& r) override
+    {
+        QMutexLocker lock(&m_mutex);
+        const QString name = QStringLiteral("%1-%2-%3.xml")
+                                 .arg(++m_count, 3, 10, QLatin1Char('0'))
+                                 .arg(r.operation)
+                                 .arg(r.httpStatus);
+        QFile f(QDir(m_dir).filePath(name));
+        if (f.open(QIODevice::WriteOnly)) {
+            f.write("<!-- " + r.method + ' ' + r.url.toUtf8() + " -> " + QByteArray::number(r.httpStatus)
+                    + " request-id " + r.requestId.toUtf8() + " -->\n");
+            f.write(r.responseBody);
+        }
+    }
+
+private:
+    QString m_dir;
+    QMutex m_mutex;
+    int m_count = 0;
+};
 
 int fail(const Error& e)
 {
@@ -94,7 +124,10 @@ int main(int argc, char** argv)
                                      QStringLiteral("Bucket in the path (default: the provider's choice)."));
     const QCommandLineOption recursiveOpt({QStringLiteral("r"), QStringLiteral("recursive")},
                                           QStringLiteral("List without delimiter."));
-    parser.addOptions({providerOpt, endpointOpt, regionOpt, profileOpt, pathOpt, recursiveOpt});
+    const QCommandLineOption dumpOpt(QStringLiteral("dump-responses"),
+                                     QStringLiteral("Write every response body into <dir> (test fixtures)."),
+                                     QStringLiteral("dir"));
+    parser.addOptions({providerOpt, endpointOpt, regionOpt, profileOpt, pathOpt, recursiveOpt, dumpOpt});
     parser.addPositionalArgument(QStringLiteral("command"),
                                  QStringLiteral("buckets | ls <bucket> [prefix] | probe <bucket>"));
     parser.process(app);
@@ -116,6 +149,10 @@ int main(int argc, char** argv)
             QString(), parser.value(profileOpt));
     } else {
         options.credentials = std::make_shared<EnvCredentialsProvider>();
+    }
+    if (parser.isSet(dumpOpt)) {
+        options.observer = std::make_shared<ResponseDumper>(parser.value(dumpOpt));
+        options.captureResponseBodyBytes = 1024 * 1024;
     }
     if (const QString e = options.endpoint.validationError(); !e.isEmpty()) {
         err() << "error: " << e << Qt::endl;
