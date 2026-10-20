@@ -48,6 +48,8 @@ enum class Feature : quint16 {
     CrossBucketCopy,       // write-only
     BatchDelete,           // DeleteObjects
     Presign,
+    MultipartUpload,       // Create/UploadPart/Complete/Abort/ListParts, UploadPartCopy
+                           // (write-only: profile knowledge, never probed)
 };
 
 QBUCKET_S3_EXPORT QString featureId(Feature feature);   // e.g. "bucket.versioning"

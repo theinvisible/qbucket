@@ -20,6 +20,13 @@ QString operationName(Operation op)
     case Operation::GetBucketSubresource: return QStringLiteral("GetBucketSubresource");
     case Operation::GetObjectSubresource: return QStringLiteral("GetObjectSubresource");
     case Operation::CopyObject:           return QStringLiteral("CopyObject");
+    case Operation::CreateMultipartUpload:   return QStringLiteral("CreateMultipartUpload");
+    case Operation::UploadPart:              return QStringLiteral("UploadPart");
+    case Operation::CompleteMultipartUpload: return QStringLiteral("CompleteMultipartUpload");
+    case Operation::AbortMultipartUpload:    return QStringLiteral("AbortMultipartUpload");
+    case Operation::ListParts:               return QStringLiteral("ListParts");
+    case Operation::ListMultipartUploads:    return QStringLiteral("ListMultipartUploads");
+    case Operation::UploadPartCopy:          return QStringLiteral("UploadPartCopy");
     }
     return QStringLiteral("Unknown");
 }
@@ -33,6 +40,11 @@ bool isMutating(Operation op)
     case Operation::CreateBucket:
     case Operation::DeleteBucket:
     case Operation::CopyObject:
+    case Operation::CreateMultipartUpload:
+    case Operation::UploadPart:
+    case Operation::CompleteMultipartUpload:
+    case Operation::AbortMultipartUpload:
+    case Operation::UploadPartCopy:
         return true;
     default:
         return false;

@@ -27,6 +27,13 @@ enum class Operation : quint16 {
     GetBucketSubresource,   // capability probes: ?versioning, ?cors, …
     GetObjectSubresource,   // capability probes: ?tagging, ?acl, …
     CopyObject,
+    CreateMultipartUpload,
+    UploadPart,
+    CompleteMultipartUpload,
+    AbortMultipartUpload,
+    ListParts,
+    ListMultipartUploads,
+    UploadPartCopy,
 };
 
 // Stable English name, e.g. "ListObjectsV2".

@@ -92,6 +92,10 @@ qbucket_s3_add_test(test_session_transfer
     SOURCES test_session_transfer.cpp
     LIBS    qbucket::s3_testsupport
 )
+qbucket_s3_add_test(test_s3client_multipart
+    SOURCES test_s3client_multipart.cpp
+    LIBS    qbucket::s3_testsupport
+)
 
 # --- Integration tests (opt-in) --------------------------------------------------
 # it_s3_backend runs against whatever QBUCKET_IT_* in the environment points at

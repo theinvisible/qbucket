@@ -28,6 +28,9 @@ CapabilitySet GarageProfile::capabilities() const
     set.set(Feature::BucketVersioning, no);
     set.set(Feature::ObjectLock, no);
     set.set(Feature::SseC, no);
+    // If-None-Match: * is ignored and the write overwrites (Garage 1.x in
+    // tests/docker, it_s3_backend conditionalPutBehaviour).
+    set.set(Feature::ConditionalWrites, no);
     return set;
 }
 

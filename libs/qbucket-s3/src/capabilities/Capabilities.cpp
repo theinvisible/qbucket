@@ -11,7 +11,7 @@ namespace qbucket::s3 {
 namespace {
 
 // Stable ids — never change one, only append.
-constexpr std::array<std::pair<Feature, const char*>, 26> kIds = {{
+constexpr std::array<std::pair<Feature, const char*>, 27> kIds = {{
     {Feature::BucketVersioning, "bucket.versioning"},
     {Feature::ObjectLock, "bucket.object-lock"},
     {Feature::LegalHold, "object.legal-hold"},
@@ -38,6 +38,7 @@ constexpr std::array<std::pair<Feature, const char*>, 26> kIds = {{
     {Feature::CrossBucketCopy, "object.cross-bucket-copy"},
     {Feature::BatchDelete, "bucket.batch-delete"},
     {Feature::Presign, "object.presign"},
+    {Feature::MultipartUpload, "object.multipart-upload"},
 }};
 
 bool isDefinitive(CapabilityState s)
@@ -117,6 +118,15 @@ QList<Feature> featuresFor(Operation op)
     switch (op) {
     case Operation::DeleteObjects:
         return {Feature::BatchDelete};
+    case Operation::CreateMultipartUpload:
+    case Operation::UploadPart:
+    case Operation::CompleteMultipartUpload:
+    case Operation::AbortMultipartUpload:
+    case Operation::ListParts:
+    case Operation::UploadPartCopy:
+        return {Feature::MultipartUpload};
+    case Operation::ListMultipartUploads:
+        return {Feature::MultipartListing};
     default:
         return {};
     }

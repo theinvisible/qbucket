@@ -421,6 +421,13 @@ RequestId Session::headObject(const QString& bucket, const QString& key, const Q
                                  });
 }
 
+RequestId Session::headObject(const HeadObjectParams& params, QObject* context, Callback<ObjectMeta> callback)
+{
+    return d->submit<ObjectMeta>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->headObject(params, std::move(done));
+    });
+}
+
 RequestId Session::getObject(const QString& bucket, const QString& key, const QString& versionId,
                              QObject* context, Callback<ObjectData> callback)
 {
@@ -475,6 +482,69 @@ RequestId Session::copyObject(const CopyObjectParams& params, QObject* context, 
     return d->submit<CopyObjectResult>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
         return c->copyObject(params, std::move(done));
     });
+}
+
+RequestId Session::createMultipartUpload(const CreateMultipartUploadParams& params, QObject* context,
+                                         Callback<CreateMultipartUploadResult> callback)
+{
+    return d->submit<CreateMultipartUploadResult>(context, std::move(callback),
+                                                  [params](S3Client* c, auto done, auto /*progress*/) {
+                                                      return c->createMultipartUpload(params, std::move(done));
+                                                  });
+}
+
+RequestId Session::uploadPart(const UploadPartParams& params, QObject* context, Callback<UploadPartResult> callback,
+                              ProgressCallback progress)
+{
+    return d->submit<UploadPartResult>(
+        context, std::move(callback),
+        [params](S3Client* c, auto done, auto progress) {
+            return c->uploadPart(params, std::move(done), std::move(progress));
+        },
+        true, std::move(progress));
+}
+
+RequestId Session::completeMultipartUpload(const CompleteMultipartUploadParams& params, QObject* context,
+                                           Callback<CompleteMultipartUploadResult> callback)
+{
+    return d->submit<CompleteMultipartUploadResult>(context, std::move(callback),
+                                                    [params](S3Client* c, auto done, auto /*progress*/) {
+                                                        return c->completeMultipartUpload(params, std::move(done));
+                                                    });
+}
+
+RequestId Session::abortMultipartUpload(const QString& bucket, const QString& key, const QString& uploadId,
+                                        QObject* context, Callback<void> callback)
+{
+    return d->submit<void>(context, std::move(callback),
+                           [bucket, key, uploadId](S3Client* c, auto done, auto /*progress*/) {
+                               return c->abortMultipartUpload(bucket, key, uploadId, std::move(done));
+                           });
+}
+
+RequestId Session::listParts(const ListPartsParams& params, QObject* context, Callback<ListPartsPage> callback)
+{
+    return d->submit<ListPartsPage>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->listParts(params, std::move(done));
+    });
+}
+
+RequestId Session::listMultipartUploads(const ListMultipartUploadsParams& params, QObject* context,
+                                        Callback<ListMultipartUploadsPage> callback)
+{
+    return d->submit<ListMultipartUploadsPage>(context, std::move(callback),
+                                               [params](S3Client* c, auto done, auto /*progress*/) {
+                                                   return c->listMultipartUploads(params, std::move(done));
+                                               });
+}
+
+RequestId Session::uploadPartCopy(const UploadPartCopyParams& params, QObject* context,
+                                  Callback<UploadPartCopyResult> callback)
+{
+    return d->submit<UploadPartCopyResult>(
+        context, std::move(callback),
+        [params](S3Client* c, auto done, auto /*progress*/) { return c->uploadPartCopy(params, std::move(done)); },
+        true);
 }
 
 RequestId Session::createBucket(const CreateBucketParams& params, QObject* context,

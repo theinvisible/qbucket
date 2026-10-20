@@ -59,6 +59,18 @@ Result<QByteArray> buildDeleteRequest(const QList<ObjectIdentifier>& objects, bo
     return out;
 }
 
+QByteArray buildCompleteMultipartUpload(const QList<CompletedPart>& parts)
+{
+    QByteArray out = R"(<?xml version="1.0" encoding="UTF-8"?>)"
+                     R"(<CompleteMultipartUpload xmlns="http://s3.amazonaws.com/doc/2006-03-01/">)";
+    for (const CompletedPart& p : parts) {
+        out += "<Part><PartNumber>" + QByteArray::number(p.partNumber) + "</PartNumber>"
+             + "<ETag>" + escapeText(p.etag) + "</ETag></Part>";
+    }
+    out += "</CompleteMultipartUpload>";
+    return out;
+}
+
 QByteArray buildCreateBucketConfiguration(const QString& locationConstraint)
 {
     return R"(<?xml version="1.0" encoding="UTF-8"?>)"

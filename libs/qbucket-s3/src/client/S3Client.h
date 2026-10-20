@@ -48,6 +48,7 @@ public:
     quint64 getBucketLocation(const QString& bucket, Done<QString> done);
     quint64 headObject(const QString& bucket, const QString& key, const QString& versionId,
                        Done<ObjectMeta> done);
+    quint64 headObject(const HeadObjectParams& params, Done<ObjectMeta> done);
 
     // In memory, up to ClientConfig::maxResponseBytes; MD5-verified against
     // the ETag where that is meaningful (see Integrity). Streaming to files
@@ -71,6 +72,23 @@ public:
     // not report are listed as failed ("NotReported").
     quint64 deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
                           Done<DeleteObjectsResult> done);
+    // --- multipart uploads (PLAN.md §12.5) ---
+    quint64 createMultipartUpload(const CreateMultipartUploadParams& params,
+                                  Done<CreateMultipartUploadResult> done);
+    // Streamed from a file range with Content-MD5; retried like any PUT.
+    quint64 uploadPart(const UploadPartParams& params, Done<UploadPartResult> done, Progress progress = {});
+    // 200-with-error aware; never retried after a lost answer
+    // (outcomeUnknown) — the caller looks the object up instead.
+    quint64 completeMultipartUpload(const CompleteMultipartUploadParams& params,
+                                    Done<CompleteMultipartUploadResult> done);
+    // NotFound (NoSuchUpload) when the upload is gone — also after a retry
+    // of an abort whose first answer was lost.
+    quint64 abortMultipartUpload(const QString& bucket, const QString& key, const QString& uploadId,
+                                 Done<void> done);
+    quint64 listParts(const ListPartsParams& params, Done<ListPartsPage> done);
+    quint64 listMultipartUploads(const ListMultipartUploadsParams& params, Done<ListMultipartUploadsPage> done);
+    quint64 uploadPartCopy(const UploadPartCopyParams& params, Done<UploadPartCopyResult> done);
+
     // Bucket lifecycle — exposed for tooling and tests; applications gate
     // these behind their own confirmation/policy layer.
     quint64 createBucket(const CreateBucketParams& params, Done<void> done);

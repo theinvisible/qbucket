@@ -99,6 +99,10 @@ public:
     // the body unless UNSIGNED-PAYLOAD.
     void setVerifySignatures(const Credentials& credentials, const QByteArray& region);
 
+    // false: requests() keeps everything but the bodies — for transfers of
+    // many gigabytes.
+    void setRecordBodies(bool record);
+
     // Shift the server clock (Date header, signature time check) — clock-skew tests.
     void setClockOffsetSecs(qint64 offset);
 

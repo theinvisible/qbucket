@@ -104,6 +104,7 @@ QByteArray reasonPhrase(int status)
     case 405: return "Method Not Allowed";
     case 409: return "Conflict";
     case 412: return "Precondition Failed";
+    case 416: return "Range Not Satisfiable";
     case 500: return "Internal Server Error";
     case 501: return "Not Implemented";
     case 502: return "Bad Gateway";
@@ -179,6 +180,7 @@ struct FakeS3Server::Impl {
     int connections = 0;
     int requestCounter = 0;
     qint64 clockOffsetSecs = 0;
+    bool recordBodies = true;
 
     bool verify = false;
     Credentials verifyCredentials;
@@ -247,7 +249,13 @@ struct FakeS3Server::Impl {
         conn->buffer.remove(0, bodyStart + contentLength);
         conn->busy = true;
 
-        recorded.append(req);
+        if (recordBodies) {
+            recorded.append(req);
+        } else {
+            RecordedRequest copy = req;
+            copy.body.clear();
+            recorded.append(copy);
+        }
         const int index = int(recorded.size()) - 1;
         Q_EMIT q->requestReceived(index);
 
@@ -507,6 +515,11 @@ void FakeS3Server::setVerifySignatures(const Credentials& credentials, const QBy
     d->verify = true;
     d->verifyCredentials = credentials;
     d->verifyRegion = region;
+}
+
+void FakeS3Server::setRecordBodies(bool record)
+{
+    d->recordBodies = record;
 }
 
 void FakeS3Server::setClockOffsetSecs(qint64 offset)

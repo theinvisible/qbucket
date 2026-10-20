@@ -22,5 +22,7 @@
         "object.legal-hold": "Unsupported",
         "object.retention": "Unsupported",
         "object.tagging": "Unsupported"
-    }
+    },
+    "conditionalWrites": false,
+    "partNumberReads": true
 }

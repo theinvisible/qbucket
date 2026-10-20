@@ -21,6 +21,9 @@ private Q_SLOTS:
         QCOMPARE(p.maxKeysPerList(), 1000);
         QCOMPARE(p.maxParts(), 10000);
         QCOMPARE(p.listApi(), ListApi::V2);
+        // Multipart is core S3; conditional writes are left to the probes.
+        QCOMPARE(p.capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
+        QCOMPARE(p.capabilities().state(Feature::ConditionalWrites), CapabilityState::Unknown);
     }
 
     void normalizesEtags()

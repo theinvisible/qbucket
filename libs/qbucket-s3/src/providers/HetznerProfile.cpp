@@ -64,6 +64,13 @@ CapabilitySet HetznerProfile::capabilities() const
     known(Feature::SseC, CapabilityState::Supported);                // the only encryption mode
     known(Feature::BucketEncryption, CapabilityState::Unsupported);  // no SSE-S3 / SSE-KMS
     known(Feature::BatchDelete, CapabilityState::Supported);
+    // If-None-Match: * on PutObject is ignored — the object was overwritten
+    // (nbg1, 2026-10-20, it_s3_backend conditionalPutBehaviour). Refused
+    // locally, so nobody relies on it; uploads check with HEAD instead.
+    // Multipart requests do keep their query string: UploadPart and Abort
+    // on the key of an existing object left it intact
+    // (multipartRequestsLeaveAnExistingObjectAlone).
+    known(Feature::ConditionalWrites, CapabilityState::Unsupported);
     return set;
 }
 

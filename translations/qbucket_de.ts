@@ -656,72 +656,77 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Vorsignierte Links</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="511"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="504"/>
+        <source>Multipart uploads</source>
+        <translation>Multipart-Uploads</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="512"/>
         <source>Supported</source>
         <translation>Unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="512"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="513"/>
         <source>Not supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="513"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
         <source>Not permitted</source>
         <translation>Nicht erlaubt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
         <source>Unknown</source>
         <translation>Unbekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="522"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="523"/>
         <source>Checked</source>
         <translation>Geprüft</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="523"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="524"/>
         <source>Learned from a request</source>
         <translation>Aus einer Anfrage gelernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="524"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="525"/>
         <source>Provider profile</source>
         <translation>Anbieterprofil</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="534"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="535"/>
         <source>known from the provider profile</source>
         <translation>aus dem Anbieterprofil bekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="539"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="540"/>
         <source>HTTP %1 %2, %3</source>
         <translation>HTTP %1 %2, %3</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="547"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="548"/>
         <source>%1 is switched off for this provider: its proxy mishandles these requests.</source>
         <translation>%1 ist für diesen Anbieter abgeschaltet: Sein Proxy behandelt diese Anfragen falsch.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="548"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="549"/>
         <source>The server does not support %1 (%2).</source>
         <translation>Der Server unterstützt %1 nicht (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="550"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
         <source>These credentials may not use %1 (%2).</source>
         <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="552"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="553"/>
         <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="554"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="555"/>
         <source>%1 is not verified on this server.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
     </message>
@@ -945,6 +950,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/controllers/DeleteJob.cpp" line="187"/>
+        <location filename="../tests/test_translations.cpp" line="17"/>
         <source>%n selected object(s) no longer exist and are skipped.</source>
         <translation>
             <numerusform>%n ausgewähltes Objekt existiert nicht mehr und wird übersprungen.</numerusform>
@@ -1734,6 +1740,10 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ui/ObjectBrowser.cpp" line="467"/>
+        <location filename="../tests/test_translations.cpp" line="15"/>
+        <location filename="../tests/test_translations.cpp" line="16"/>
+        <location filename="../tests/test_translations.cpp" line="26"/>
+        <location filename="../tests/test_translations.cpp" line="31"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n Objekt</numerusform>
@@ -1770,27 +1780,27 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::ObjectTableModel</name>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="703"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="747"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="705"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="749"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="707"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="751"/>
         <source>Modified</source>
         <translation>Geändert</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="709"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="753"/>
         <source>Class</source>
         <translation>Klasse</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/models/ObjectTableModel.cpp" line="715"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="759"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sortiert innerhalb der %n bisher geladenen Zeile; weitere Seiten werden beim Eintreffen einsortiert.</numerusform>

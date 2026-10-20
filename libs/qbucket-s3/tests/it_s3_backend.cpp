@@ -29,6 +29,7 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QtTest>
 
 #include <optional>
@@ -96,6 +97,7 @@ private:
     QString m_backend;
     QJsonObject m_expect;   // known deviations of this backend
     QObject m_ctx;
+    QTemporaryDir m_dir;
 
     bool expects(const char* quirk) const { return m_expect.value(QLatin1String(quirk)).toBool(); }
 
@@ -138,6 +140,53 @@ private:
                 keys.append(e.key);
         }
         return keys;
+    }
+
+    // A local file with `data`, and a FileBody for a range of it.
+    QString writeFile(const QString& name, const QByteArray& data)
+    {
+        QString path = m_dir.filePath(name);
+        QFile f(path);
+        if (!f.open(QIODevice::WriteOnly) || f.write(data) != data.size())
+            return {};
+        return path;
+    }
+
+    static FileBody bodyFor(const QString& path, const QByteArray& data, qint64 offset, qint64 length)
+    {
+        FileBody b;
+        b.path = path;
+        b.offset = offset;
+        b.length = length;
+        const QByteArray range = data.mid(offset, length);
+        b.md5Base64 = QCryptographicHash::hash(range, QCryptographicHash::Md5).toBase64();
+        b.sha256Hex = QCryptographicHash::hash(range, QCryptographicHash::Sha256).toHex();
+        return b;
+    }
+
+    // Aborts every unfinished upload this run left under its prefix.
+    void abortAllUnder(const QString& prefix)
+    {
+        ListMultipartUploadsParams p;
+        p.bucket = m_bucket;
+        p.prefix = prefix;
+        for (int page = 0; page < 100; ++page) {
+            const Result<ListMultipartUploadsPage> r = await<ListMultipartUploadsPage>(
+                [&](auto cb) { m_session->listMultipartUploads(p, &m_ctx, std::move(cb)); });
+            if (!r)
+                return;
+            for (const MultipartUploadInfo& u : r->uploads) {
+                if (u.key.startsWith(m_prefix)) {
+                    (void)await<void>([&](auto cb) {
+                        m_session->abortMultipartUpload(m_bucket, u.key, u.uploadId, &m_ctx, std::move(cb));
+                    });
+                }
+            }
+            if (!r->isTruncated)
+                return;
+            p.keyMarker = r->nextKeyMarker;
+            p.uploadIdMarker = r->nextUploadIdMarker;
+        }
     }
 
     void deleteAllUnder(const QString& prefix)
@@ -202,8 +251,10 @@ private Q_SLOTS:
 
     void cleanupTestCase()
     {
-        if (m_session)
+        if (m_session) {
+            abortAllUnder(m_prefix);
             deleteAllUnder(m_prefix);
+        }
     }
 
     void bucketIsVisible()
@@ -277,6 +328,209 @@ private Q_SLOTS:
         QCOMPARE(stale.error().category, ErrorCategory::PreconditionFailed);
         const Result<ObjectMeta> none = await<ObjectMeta>([&](auto cb) { m_session->headObject(m_bucket, p.key, {}, &m_ctx, std::move(cb)); });
         QVERIFY(!none);
+    }
+
+    // Two parts (5 MiB + a tail), streamed from a file: ListParts, the
+    // composite ETag, part-number reads where the backend has them, ranged
+    // and whole downloads into files.
+    void multipartRoundTrip()
+    {
+        const qint64 first = Q_INT64_C(5) * 1024 * 1024;
+        const QByteArray data = QByteArray("multipart payload 0123456789\n").repeated(int(first / 29) + 200);
+        const QString path = writeFile(QStringLiteral("multipart.bin"), data);
+        QVERIFY(!path.isEmpty());
+        const QString k = key(QStringLiteral("multipart/ä big.bin"));
+        qInfo() << "payload hash required:" << m_session->requiresPayloadHash();
+
+        CreateMultipartUploadParams cp;
+        cp.bucket = m_bucket;
+        cp.key = k;
+        cp.contentType = QStringLiteral("application/x-test");
+        cp.metadata.insert(QStringLiteral("origin"), QStringLiteral("it"));
+        const Result<CreateMultipartUploadResult> created =
+            await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(cp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(created);
+
+        QList<CompletedPart> parts;
+        QList<QByteArray> md5s;
+        const qint64 offsets[] = {0, first};
+        const qint64 lengths[] = {first, data.size() - first};
+        for (int i = 0; i < 2; ++i) {
+            UploadPartParams up;
+            up.bucket = m_bucket;
+            up.key = k;
+            up.uploadId = created->uploadId;
+            up.partNumber = i + 1;
+            up.file = bodyFor(path, data, offsets[i], lengths[i]);
+            const Result<UploadPartResult> r =
+                await<UploadPartResult>([&](auto cb) { m_session->uploadPart(up, &m_ctx, std::move(cb)); });
+            VERIFY_OK(r);
+            const QByteArray md5 = QCryptographicHash::hash(data.mid(offsets[i], lengths[i]), QCryptographicHash::Md5);
+            QCOMPARE(r->etag.toLatin1(), '"' + md5.toHex() + '"');
+            parts.append({r->partNumber, r->etag});
+            md5s.append(md5);
+        }
+
+        ListPartsParams lp;
+        lp.bucket = m_bucket;
+        lp.key = k;
+        lp.uploadId = created->uploadId;
+        const Result<ListPartsPage> listed = await<ListPartsPage>([&](auto cb) { m_session->listParts(lp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(listed);
+        QCOMPARE(listed->parts.size(), 2);
+        QCOMPARE(listed->parts[0].size, first);
+        QCOMPARE(listed->parts[1].etag, parts[1].etag);
+
+        CompleteMultipartUploadParams cmp;
+        cmp.bucket = m_bucket;
+        cmp.key = k;
+        cmp.uploadId = created->uploadId;
+        cmp.parts = parts;
+        const Result<CompleteMultipartUploadResult> done = await<CompleteMultipartUploadResult>(
+            [&](auto cb) { m_session->completeMultipartUpload(cmp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(done);
+        QByteArray all;
+        for (const QByteArray& m : md5s)
+            all += m;
+        const QString composite = QLatin1Char('"') + QString::fromLatin1(QCryptographicHash::hash(all, QCryptographicHash::Md5).toHex())
+                                + QStringLiteral("-2\"");
+        QCOMPARE(done->etag, composite);
+
+        const Result<ObjectMeta> head = await<ObjectMeta>([&](auto cb) { m_session->headObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(head);
+        QCOMPARE(head->size, data.size());
+        QCOMPARE(head->etag, composite);
+        QCOMPARE(head->contentType, QStringLiteral("application/x-test"));
+        QCOMPARE(head->userMetadata.value(QStringLiteral("origin")), QStringLiteral("it"));
+
+        // The part layout. Not every backend answers part-number requests.
+        HeadObjectParams hp;
+        hp.bucket = m_bucket;
+        hp.key = k;
+        hp.partNumber = 1;
+        const Result<ObjectMeta> part1 = await<ObjectMeta>([&](auto cb) { m_session->headObject(hp, &m_ctx, std::move(cb)); });
+        const bool layout = part1 && part1->partsCount == 2 && part1->size == first;
+        qInfo() << "HEAD ?partNumber=1:" << (part1 ? QStringLiteral("parts %1, size %2").arg(part1->partsCount).arg(part1->size)
+                                                    : part1.error().toString());
+        const QJsonValue expectLayout = m_expect.value(QLatin1String("partNumberReads"));
+        if (expectLayout.isBool())
+            QCOMPARE(layout, expectLayout.toBool());
+
+        // Whole object into a file: verified by size here (multipart ETag).
+        GetObjectToFileParams gp;
+        gp.bucket = m_bucket;
+        gp.key = k;
+        gp.filePath = m_dir.filePath(QStringLiteral("multipart.download"));
+        gp.ifMatch = composite;
+        const Result<DownloadResult> whole = await<DownloadResult>([&](auto cb) { m_session->getObjectToFile(gp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(whole);
+        QCOMPARE(whole->bytesWritten, data.size());
+        QCOMPARE(whole->md5, QCryptographicHash::hash(data, QCryptographicHash::Md5));
+
+        // A range, written at its offset.
+        gp.filePath = m_dir.filePath(QStringLiteral("multipart.range"));
+        gp.fileOffset = 1000;
+        gp.rangeStart = first - 10;
+        gp.rangeLength = 30;
+        const Result<DownloadResult> range = await<DownloadResult>([&](auto cb) { m_session->getObjectToFile(gp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(range);
+        QCOMPARE(range->objectSize, data.size());
+        QFile f(gp.filePath);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        QCOMPARE(f.readAll().mid(1000), data.mid(first - 10, 30));
+
+        // The second part by number, where supported.
+        if (layout) {
+            gp.filePath = m_dir.filePath(QStringLiteral("multipart.part2"));
+            gp.fileOffset = 0;
+            gp.rangeLength = -1;
+            gp.partNumber = 2;
+            const Result<DownloadResult> p2 = await<DownloadResult>([&](auto cb) { m_session->getObjectToFile(gp, &m_ctx, std::move(cb)); });
+            VERIFY_OK(p2);
+            QCOMPARE(p2->md5, md5s[1]);
+        }
+    }
+
+    // The safety case (PLAN.md §12, Hetzner's proxy once dropped a query
+    // string): a multipart upload and an aborted one on the key of an
+    // existing object must leave that object alone — without the query
+    // string, UploadPart would be a PUT of the object and Abort a DELETE.
+    void multipartRequestsLeaveAnExistingObjectAlone()
+    {
+        const QByteArray victimData = "victim — must survive\n";
+        const QString k = key(QStringLiteral("victim.txt"));
+        const Result<PutObjectResult> victim = put(k, victimData);
+        VERIFY_OK(victim);
+
+        CreateMultipartUploadParams cp;
+        cp.bucket = m_bucket;
+        cp.key = k;
+        const Result<CreateMultipartUploadResult> created =
+            await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(cp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(created);
+
+        const QByteArray partData = QByteArray("replacement part\n").repeated(64);
+        const QString path = writeFile(QStringLiteral("victim-part.bin"), partData);
+        UploadPartParams up;
+        up.bucket = m_bucket;
+        up.key = k;
+        up.uploadId = created->uploadId;
+        up.partNumber = 1;
+        up.file = bodyFor(path, partData, 0, partData.size());
+        VERIFY_OK((await<UploadPartResult>([&](auto cb) { m_session->uploadPart(up, &m_ctx, std::move(cb)); })));
+
+        const auto victimUnchanged = [&] {
+            const Result<ObjectData> got = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+            return got && got->data == victimData && got->meta.etag == victim->etag;
+        };
+        QVERIFY2(victimUnchanged(), "UploadPart changed the existing object");
+
+        ListMultipartUploadsParams lp;
+        lp.bucket = m_bucket;
+        lp.prefix = k;
+        const Result<ListMultipartUploadsPage> listed = await<ListMultipartUploadsPage>(
+            [&](auto cb) { m_session->listMultipartUploads(lp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(listed);
+        bool found = false;
+        for (const MultipartUploadInfo& u : listed->uploads)
+            found |= u.uploadId == created->uploadId && u.key == k;
+        QVERIFY(found);
+
+        VERIFY_OK((await<void>([&](auto cb) {
+            m_session->abortMultipartUpload(m_bucket, k, created->uploadId, &m_ctx, std::move(cb));
+        })));
+        QVERIFY2(victimUnchanged(), "AbortMultipartUpload changed or deleted the existing object");
+        const Result<ListMultipartUploadsPage> after = await<ListMultipartUploadsPage>(
+            [&](auto cb) { m_session->listMultipartUploads(lp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(after);
+        for (const MultipartUploadInfo& u : after->uploads)
+            QVERIFY(u.uploadId != created->uploadId);
+    }
+
+    // If-None-Match: * on PutObject. it-expectations say "conditionalWrites":
+    // true (refused with 412) or false (the backend ignores it and overwrites).
+    void conditionalPutBehaviour()
+    {
+        const QString k = key(QStringLiteral("conditional.txt"));
+        VERIFY_OK(put(k, "first"));
+        const QByteArray second = "second";
+        const QString path = writeFile(QStringLiteral("conditional.bin"), second);
+        PutObjectParams p;
+        p.bucket = m_bucket;
+        p.key = k;
+        p.file = bodyFor(path, second, 0, second.size());
+        p.ifNoneMatch = true;
+        const Result<PutObjectResult> r = await<PutObjectResult>([&](auto cb) { m_session->putObject(p, &m_ctx, std::move(cb)); });
+        const Result<ObjectData> now = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(now);
+        const bool honoured = !r && r.error().category == ErrorCategory::PreconditionFailed && now->data == "first";
+        qInfo() << "If-None-Match on PutObject:" << (r ? QStringLiteral("accepted, object now \"%1\"").arg(QString::fromLatin1(now->data))
+                                                       : r.error().toString());
+        if (!r)
+            QCOMPARE(now->data, QByteArray("first"));   // a refusal never writes
+        const QJsonValue expected = m_expect.value(QLatin1String("conditionalWrites"));
+        if (expected.isBool())
+            QCOMPARE(honoured, expected.toBool());
     }
 
     // Opt-in: QBUCKET_IT_SECOND_BUCKET (another qbucket-it-* bucket on the

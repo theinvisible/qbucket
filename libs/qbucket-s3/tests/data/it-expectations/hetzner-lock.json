@@ -27,5 +27,7 @@
         "object.legal-hold": "Supported",
         "object.retention": "Supported",
         "object.tagging": "Supported"
-    }
+    },
+    "conditionalWrites": false,
+    "partNumberReads": true
 }

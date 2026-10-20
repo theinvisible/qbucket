@@ -148,7 +148,9 @@ qbucket_s3_apply_build_options(qbucket_s3)
 # FakeS3Server for this library's tests and for consumers' own tests. Always
 # static: it is test code, and that spares it an export macro of its own.
 add_library(qbucket_s3_testsupport STATIC
+    include/qbucket/s3/testing/FakeObjectStore.h
     include/qbucket/s3/testing/FakeS3Server.h
+    testsupport/FakeObjectStore.cpp
     testsupport/FakeS3Server.cpp
 )
 add_library(qbucket::s3_testsupport ALIAS qbucket_s3_testsupport)

@@ -501,6 +501,7 @@ QString CapabilityController::featureName(s3::Feature f)
     case F::CrossBucketCopy: return tr("Copying between buckets");
     case F::BatchDelete: return tr("Deleting many objects at once");
     case F::Presign: return tr("Presigned links");
+    case F::MultipartUpload: return tr("Multipart uploads");
     }
     return s3::featureId(f);
 }

@@ -87,6 +87,8 @@ public:
     RequestId getBucketLocation(const QString& bucket, QObject* context, Callback<QString> callback);
     RequestId headObject(const QString& bucket, const QString& key, const QString& versionId,
                          QObject* context, Callback<ObjectMeta> callback);
+    // With a part number (layout of a multipart object) or If-Match.
+    RequestId headObject(const HeadObjectParams& params, QObject* context, Callback<ObjectMeta> callback);
     RequestId getObject(const QString& bucket, const QString& key, const QString& versionId,
                         QObject* context, Callback<ObjectData> callback);
     // Streams the object (or a range / part of it) into a local file on a
@@ -111,6 +113,28 @@ public:
     // Server-side copy (≤ 5 GiB). A lost answer is reported with
     // Error::outcomeUnknown and not retried: look the target up.
     RequestId copyObject(const CopyObjectParams& params, QObject* context, Callback<CopyObjectResult> callback);
+    // Multipart uploads (Feature::MultipartUpload). Parts are streamed on a
+    // transfer lane. Complete is never retried after a lost answer
+    // (outcomeUnknown): look the object up. Abort answers NotFound
+    // (NoSuchUpload) once the upload is gone.
+    RequestId createMultipartUpload(const CreateMultipartUploadParams& params, QObject* context,
+                                    Callback<CreateMultipartUploadResult> callback);
+    RequestId uploadPart(const UploadPartParams& params, QObject* context, Callback<UploadPartResult> callback,
+                         ProgressCallback progress = {});
+    RequestId completeMultipartUpload(const CompleteMultipartUploadParams& params, QObject* context,
+                                      Callback<CompleteMultipartUploadResult> callback);
+    RequestId abortMultipartUpload(const QString& bucket, const QString& key, const QString& uploadId,
+                                   QObject* context, Callback<void> callback);
+    // One page of an upload's parts / of a bucket's unfinished uploads
+    // (Feature::MultipartListing); a page that makes no progress is a
+    // Protocol error.
+    RequestId listParts(const ListPartsParams& params, QObject* context, Callback<ListPartsPage> callback);
+    RequestId listMultipartUploads(const ListMultipartUploadsParams& params, QObject* context,
+                                   Callback<ListMultipartUploadsPage> callback);
+    // Server-side copy of a source range into one part (on a transfer lane).
+    RequestId uploadPartCopy(const UploadPartCopyParams& params, QObject* context,
+                             Callback<UploadPartCopyResult> callback);
+
     RequestId createBucket(const CreateBucketParams& params, QObject* context,
                            Callback<void> callback);
     RequestId deleteBucket(const QString& bucket, QObject* context, Callback<void> callback);

@@ -68,6 +68,9 @@ struct ObjectMeta {
     QString contentType;
     QString storageClass;
     QString versionId;
+    // x-amz-mp-parts-count: parts of a multipart object, when the server
+    // reports it (HEAD/GET with a part number); 0 otherwise.
+    int partsCount = 0;
     QMap<QString, QString> userMetadata;  // x-amz-meta-* without the prefix, lower-case names
     // Every response header as received (names as sent, in order) — for
     // showing an object's headers; the fields above are parsed from these.
@@ -113,6 +116,10 @@ struct PutObjectParams {
     QString contentType;                  // empty: application/octet-stream
     QMap<QString, QString> metadata;      // x-amz-meta-*; printable ASCII only (for now)
     QString storageClass;                 // empty: server default
+    // If-None-Match: * — the server refuses (PreconditionFailed) when the key
+    // exists. Only meaningful where Feature::ConditionalWrites is confirmed:
+    // a server that ignores the header overwrites.
+    bool ifNoneMatch = false;
 };
 
 struct PutObjectResult {
@@ -180,6 +187,139 @@ struct CopyObjectResult {
     QString versionId;                    // of the copy (versioned buckets)
     QString sourceVersionId;
     QString requestId;                    // x-amz-request-id, for the journal
+};
+
+// HeadObject with options.
+struct HeadObjectParams {
+    QString bucket;
+    QString key;
+    QString versionId;
+    int partNumber = 0;                   // > 0: size of that part, and ObjectMeta::partsCount
+    QString ifMatch;
+};
+
+// --- Multipart uploads ---------------------------------------------------------
+
+struct CreateMultipartUploadParams {
+    QString bucket;
+    QString key;
+    QString contentType;                  // empty: application/octet-stream
+    QMap<QString, QString> metadata;      // as PutObjectParams::metadata
+    QString storageClass;
+};
+
+struct CreateMultipartUploadResult {
+    QString bucket;
+    QString key;
+    QString uploadId;
+    QString requestId;
+};
+
+// One part, streamed from a file range with its Content-MD5 (FileBody).
+// Uploading a part number again replaces it, so retries are safe.
+struct UploadPartParams {
+    QString bucket;
+    QString key;
+    QString uploadId;
+    int partNumber = 0;                   // 1..10000
+    FileBody file;
+};
+
+struct UploadPartResult {
+    int partNumber = 0;
+    QString etag;                         // as returned, with quotes
+    QString requestId;
+    bool throttled = false;               // as PutObjectResult::throttled
+};
+
+struct CompletedPart {
+    int partNumber = 0;
+    QString etag;                         // with quotes
+};
+
+struct CompleteMultipartUploadParams {
+    QString bucket;
+    QString key;
+    QString uploadId;
+    QList<CompletedPart> parts;           // ascending part numbers
+    bool ifNoneMatch = false;             // as PutObjectParams::ifNoneMatch
+};
+
+struct CompleteMultipartUploadResult {
+    QString etag;                         // "<md5 of the part MD5s>-<parts>" on S3
+    QString location;
+    QString versionId;
+    QString requestId;
+};
+
+struct ListPartsParams {
+    QString bucket;
+    QString key;
+    QString uploadId;
+    int partNumberMarker = 0;             // parts after this one
+    int maxParts = 1000;
+};
+
+struct PartInfo {
+    int partNumber = 0;
+    QString etag;
+    qint64 size = 0;
+    QDateTime lastModified;
+};
+
+struct ListPartsPage {
+    QList<PartInfo> parts;
+    bool isTruncated = false;
+    int nextPartNumberMarker = 0;
+    QString storageClass;
+};
+
+struct ListMultipartUploadsParams {
+    QString bucket;
+    QString prefix;
+    QString keyMarker;
+    QString uploadIdMarker;
+    int maxUploads = 1000;
+};
+
+struct MultipartUploadInfo {
+    QString key;                          // decoded
+    QString uploadId;
+    QDateTime initiated;
+    QString storageClass;
+    QString initiator;                    // display name or id, if reported
+};
+
+struct ListMultipartUploadsPage {
+    QList<MultipartUploadInfo> uploads;
+    bool isTruncated = false;
+    QString nextKeyMarker;
+    QString nextUploadIdMarker;
+};
+
+// One part of a multipart upload copied server-side from (a byte range of)
+// an existing object — for copies above 5 GiB. Replacing a part is
+// harmless, so it is retried like UploadPart; a 200 with an <Error> body is
+// an error.
+struct UploadPartCopyParams {
+    QString sourceBucket;
+    QString sourceKey;
+    QString sourceVersionId;
+    QString bucket;                       // destination upload
+    QString key;
+    QString uploadId;
+    int partNumber = 0;
+    qint64 rangeStart = 0;                // byte range of the source;
+    qint64 rangeLength = -1;              // < 0: the whole source
+    QString ifMatch;                      // x-amz-copy-source-if-match
+};
+
+struct UploadPartCopyResult {
+    int partNumber = 0;
+    QString etag;
+    QDateTime lastModified;
+    QString requestId;
+    bool throttled = false;
 };
 
 struct CreateBucketParams {

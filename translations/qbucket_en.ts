@@ -32,6 +32,7 @@
     </message>
     <message numerus="yes">
         <location filename="../../src/controllers/DeleteJob.cpp" line="187"/>
+        <location filename="../../tests/test_translations.cpp" line="17"/>
         <source>%n selected object(s) no longer exist and are skipped.</source>
         <translation>
             <numerusform>%n selected object no longer exists and is skipped.</numerusform>
@@ -81,6 +82,10 @@
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
         <location filename="../../src/ui/ObjectBrowser.cpp" line="467"/>
+        <location filename="../../tests/test_translations.cpp" line="15"/>
+        <location filename="../../tests/test_translations.cpp" line="16"/>
+        <location filename="../../tests/test_translations.cpp" line="26"/>
+        <location filename="../../tests/test_translations.cpp" line="31"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n object</numerusform>
@@ -107,7 +112,7 @@
 <context>
     <name>qbucket::ObjectTableModel</name>
     <message numerus="yes">
-        <location filename="../../src/models/ObjectTableModel.cpp" line="715"/>
+        <location filename="../../src/models/ObjectTableModel.cpp" line="759"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sorted among the %n row loaded so far; pages still to come are sorted in as they arrive.</numerusform>

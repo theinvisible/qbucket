@@ -29,6 +29,10 @@ CapabilitySet ProviderProfile::capabilities() const
     CapabilitySet set;
     // Signing is client-side: every SigV4 server accepts presigned URLs.
     set.set(Feature::Presign, {CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0});
+    // Core S3 since 2010; a profile turns it off for a server whose
+    // multipart requests are unsafe (e.g. a proxy dropping the query
+    // string would turn UploadPart into a PUT of the object).
+    set.set(Feature::MultipartUpload, {CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0});
     return set;
 }
 

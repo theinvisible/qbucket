@@ -304,6 +304,192 @@ Result<ListPage> parseListObjectsV1(const QByteArray& body, bool plusIsSpace)
     return page;
 }
 
+Result<CreateMultipartUploadResult> parseInitiateMultipartUpload(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("InitiateMultipartUploadResult")))
+        return *err;
+    CreateMultipartUploadResult out;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Bucket"))
+            out.bucket = r.readElementText();
+        else if (n == QLatin1String("Key"))
+            out.key = r.readElementText();
+        else if (n == QLatin1String("UploadId"))
+            out.uploadId = r.readElementText();
+        else
+            r.skipCurrentElement();
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (out.uploadId.isEmpty())
+        return protocolError(QStringLiteral("InitiateMultipartUploadResult without an UploadId"));
+    return out;
+}
+
+Result<CompleteMultipartUploadResult> parseCompleteMultipartUpload(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("CompleteMultipartUploadResult")))
+        return *err;
+    CompleteMultipartUploadResult out;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("ETag"))
+            out.etag = r.readElementText();
+        else if (n == QLatin1String("Location"))
+            out.location = r.readElementText();
+        else
+            r.skipCurrentElement();
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (out.etag.isEmpty())
+        return protocolError(QStringLiteral("CompleteMultipartUploadResult without an ETag"));
+    return out;
+}
+
+Result<ListPartsPage> parseListParts(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("ListPartsResult")))
+        return *err;
+    ListPartsPage out;
+    bool haveNext = false;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Part")) {
+            PartInfo p;
+            while (r.readNextStartElement()) {
+                const auto c = r.name();
+                if (c == QLatin1String("PartNumber"))
+                    p.partNumber = r.readElementText().toInt();
+                else if (c == QLatin1String("ETag"))
+                    p.etag = r.readElementText();
+                else if (c == QLatin1String("Size"))
+                    p.size = r.readElementText().toLongLong();
+                else if (c == QLatin1String("LastModified"))
+                    p.lastModified = parseIsoTimestamp(r.readElementText());
+                else
+                    r.skipCurrentElement();
+            }
+            if (p.partNumber <= 0)
+                return protocolError(QStringLiteral("ListPartsResult with an invalid part number"));
+            out.parts.append(p);
+        } else if (n == QLatin1String("IsTruncated")) {
+            out.isTruncated = parseBool(r.readElementText());
+        } else if (n == QLatin1String("NextPartNumberMarker")) {
+            bool ok = false;
+            out.nextPartNumberMarker = r.readElementText().toInt(&ok);
+            haveNext = ok;
+        } else if (n == QLatin1String("StorageClass")) {
+            out.storageClass = r.readElementText();
+        } else {
+            r.skipCurrentElement();
+        }
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (out.isTruncated && !haveNext) {
+        if (out.parts.isEmpty())
+            return protocolError(QStringLiteral("truncated ListPartsResult without NextPartNumberMarker"));
+        out.nextPartNumberMarker = out.parts.last().partNumber;
+    }
+    return out;
+}
+
+Result<ListMultipartUploadsPage> parseListMultipartUploads(const QByteArray& body, bool plusIsSpace)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("ListMultipartUploadsResult")))
+        return *err;
+    ListMultipartUploadsPage out;
+    QString encodingType;
+    QString nextKeyMarker;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Upload")) {
+            MultipartUploadInfo u;
+            while (r.readNextStartElement()) {
+                const auto c = r.name();
+                if (c == QLatin1String("Key")) {
+                    u.key = r.readElementText();
+                } else if (c == QLatin1String("UploadId")) {
+                    u.uploadId = r.readElementText();
+                } else if (c == QLatin1String("Initiated")) {
+                    u.initiated = parseIsoTimestamp(r.readElementText());
+                } else if (c == QLatin1String("StorageClass")) {
+                    u.storageClass = r.readElementText();
+                } else if (c == QLatin1String("Initiator")) {
+                    QString id;
+                    QString name;
+                    while (r.readNextStartElement()) {
+                        if (r.name() == QLatin1String("DisplayName"))
+                            name = r.readElementText();
+                        else if (r.name() == QLatin1String("ID"))
+                            id = r.readElementText();
+                        else
+                            r.skipCurrentElement();
+                    }
+                    u.initiator = name.isEmpty() ? id : name;
+                } else {
+                    r.skipCurrentElement();
+                }
+            }
+            out.uploads.append(u);
+        } else if (n == QLatin1String("IsTruncated")) {
+            out.isTruncated = parseBool(r.readElementText());
+        } else if (n == QLatin1String("NextKeyMarker")) {
+            nextKeyMarker = r.readElementText();
+        } else if (n == QLatin1String("NextUploadIdMarker")) {
+            out.nextUploadIdMarker = r.readElementText();
+        } else if (n == QLatin1String("EncodingType")) {
+            encodingType = r.readElementText();
+        } else {
+            r.skipCurrentElement();
+        }
+    }
+    if (auto err = finish(r))
+        return *err;
+    const bool encoded = encodingType.compare(QLatin1String("url"), Qt::CaseInsensitive) == 0;
+    for (MultipartUploadInfo& u : out.uploads) {
+        if (!decodeValue(u.key, encoded, plusIsSpace, &u.key))
+            return protocolError(QStringLiteral("invalid url-encoded key in ListMultipartUploadsResult"));
+    }
+    if (!decodeValue(nextKeyMarker, encoded, plusIsSpace, &out.nextKeyMarker))
+        return protocolError(QStringLiteral("invalid url-encoded NextKeyMarker"));
+    if (out.isTruncated && out.nextKeyMarker.isEmpty()) {
+        if (out.uploads.isEmpty())
+            return protocolError(QStringLiteral("truncated ListMultipartUploadsResult without NextKeyMarker"));
+        out.nextKeyMarker = out.uploads.last().key;
+        out.nextUploadIdMarker = out.uploads.last().uploadId;
+    }
+    return out;
+}
+
+Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("CopyPartResult")))
+        return *err;
+    UploadPartCopyResult out;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("ETag"))
+            out.etag = r.readElementText();
+        else if (n == QLatin1String("LastModified"))
+            out.lastModified = parseIsoTimestamp(r.readElementText());
+        else
+            r.skipCurrentElement();
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (out.etag.isEmpty())
+        return protocolError(QStringLiteral("CopyPartResult without an ETag"));
+    return out;
+}
+
 Result<CopyObjectResult> parseCopyObjectResult(const QByteArray& body)
 {
     QXmlStreamReader r(body);

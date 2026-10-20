@@ -55,6 +55,22 @@ QBUCKET_S3_EXPORT Result<DeleteObjectsResult> parseDeleteResult(const QByteArray
 // <CopyObjectResult> of a successful copy (ETag, LastModified).
 QBUCKET_S3_EXPORT Result<CopyObjectResult> parseCopyObjectResult(const QByteArray& body);
 
+// <InitiateMultipartUploadResult> (Bucket, Key, UploadId).
+QBUCKET_S3_EXPORT Result<CreateMultipartUploadResult> parseInitiateMultipartUpload(const QByteArray& body);
+
+// <CompleteMultipartUploadResult> (Location, ETag).
+QBUCKET_S3_EXPORT Result<CompleteMultipartUploadResult> parseCompleteMultipartUpload(const QByteArray& body);
+
+// <ListPartsResult>. A truncated page must name the next marker.
+QBUCKET_S3_EXPORT Result<ListPartsPage> parseListParts(const QByteArray& body);
+
+// <ListMultipartUploadsResult>; keys decoded for encoding-type=url.
+QBUCKET_S3_EXPORT Result<ListMultipartUploadsPage> parseListMultipartUploads(const QByteArray& body,
+                                                                             bool plusIsSpace);
+
+// <CopyPartResult> of UploadPartCopy (ETag, LastModified).
+QBUCKET_S3_EXPORT Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body);
+
 // Raw LocationConstraint value ("" for us-east-1, legacy "EU", …). Mapping
 // to a signing region is the provider profile's job.
 QBUCKET_S3_EXPORT Result<QString> parseLocationConstraint(const QByteArray& body);

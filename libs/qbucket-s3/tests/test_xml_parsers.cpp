@@ -243,6 +243,93 @@ private Q_SLOTS:
             xml::buildDeleteRequest({{QStringLiteral("bell\x07"), QString()}}, false);
         QCOMPARE(bad.error().category, ErrorCategory::InvalidRequest);
     }
+
+    // --- multipart --------------------------------------------------------------
+
+    void initiateMultipartUpload()
+    {
+        const auto r = xml::parseInitiateMultipartUpload(fixture("initiate-multipart-upload.xml"));
+        QVERIFY(r);
+        QCOMPARE(r->bucket, QStringLiteral("example-bucket"));
+        QCOMPARE(r->key, QStringLiteral("example-object"));
+        QCOMPARE(r->uploadId, QStringLiteral("VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA"));
+        QVERIFY(!xml::parseInitiateMultipartUpload("<InitiateMultipartUploadResult/>"));
+    }
+
+    void completeMultipartUpload()
+    {
+        const auto r = xml::parseCompleteMultipartUpload(fixture("complete-multipart-upload.xml"));
+        QVERIFY(r);
+        QCOMPARE(r->etag, QStringLiteral("\"3858f62230ac3c915f300c664312c11f-9\""));
+        QVERIFY(r->location.endsWith(QStringLiteral("/Example-Object")));
+        // A 200 with an <Error> body is never a success.
+        const auto e = xml::parseCompleteMultipartUpload(fixture("complete-multipart-upload-error.xml"));
+        QVERIFY(!e);
+        QCOMPARE(e.error().category, ErrorCategory::Protocol);
+        QCOMPARE(xml::rootElementName(fixture("complete-multipart-upload-error.xml")), QStringLiteral("Error"));
+    }
+
+    void listParts()
+    {
+        const auto r = xml::parseListParts(fixture("list-parts.xml"));
+        QVERIFY(r);
+        QCOMPARE(r->parts.size(), 2);
+        QCOMPARE(r->parts[0].partNumber, 2);
+        QCOMPARE(r->parts[0].size, 10485760);
+        QCOMPARE(r->parts[0].etag, QStringLiteral("\"7778aef83f66abc1fa1e8477f296d394\""));
+        QVERIFY(r->parts[1].lastModified.isValid());
+        QVERIFY(r->isTruncated);
+        QCOMPARE(r->nextPartNumberMarker, 3);
+        QCOMPARE(r->storageClass, QStringLiteral("STANDARD"));
+
+        // Truncated without a marker: continue after the last part.
+        const auto noMarker = xml::parseListParts(
+            "<ListPartsResult><IsTruncated>true</IsTruncated><Part><PartNumber>7</PartNumber><ETag>\"x\"</ETag>"
+            "<Size>1</Size></Part></ListPartsResult>");
+        QVERIFY(noMarker);
+        QCOMPARE(noMarker->nextPartNumberMarker, 7);
+        QVERIFY(!xml::parseListParts("<ListPartsResult><IsTruncated>true</IsTruncated></ListPartsResult>"));
+        QVERIFY(!xml::parseListParts("<ListPartsResult><Part><PartNumber>0</PartNumber></Part></ListPartsResult>"));
+    }
+
+    void listMultipartUploads()
+    {
+        const auto r = xml::parseListMultipartUploads(fixture("list-multipart-uploads.xml"), false);
+        QVERIFY(r);
+        QCOMPARE(r->uploads.size(), 2);
+        QCOMPARE(r->uploads[0].key, QStringLiteral("my-divisor"));
+        QCOMPARE(r->uploads[1].key, QStringLiteral("my movie.m2ts"));   // url-decoded
+        QCOMPARE(r->uploads[1].uploadId, QStringLiteral("YW55IGlkZWEgd2h5IGVsdmluZydzIHVwbG9hZCBmYWlsZWQ"));
+        QCOMPARE(r->uploads[0].initiator, QStringLiteral("user1-11111a31-17b5-4fb7-9df5-b111111f13de"));
+        QVERIFY(r->uploads[0].initiated.isValid());
+        QVERIFY(r->isTruncated);
+        QCOMPARE(r->nextKeyMarker, QStringLiteral("my movie.m2ts"));
+
+        // Hetzner's answer for a bucket without unfinished uploads.
+        QFile f(QStringLiteral(TEST_DATA_DIR "/hetzner/probe-uploads-200.xml"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const auto hetzner = xml::parseListMultipartUploads(f.readAll(), false);
+        QVERIFY(hetzner);
+        QVERIFY(hetzner->uploads.isEmpty());
+        QVERIFY(!hetzner->isTruncated);
+    }
+
+    void copyPartResult()
+    {
+        const auto r = xml::parseCopyPartResult(fixture("copy-part-result.xml"));
+        QVERIFY(r);
+        QCOMPARE(r->etag, QStringLiteral("\"9b2cf535f27731c974343645a3985328\""));
+        QVERIFY(r->lastModified.isValid());
+        QVERIFY(!xml::parseCopyPartResult(fixture("copy-object-result.xml")));   // wrong root
+    }
+
+    void completeRequestBody()
+    {
+        const QByteArray body = xml::buildCompleteMultipartUpload({{1, QStringLiteral("\"a\"")}, {2, QStringLiteral("\"b&c\"")}});
+        QVERIFY(body.contains("<Part><PartNumber>1</PartNumber><ETag>&quot;a&quot;</ETag></Part>"));
+        QVERIFY(body.contains("<PartNumber>2</PartNumber><ETag>&quot;b&amp;c&quot;</ETag>"));
+        QVERIFY(body.startsWith("<?xml"));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestXmlParsers)

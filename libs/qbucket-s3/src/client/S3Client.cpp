@@ -51,6 +51,7 @@ ObjectMeta metaFromHeaders(const QString& key, const RawResponse& r)
     m.contentType = QString::fromUtf8(r.header("content-type"));
     m.storageClass = QString::fromLatin1(r.header("x-amz-storage-class"));
     m.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+    m.partsCount = r.header("x-amz-mp-parts-count").trimmed().toInt();
     static constexpr char kMetaPrefix[] = "x-amz-meta-";
     for (const auto& [name, value] : r.headers) {
         m.responseHeaders.append({QString::fromLatin1(name), QString::fromUtf8(value)});
@@ -81,6 +82,36 @@ bool etagIsContentMd5(const QString& etag, const RawResponse& r)
         || !r.header("x-amz-server-side-encryption-customer-algorithm").isNull())
         return false;
     return true;
+}
+
+// x-amz-meta-* headers; printable ASCII only (for now).
+std::optional<Error> appendMetadata(RequestSpec& spec, const QMap<QString, QString>& metadata)
+{
+    for (auto it = metadata.cbegin(); it != metadata.cend(); ++it) {
+        if (it.key().isEmpty() || !isPrintableAscii(it.key()) || !isPrintableAscii(it.value()))
+            return invalid(QStringLiteral("metadata must be printable ASCII: ") + it.key());
+        spec.headers.append({"x-amz-meta-" + it.key().toLower().toLatin1(), it.value().toLatin1()});
+    }
+    return std::nullopt;
+}
+
+// x-amz-copy-source value: /bucket/key[?versionId=…], encoded exactly once.
+std::optional<QByteArray> copySource(const QString& bucket, const QString& key, const QString& versionId)
+{
+    // Same rule as for request paths: QNAM would normalise them in the URL,
+    // the server might in the header.
+    const QStringList segments = key.split(u'/');
+    if (segments.contains(QStringLiteral(".")) || segments.contains(QStringLiteral("..")))
+        return std::nullopt;
+    QByteArray source = '/' + uriEncodeText(bucket, SlashMode::Encode) + '/' + uriEncodeText(key, SlashMode::Keep);
+    if (!versionId.isEmpty())
+        source += "?versionId=" + uriEncodeText(versionId, SlashMode::Encode);
+    return source;
+}
+
+bool validPartNumber(int n)
+{
+    return n >= 1 && n <= 10000;
 }
 
 } // namespace
@@ -150,7 +181,13 @@ void S3Client::send(const std::shared_ptr<Op>& op, RequestSpec spec,
 
 std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
 {
-    const QList<Feature> needed = featuresFor(spec.operation);
+    QList<Feature> needed = featuresFor(spec.operation);
+    for (const auto& [name, value] : spec.headers) {
+        if (name.compare("If-None-Match", Qt::CaseInsensitive) == 0 && spec.method != "GET" && spec.method != "HEAD")
+            needed.append(Feature::ConditionalWrites);
+    }
+    if (!spec.sourceBucket.isEmpty() && spec.sourceBucket != spec.bucket)
+        needed.append(Feature::CrossBucketCopy);
     if (needed.isEmpty())
         return std::nullopt;
     const CapabilitySet profile = config().profile->capabilities();
@@ -354,17 +391,32 @@ quint64 S3Client::getBucketLocation(const QString& bucket, Done<QString> done)
 quint64 S3Client::headObject(const QString& bucket, const QString& key, const QString& versionId,
                              Done<ObjectMeta> done)
 {
-    if (bucket.isEmpty() || key.isEmpty())
+    HeadObjectParams params;
+    params.bucket = bucket;
+    params.key = key;
+    params.versionId = versionId;
+    return headObject(params, std::move(done));
+}
+
+quint64 S3Client::headObject(const HeadObjectParams& params, Done<ObjectMeta> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (params.partNumber != 0 && !validPartNumber(params.partNumber))
+        return failLater(std::move(done), invalid(QStringLiteral("invalid part number")));
     RequestSpec spec;
     spec.operation = Operation::HeadObject;
     spec.method = "HEAD";
-    spec.bucket = bucket;
-    spec.key = key;
-    spec.versionId = versionId;
-    if (!versionId.isEmpty())
-        spec.query.append({"versionId", versionId.toUtf8(), false});
-    return single(std::move(spec), std::move(done), [key](const RawResponse& r) {
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.versionId = params.versionId;
+    if (!params.versionId.isEmpty())
+        spec.query.append({"versionId", params.versionId.toUtf8(), false});
+    if (params.partNumber > 0)
+        spec.query.append({"partNumber", QByteArray::number(params.partNumber), false});
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"If-Match", params.ifMatch.toLatin1()});
+    return single(std::move(spec), std::move(done), [key = params.key](const RawResponse& r) {
         return Result<ObjectMeta>(metaFromHeaders(key, r));
     });
 }
@@ -525,13 +577,10 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
     spec.headers.append({"Content-MD5", params.file ? params.file->md5Base64 : contentMd5(params.data)});
     if (!params.storageClass.isEmpty())
         spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
-    for (auto it = params.metadata.cbegin(); it != params.metadata.cend(); ++it) {
-        if (it.key().isEmpty() || !isPrintableAscii(it.key()) || !isPrintableAscii(it.value())) {
-            return failLater(std::move(done),
-                             invalid(QStringLiteral("metadata must be printable ASCII: ") + it.key()));
-        }
-        spec.headers.append({"x-amz-meta-" + it.key().toLower().toLatin1(), it.value().toLatin1()});
-    }
+    if (params.ifNoneMatch)
+        spec.headers.append({"If-None-Match", QByteArray("*")});
+    if (std::optional<Error> e = appendMetadata(spec, params.metadata))
+        return failLater(std::move(done), *e);
 
     return single(std::move(spec), std::move(done), [](const RawResponse& r) {
         PutObjectResult out;
@@ -549,16 +598,13 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
         return failLater(std::move(done), invalid(QStringLiteral("source or destination is missing")));
     if (params.sourceBucket == params.bucket && params.sourceKey == params.key && params.sourceVersionId.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("an object cannot be copied onto itself")));
-    // Same rule as for request paths: QNAM would normalise them in the URL,
-    // the server might in the header.
-    for (const QString& k : {params.sourceKey, params.key}) {
-        const QStringList segments = k.split(u'/');
-        if (segments.contains(QStringLiteral(".")) || segments.contains(QStringLiteral("..")))
-            return failLater(std::move(done), invalid(QStringLiteral("keys with \".\" or \"..\" segments cannot be copied")));
-    }
+    const std::optional<QByteArray> source = copySource(params.sourceBucket, params.sourceKey, params.sourceVersionId);
+    if (!source)
+        return failLater(std::move(done), invalid(QStringLiteral("keys with \".\" or \"..\" segments cannot be copied")));
 
     RequestSpec spec;
     spec.operation = Operation::CopyObject;
+    spec.sourceBucket = params.sourceBucket;
     spec.method = "PUT";
     spec.bucket = params.bucket;
     spec.key = params.key;
@@ -566,11 +612,7 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
     // A lost answer leaves the outcome open (another version on versioned
     // buckets): never retried blindly — the caller checks with HEAD.
     spec.idempotent = false;
-    QByteArray source = '/' + uriEncodeText(params.sourceBucket, SlashMode::Encode) + '/'
-                      + uriEncodeText(params.sourceKey, SlashMode::Keep);
-    if (!params.sourceVersionId.isEmpty())
-        source += "?versionId=" + uriEncodeText(params.sourceVersionId, SlashMode::Encode);
-    spec.headers.append({"x-amz-copy-source", source});
+    spec.headers.append({"x-amz-copy-source", *source});
     spec.headers.append({"x-amz-metadata-directive", QByteArray("COPY")});
     if (!params.ifMatch.isEmpty())
         spec.headers.append({"x-amz-copy-source-if-match", params.ifMatch.toLatin1()});
@@ -586,6 +628,216 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
         parsed->versionId = QString::fromUtf8(r.header("x-amz-version-id"));
         parsed->sourceVersionId = QString::fromUtf8(r.header("x-amz-copy-source-version-id"));
         parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return parsed;
+    });
+}
+
+// --- Multipart uploads -----------------------------------------------------------
+
+quint64 S3Client::createMultipartUpload(const CreateMultipartUploadParams& params,
+                                        Done<CreateMultipartUploadResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    RequestSpec spec;
+    spec.operation = Operation::CreateMultipartUpload;
+    spec.method = "POST";
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.query.append({"uploads", {}, true});
+    // The object's content type is fixed here, not by the parts.
+    spec.headers.append({"Content-Type", params.contentType.isEmpty() ? QByteArray("application/octet-stream")
+                                                                      : params.contentType.toUtf8()});
+    if (!params.storageClass.isEmpty())
+        spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
+    if (std::optional<Error> e = appendMetadata(spec, params.metadata))
+        return failLater(std::move(done), *e);
+    // A lost answer leaves an orphaned upload behind at worst, which
+    // ListMultipartUploads shows and Abort removes — a retry is acceptable.
+    spec.idempotent = true;
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<CreateMultipartUploadResult> {
+        Result<CreateMultipartUploadResult> parsed = xml::parseInitiateMultipartUpload(r.body);
+        if (parsed)
+            parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return parsed;
+    });
+}
+
+quint64 S3Client::uploadPart(const UploadPartParams& params, Done<UploadPartResult> done, Progress progress)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty() || params.uploadId.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket, key or upload id is missing")));
+    if (!validPartNumber(params.partNumber))
+        return failLater(std::move(done), invalid(QStringLiteral("part numbers are 1 to 10000")));
+    if (params.file.path.isEmpty() || params.file.offset < 0 || params.file.length < 0)
+        return failLater(std::move(done), invalid(QStringLiteral("invalid file body")));
+    if (params.file.md5Base64.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("a part needs its Content-MD5")));
+    RequestSpec spec;
+    spec.operation = Operation::UploadPart;
+    spec.method = "PUT";
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.query.append({"partNumber", QByteArray::number(params.partNumber), false});
+    spec.query.append({"uploadId", params.uploadId.toUtf8(), false});
+    spec.file = params.file;
+    spec.contentType = "application/octet-stream";
+    spec.headers.append({"Content-MD5", params.file.md5Base64});
+    spec.progress = std::move(progress);
+    spec.idempotent = true;   // the same part number again replaces it
+    return single(std::move(spec), std::move(done), [n = params.partNumber](const RawResponse& r) -> Result<UploadPartResult> {
+        UploadPartResult out;
+        out.partNumber = n;
+        out.etag = QString::fromLatin1(r.header("etag"));
+        out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        out.throttled = r.throttled;
+        if (out.etag.isEmpty())
+            return Error::make(ErrorCategory::Protocol, QStringLiteral("UploadPart answered without an ETag"));
+        return out;
+    });
+}
+
+quint64 S3Client::completeMultipartUpload(const CompleteMultipartUploadParams& params,
+                                          Done<CompleteMultipartUploadResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty() || params.uploadId.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket, key or upload id is missing")));
+    if (params.parts.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("a multipart upload needs at least one part")));
+    int previous = 0;
+    for (const CompletedPart& p : params.parts) {
+        if (!validPartNumber(p.partNumber) || p.partNumber <= previous || p.etag.isEmpty())
+            return failLater(std::move(done), invalid(QStringLiteral("parts must be listed in ascending order, each with its ETag")));
+        previous = p.partNumber;
+    }
+    RequestSpec spec;
+    spec.operation = Operation::CompleteMultipartUpload;
+    spec.method = "POST";
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.query.append({"uploadId", params.uploadId.toUtf8(), false});
+    spec.body = xml::buildCompleteMultipartUpload(params.parts);
+    spec.contentType = "application/xml";
+    spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    if (params.ifNoneMatch)
+        spec.headers.append({"If-None-Match", QByteArray("*")});
+    // The server may fail after sending 200 (assembling takes a while) —
+    // and a lost answer leaves it open whether the object now exists.
+    spec.mayReturn200Error = true;
+    spec.idempotent = false;
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<CompleteMultipartUploadResult> {
+        Result<CompleteMultipartUploadResult> parsed = xml::parseCompleteMultipartUpload(r.body);
+        if (!parsed)
+            return parsed;
+        parsed->versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+        parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return parsed;
+    });
+}
+
+quint64 S3Client::abortMultipartUpload(const QString& bucket, const QString& key, const QString& uploadId,
+                                       Done<void> done)
+{
+    if (bucket.isEmpty() || key.isEmpty() || uploadId.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket, key or upload id is missing")));
+    RequestSpec spec;
+    spec.operation = Operation::AbortMultipartUpload;
+    spec.method = "DELETE";
+    spec.bucket = bucket;
+    spec.key = key;
+    spec.query.append({"uploadId", uploadId.toUtf8(), false});
+    spec.idempotent = true;
+    return single(std::move(spec), std::move(done), [](const RawResponse&) { return Result<void>(); });
+}
+
+quint64 S3Client::listParts(const ListPartsParams& params, Done<ListPartsPage> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty() || params.uploadId.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket, key or upload id is missing")));
+    RequestSpec spec;
+    spec.operation = Operation::ListParts;
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.query.append({"uploadId", params.uploadId.toUtf8(), false});
+    spec.query.append({"max-parts", QByteArray::number(std::clamp(params.maxParts, 1, 1000)), false});
+    if (params.partNumberMarker > 0)
+        spec.query.append({"part-number-marker", QByteArray::number(params.partNumberMarker), false});
+    return single(std::move(spec), std::move(done), [marker = params.partNumberMarker](const RawResponse& r) -> Result<ListPartsPage> {
+        Result<ListPartsPage> page = xml::parseListParts(r.body);
+        if (page && page->isTruncated && page->nextPartNumberMarker <= marker) {
+            return Error::make(ErrorCategory::Protocol,
+                               QStringLiteral("ListParts made no progress (listing loop)"));
+        }
+        return page;
+    });
+}
+
+quint64 S3Client::listMultipartUploads(const ListMultipartUploadsParams& params, Done<ListMultipartUploadsPage> done)
+{
+    if (params.bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    RequestSpec spec;
+    spec.operation = Operation::ListMultipartUploads;
+    spec.bucket = params.bucket;
+    spec.query.append({"uploads", {}, true});
+    spec.query.append({"encoding-type", "url", false});
+    spec.query.append({"max-uploads", QByteArray::number(std::clamp(params.maxUploads, 1, 1000)), false});
+    if (!params.prefix.isEmpty())
+        spec.query.append({"prefix", params.prefix.toUtf8(), false});
+    if (!params.keyMarker.isEmpty())
+        spec.query.append({"key-marker", params.keyMarker.toUtf8(), false});
+    if (!params.uploadIdMarker.isEmpty())
+        spec.query.append({"upload-id-marker", params.uploadIdMarker.toUtf8(), false});
+    return single(std::move(spec), std::move(done), [this, params](const RawResponse& r) -> Result<ListMultipartUploadsPage> {
+        Result<ListMultipartUploadsPage> page =
+            xml::parseListMultipartUploads(r.body, config().profile->listingDecodesPlusAsSpace());
+        if (page && page->isTruncated && page->nextKeyMarker == params.keyMarker
+            && page->nextUploadIdMarker == params.uploadIdMarker) {
+            return Error::make(ErrorCategory::Protocol,
+                               QStringLiteral("ListMultipartUploads returned the same markers again (listing loop)"));
+        }
+        return page;
+    });
+}
+
+quint64 S3Client::uploadPartCopy(const UploadPartCopyParams& params, Done<UploadPartCopyResult> done)
+{
+    if (params.sourceBucket.isEmpty() || params.sourceKey.isEmpty() || params.bucket.isEmpty() || params.key.isEmpty()
+        || params.uploadId.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("source, destination or upload id is missing")));
+    if (!validPartNumber(params.partNumber))
+        return failLater(std::move(done), invalid(QStringLiteral("part numbers are 1 to 10000")));
+    if (params.rangeLength == 0 || (params.rangeLength > 0 && params.rangeStart < 0))
+        return failLater(std::move(done), invalid(QStringLiteral("invalid byte range")));
+    const std::optional<QByteArray> source = copySource(params.sourceBucket, params.sourceKey, params.sourceVersionId);
+    if (!source)
+        return failLater(std::move(done), invalid(QStringLiteral("keys with \".\" or \"..\" segments cannot be copied")));
+
+    RequestSpec spec;
+    spec.operation = Operation::UploadPartCopy;
+    spec.method = "PUT";
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.sourceBucket = params.sourceBucket;
+    spec.query.append({"partNumber", QByteArray::number(params.partNumber), false});
+    spec.query.append({"uploadId", params.uploadId.toUtf8(), false});
+    spec.contentType = "application/octet-stream";
+    spec.headers.append({"x-amz-copy-source", *source});
+    if (params.rangeLength > 0) {
+        spec.headers.append({"x-amz-copy-source-range", "bytes=" + QByteArray::number(params.rangeStart) + '-'
+                                                            + QByteArray::number(params.rangeStart + params.rangeLength - 1)});
+    }
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"x-amz-copy-source-if-match", params.ifMatch.toLatin1()});
+    spec.mayReturn200Error = true;
+    spec.idempotent = true;   // replaces the part of an unfinished upload
+    return single(std::move(spec), std::move(done), [n = params.partNumber](const RawResponse& r) -> Result<UploadPartCopyResult> {
+        Result<UploadPartCopyResult> parsed = xml::parseCopyPartResult(r.body);
+        if (!parsed)
+            return parsed;
+        parsed->partNumber = n;
+        parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        parsed->throttled = r.throttled;
         return parsed;
     });
 }

@@ -16,6 +16,9 @@ namespace qbucket::s3::xml {
 QBUCKET_S3_EXPORT Result<QByteArray> buildDeleteRequest(const QList<ObjectIdentifier>& objects,
                                                         bool quiet);
 
+// <CompleteMultipartUpload> with the parts in the given order.
+QBUCKET_S3_EXPORT QByteArray buildCompleteMultipartUpload(const QList<CompletedPart>& parts);
+
 // <CreateBucketConfiguration> with a LocationConstraint.
 QBUCKET_S3_EXPORT QByteArray buildCreateBucketConfiguration(const QString& locationConstraint);
 

@@ -76,6 +76,10 @@ private Q_SLOTS:
         // Verified by writing (devlog 005), against the provider's own page.
         QCOMPARE(HetznerProfile().capabilities().state(Feature::CrossBucketCopy), CapabilityState::Supported);
         QCOMPARE(HetznerProfile().capabilities().state(Feature::BatchDelete), CapabilityState::Supported);
+        // Verified on nbg1: If-None-Match is ignored (overwrites), multipart
+        // requests keep their query string.
+        QCOMPARE(HetznerProfile().capabilities().state(Feature::ConditionalWrites), CapabilityState::Unsupported);
+        QCOMPARE(HetznerProfile().capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
 
         CapabilityEntry cors{CapabilityState::Supported, CapabilitySource::Probed, {}, 404, {}, false, 0};
         HetznerProfile().reviewProbe(Feature::Cors, cors);

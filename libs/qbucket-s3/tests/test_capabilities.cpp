@@ -32,12 +32,15 @@ private Q_SLOTS:
             ids.insert(id);
             QCOMPARE(featureFromId(id), std::optional(f));
         }
-        QCOMPARE(ids.size(), int(Feature::Presign) + 1);
+        QCOMPARE(ids.size(), int(Feature::MultipartUpload) + 1);
         // Persisted ids must never change.
         QCOMPARE(featureId(Feature::BucketVersioning), QStringLiteral("bucket.versioning"));
         QCOMPARE(featureId(Feature::CrossBucketCopy), QStringLiteral("object.cross-bucket-copy"));
         QVERIFY(!featureFromId(QStringLiteral("bucket.teleport")));
         QCOMPARE(featuresFor(Operation::DeleteObjects), QList<Feature>{Feature::BatchDelete});
+        QCOMPARE(featureId(Feature::MultipartUpload), QStringLiteral("object.multipart-upload"));
+        QCOMPARE(featuresFor(Operation::UploadPart), QList<Feature>{Feature::MultipartUpload});
+        QCOMPARE(featuresFor(Operation::ListMultipartUploads), QList<Feature>{Feature::MultipartListing});
     }
 
     void probeWinsOverProfile()

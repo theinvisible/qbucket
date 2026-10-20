@@ -27,5 +27,7 @@
         "object.legal-hold": "Unknown",
         "object.retention": "Unknown",
         "object.tagging": "Supported"
-    }
+    },
+    "conditionalWrites": false,
+    "partNumberReads": true
 }

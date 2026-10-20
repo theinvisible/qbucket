@@ -60,6 +60,25 @@ with `QBUCKET_IT_SECOND_BUCKET`, expected in `it-expectations/hetzner*.json`
 Supported in the profile; a refused copy would only be an error, never a
 deleted source.
 
+Multipart uploads (`it_s3_backend`, nbg1, 2026-10-20):
+
+- Create / UploadPart / ListParts / Complete / Abort / ListMultipartUploads
+  work; parts are streamed with `UNSIGNED-PAYLOAD` over HTTPS and
+  `Content-MD5`; part ETags are the part MD5s and the object ETag is the
+  usual MD5-of-MD5s with `-N`.
+- `HEAD` / `GET ?partNumber=N` answer the part's size and
+  `x-amz-mp-parts-count` — downloads can verify multipart objects part by
+  part.
+- **The query string survives:** a multipart upload, a part and an abort on
+  the key of an existing object left that object untouched
+  (`multipartRequestsLeaveAnExistingObjectAlone`). Without it, UploadPart
+  would be a PUT of the object and Abort a DELETE — the proxy's
+  subresource behaviour (below) made this worth checking first.
+- **`If-None-Match: *` is ignored:** a PutObject with it overwrote the
+  existing object. The profile knows `ConditionalWrites` as Unsupported, so
+  the library refuses the header locally and uploads check for an existing
+  target with HEAD (a small race window, documented in the app).
+
 Writes verified by the app's own jobs (`tests/it_operations`, both
 buckets, 2026-10-20): creating a folder marker, deleting a folder
 recursively with DeleteObjects batches (versioned bucket: delete markers),

@@ -52,6 +52,7 @@ struct RequestSpec {
     QString bucket;
     QString key;
     QString versionId;           // for records/logs only
+    QString sourceBucket;        // server-side copies, for the capability check
     QueryParams query;
     HeaderList headers;          // all are signed
     QByteArray body;

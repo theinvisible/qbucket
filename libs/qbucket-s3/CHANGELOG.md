@@ -67,6 +67,25 @@ version bump may break the API.
   answered SlowDown / 503 before the request succeeded.
 - `ErrorCategory::LocalIo` — a local file could not be read or written
   (never retried).
+- Multipart uploads on `Session`: `createMultipartUpload`, `uploadPart`
+  (streamed `FileBody`, on a transfer lane), `completeMultipartUpload`
+  (200-with-error aware, never retried after a lost answer),
+  `abortMultipartUpload`, `listParts`, `listMultipartUploads` (both paged
+  with loop detection), `uploadPartCopy` (byte ranges, copy-source-if-match);
+  the value types in `Types.h`, `Operation` values appended,
+  `Feature::MultipartUpload` (profile knowledge, Supported by default).
+- `headObject(HeadObjectParams)` with a part number / If-Match;
+  `ObjectMeta::partsCount` (`x-amz-mp-parts-count`).
+- `PutObjectParams::ifNoneMatch` / `CompleteMultipartUploadParams::ifNoneMatch`
+  (`If-None-Match: *`); refused locally where `ConditionalWrites` is
+  Unsupported. The short-circuit also checks `CrossBucketCopy` for copies
+  between buckets.
+- `HetznerProfile` and `GarageProfile` know `ConditionalWrites` as
+  Unsupported: both ignored `If-None-Match` and overwrote the object.
+- `testing::FakeObjectStore`: a stateful S3 store behind `FakeS3Server` —
+  objects with data, multipart, ranges, part numbers, conditional writes,
+  copies, listings, scripted faults, a discard mode for huge uploads.
+  `FakeS3Server::setRecordBodies()`.
 
 ### Fixed
 
