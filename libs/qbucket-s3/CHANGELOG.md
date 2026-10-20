@@ -15,3 +15,4 @@ version bump may break the API.
 - `Version.h` with `QBUCKET_S3_VERSION_*` macros.
 - `Endpoint` (URL, signing region, `AddressingStyle`, pinned certificates) and
   the value types in `Types.h` (`BucketInfo`, `ListPage`, `ObjectMeta`, …).
+- `Credentials` value type and `Presigner` (SigV4 query signing, at most 7 days).

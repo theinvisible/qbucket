@@ -1,9 +1,11 @@
 // Every public header, compiled with the library's full strictness
 // (QT_NO_KEYWORDS, QT_NO_CAST_FROM_ASCII, …). The relaxed counterpart lives
 // in public_headers_relaxed.cpp. Keep both include lists in sync.
+#include <qbucket/s3/Credentials.h>
 #include <qbucket/s3/Endpoint.h>
 #include <qbucket/s3/Error.h>
 #include <qbucket/s3/Export.h>
+#include <qbucket/s3/Presigner.h>
 #include <qbucket/s3/Result.h>
 #include <qbucket/s3/Types.h>
 #include <qbucket/s3/Version.h>

@@ -46,8 +46,10 @@ else()
 endif()
 
 add_library(qbucket_s3 ${_s3_lib_type}
+    include/qbucket/s3/Credentials.h
     include/qbucket/s3/Endpoint.h
     include/qbucket/s3/Error.h
+    include/qbucket/s3/Presigner.h
     include/qbucket/s3/Result.h
     include/qbucket/s3/Types.h
     src/core/Endpoint.cpp
@@ -56,6 +58,9 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/http/S3Uri.cpp
     src/http/UriEncoding.h
     src/http/UriEncoding.cpp
+    src/signing/Presigner.cpp
+    src/signing/SigV4Signer.h
+    src/signing/SigV4Signer.cpp
 )
 add_library(qbucket::s3 ALIAS qbucket_s3)
 
