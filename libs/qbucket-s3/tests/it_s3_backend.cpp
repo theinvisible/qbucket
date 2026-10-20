@@ -279,6 +279,42 @@ private Q_SLOTS:
         QVERIFY(!none);
     }
 
+    // Opt-in: QBUCKET_IT_SECOND_BUCKET (another qbucket-it-* bucket on the
+    // same account). The copy lands under this run's prefix there and is
+    // removed again. it-expectations may say "crossBucketCopy": true/false.
+    void crossBucketCopy()
+    {
+        const QString second = env("QBUCKET_IT_SECOND_BUCKET");
+        if (second.isEmpty())
+            QSKIP("QBUCKET_IT_SECOND_BUCKET not set");
+        static const QRegularExpression safeName(QStringLiteral("^qbucket-it-[a-z0-9-]+$"));
+        QVERIFY2(safeName.match(second).hasMatch() && second != m_bucket,
+                 "refusing to run: QBUCKET_IT_SECOND_BUCKET must be another qbucket-it-* bucket");
+        const QString k = key(QStringLiteral("cross-bucket.txt"));
+        const Result<PutObjectResult> put = this->put(k, "across");
+        VERIFY_OK(put);
+        CopyObjectParams p;
+        p.sourceBucket = m_bucket;
+        p.sourceKey = k;
+        p.bucket = second;
+        p.key = k;
+        p.ifMatch = put->etag;
+        const Result<CopyObjectResult> r =
+            await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+        qInfo().noquote() << "cross-bucket copy" << m_bucket << "->" << second << ":"
+                          << (r ? QStringLiteral("works") : r.error().toString());
+        if (r) {
+            const Result<ObjectData> back = await<ObjectData>([&](auto cb) { m_session->getObject(second, k, {}, &m_ctx, std::move(cb)); });
+            VERIFY_OK(back);
+            QCOMPARE(back->data, QByteArray("across"));
+            QVERIFY(k.startsWith(m_prefix));
+            VERIFY_OK((await<DeleteObjectResult>([&](auto cb) { m_session->deleteObject(second, k, {}, &m_ctx, std::move(cb)); })));
+        }
+        const QJsonValue expected = m_expect.value(QLatin1String("crossBucketCopy"));
+        if (expected.isBool())
+            QCOMPARE(bool(r), expected.toBool());
+    }
+
     void nastyKeysRoundTrip()
     {
         const QString base = key(QStringLiteral("nasty/"));

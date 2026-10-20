@@ -4,11 +4,13 @@ A native desktop browser for **S3 and S3-compatible object storage** —
 Hetzner Object Storage, Ceph RGW, AWS S3 and others. Windows and Linux,
 MIT-licensed, built with C++20 and Qt 6 Widgets.
 
-> **Status: early development (M0 — skeleton).** The main window, the light
-> and dark theme and the build/packaging pipeline are in place; S3
-> connectivity arrives with milestone M1. See [PLAN.md](PLAN.md).
+> **Status: early development (M2 — browser).** Accounts with the secret in
+> the system keychain, browsing buckets and folders of any size, object
+> details, the server's capabilities, and the first changes — new folder,
+> delete, rename — each planned, previewed, verified and journaled.
+> Transfers arrive with milestone M3. See [PLAN.md](PLAN.md).
 
-![QBucket main window, dark theme](docs/devlog/img/main-dark.png)
+![QBucket browsing a Hetzner bucket, dark theme](docs/devlog/img/browser-hetzner-dark.png)
 
 ## Goals
 
@@ -18,7 +20,7 @@ MIT-licensed, built with C++20 and Qt 6 Widgets.
   previewed, executed, verified and reported; the server's capabilities are
   probed automatically and unsupported actions can't be triggered.
 - **Never blocks the UI**, also with millions of objects.
-- The S3 layer becomes a reusable library (`libs/qbucket-s3`, from M1).
+- The S3 layer is a reusable library: [`libs/qbucket-s3`](libs/qbucket-s3).
 
 ## Building
 

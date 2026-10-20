@@ -1,5 +1,6 @@
 {
     "_comment": "Hetzner Object Storage, location nbg1, 2026-10-20 (Ceph RGW behind a front proxy). Bucket with versioning (enabled 2026-10-20 via rclone), without object lock, so legal hold and retention can't be told (Unknown). bucket.encryption is overridden to Unsupported by HetznerProfile::reviewProbe: GET ?encryption reaches RGW, but DELETE ?encryption was executed by the proxy as DeleteBucket. Sporadic 403 AccessDenied with an empty message are retried (HetznerProfile::mapError).",
+    "crossBucketCopy": true,
     "bucketState": {
         "versioning": "Enabled",
         "objectLockEnabled": false

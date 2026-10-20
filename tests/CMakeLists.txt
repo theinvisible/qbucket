@@ -177,6 +177,14 @@ qbucket_add_test(it_operations
     qbucket::s3_testsupport
 )
 set_tests_properties(it_operations PROPERTIES LABELS integration TIMEOUT 600)
+# The real window, read-only, against the same server.
+qbucket_add_test(it_browser
+    it_browser.cpp
+    qbucket_app_ui
+)
+set_tests_properties(it_browser PROPERTIES LABELS integration TIMEOUT 300)
+target_compile_definitions(it_browser PRIVATE QBUCKET_QM_DIR="${CMAKE_BINARY_DIR}/src")
+add_dependencies(it_browser qbucket)
 if(QBUCKET_S3_IT_LOCAL)
     foreach(backend ceph versitygw garage)
         file(STRINGS ${CMAKE_SOURCE_DIR}/libs/qbucket-s3/tests/docker/env/${backend}.env _it_env REGEX "^QBUCKET_IT_")
@@ -188,6 +196,11 @@ if(QBUCKET_S3_IT_LOCAL)
         )
     endforeach()
 endif()
+
+# The compiled .qm files of the app target.
+qbucket_add_test(test_translations test_translations.cpp)
+target_compile_definitions(test_translations PRIVATE QBUCKET_QM_DIR="${CMAKE_BINARY_DIR}/src")
+add_dependencies(test_translations qbucket)
 
 # --- Static checks -----------------------------------------------------------
 # The mutation gate (PLAN.md §12.1): writing S3 calls only in src/controllers/.

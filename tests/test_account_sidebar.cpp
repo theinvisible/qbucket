@@ -36,7 +36,7 @@ class TestAccountSidebar : public QObject {
 private slots:
     void initTestCase()
     {
-        m_theme.apply(QStringLiteral("dark"));
+        m_theme.apply(QStringLiteral("Dark"));
     }
 
     void init()

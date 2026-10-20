@@ -172,10 +172,20 @@ target_link_libraries(qbucket PRIVATE
     Qt6::Widgets
 )
 
-qt_add_translations(qbucket
-    TS_FILES ${CMAKE_SOURCE_DIR}/translations/qbucket_de.ts
-    RESOURCE_PREFIX "/i18n"
-)
+# qbucket_en.ts holds the English plural forms only ("%n object(s)" →
+# "1 object" / "2 objects"); without it Qt shows the source text as is.
+if(Qt6_VERSION VERSION_GREATER_EQUAL 6.7)
+    qt_add_translations(qbucket
+        TS_FILES ${CMAKE_SOURCE_DIR}/translations/qbucket_de.ts
+        PLURALS_TS_FILE ${CMAKE_SOURCE_DIR}/translations/qbucket_en.ts
+        RESOURCE_PREFIX "/i18n"
+    )
+else()
+    qt_add_translations(qbucket
+        TS_FILES ${CMAKE_SOURCE_DIR}/translations/qbucket_de.ts ${CMAKE_SOURCE_DIR}/translations/qbucket_en.ts
+        RESOURCE_PREFIX "/i18n"
+    )
+endif()
 
 # --- Install (Linux desktop integration; used by the Flatpak build) ---------
 install(TARGETS qbucket RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

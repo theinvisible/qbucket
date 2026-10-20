@@ -49,10 +49,23 @@ object lock can only be enabled at creation.
 | **bucket.encryption** | **Unsupported (profile override)** | GET: 404 …NotFoundError from RGW — but writes are intercepted, see below |
 | object.legal-hold, object.retention | Supported on `qbucket-it-lock` (404 ObjectLockConfigurationNotFoundError — RGW's code where AWS says NoSuchObjectLockConfiguration); Unknown on a bucket without object lock (400 "bucket object lock not configured") | |
 
-Profile knowledge for what read probes can't see (from Hetzner's
-"supported actions" page, not yet verified by writing): CopyObject only
-within one bucket (`CrossBucketCopy` Unsupported), SSE-C is the only
-encryption mode, batch delete works (verified by the integration test).
+Profile knowledge for what read probes can't see: SSE-C is the only
+encryption mode (Hetzner's "supported actions" page, not yet verified by
+writing); batch delete works (integration test). **Copying between
+buckets works**, although the same page says CopyObject works within one
+bucket only: `qbucket-it-test` → `qbucket-it-lock` (nbg1, one project,
+2026-10-20) copied and read back intact — `it_s3_backend crossBucketCopy`
+with `QBUCKET_IT_SECOND_BUCKET`, expected in `it-expectations/hetzner*.json`
+(`"crossBucketCopy": true`), so a change shows up. `CrossBucketCopy` is
+Supported in the profile; a refused copy would only be an error, never a
+deleted source.
+
+Writes verified by the app's own jobs (`tests/it_operations`, both
+buckets, 2026-10-20): creating a folder marker, deleting a folder
+recursively with DeleteObjects batches (versioned bucket: delete markers),
+renaming an object and a folder (CopyObject with
+`x-amz-copy-source-if-match`, HEAD, DeleteObject). A stale if-match ETag is
+answered with 412 PreconditionFailed, as on AWS.
 
 ## Quirks
 
@@ -120,5 +133,5 @@ Consequences:
 ## Open
 
 - Probe fsn1 and hel1.
-- Verify CrossBucketCopy and SSE-C by writing (scratch bucket, guard object).
+- Verify SSE-C by writing (scratch bucket, guard object).
 - Check whether a fresh *access key* shows the same start-up 403s.

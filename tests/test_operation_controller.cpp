@@ -100,7 +100,7 @@ class TestOperationController : public QObject {
 private slots:
     void initTestCase()
     {
-        m_theme.apply(QStringLiteral("light"));
+        m_theme.apply(QStringLiteral("Light"));
     }
 
     void init()

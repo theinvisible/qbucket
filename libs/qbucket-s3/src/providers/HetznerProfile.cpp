@@ -55,7 +55,12 @@ CapabilitySet HetznerProfile::capabilities() const
     const auto known = [&set](Feature f, CapabilityState s) {
         set.set(f, {s, CapabilitySource::Profile, {}, 0, {}, false, 0});
     };
-    known(Feature::CrossBucketCopy, CapabilityState::Unsupported);   // CopyObject within one bucket only
+    // Hetzner's "supported actions" page says CopyObject works within one
+    // bucket only; a copy qbucket-it-test → qbucket-it-lock (nbg1, same
+    // project) worked and read back intact (devlog 005, it_s3_backend
+    // crossBucketCopy). Safe either way: a refused copy is an error and the
+    // app never deletes a source whose copy failed.
+    known(Feature::CrossBucketCopy, CapabilityState::Supported);
     known(Feature::SseC, CapabilityState::Supported);                // the only encryption mode
     known(Feature::BucketEncryption, CapabilityState::Unsupported);  // no SSE-S3 / SSE-KMS
     known(Feature::BatchDelete, CapabilityState::Supported);

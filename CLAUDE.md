@@ -46,7 +46,9 @@ convenient):
 
 **M0 (skeleton) done** — devlog 001; verified on Linux in devlog 002.
 **M1 done** — devlog 003 (library, accounts), devlog 004 (Hetzner
-validation, nbg1); first CI run pending.
+validation, nbg1).
+**M2 done** — devlog 005 (browser UI, the mutation gate, create folder /
+delete / rename, Hetzner run).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -72,6 +74,23 @@ What exists:
 - App accounts (M1): `accounts/SecretStore` (QtKeychain, session-only mode),
   `accounts/AccountStore`, `accounts/KeychainCredentialsProvider`,
   `controllers/ConnectionTester`, `ui/AccountDialog`.
+- Browser (M2): `controllers/AccountSessions` (one `s3::Session` per
+  account), `models/AccountTreeModel` + `ui/AccountSidebar`,
+  `models/ObjectTableModel` (paging via `loadMore`, own sort / filter,
+  listing cache), `controllers/BrowseController`, `ui/ObjectBrowser`,
+  `ui/PathBar`, `ui/ObjectRowDelegate`, `ui/DetailPane`, Edit menu and
+  list keys.
+- Capabilities in the app (M2): `controllers/CapabilityController`
+  (probe, re-validate, merge, history, `decide()` / `reason()`,
+  `ensureFresh()`), `accounts/CapabilityStore`, `ui/CapabilitiesDialog`,
+  `controllers/ActivityLog` + `ui/LogPanel` (Log tab).
+- The mutation gate (M2): `controllers/OperationController`, `Job`
+  (plan → preview → execute → verify → report), `Journal` (JSONL),
+  `PlanFile`, `ui/OperationPreviewDialog`; jobs `CreateFolderJob`,
+  `DeleteJob`, `RenameJob`. `tools/check-mutation-gate.sh` (ctest
+  `mutation_gate`).
+- `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
+  with the tests, run by hand, release builds only).
 - CI per push (`ci.yml`): Linux Release, Windows app, library as Windows DLL.
   Weekly / tags / on demand: `ci-extended.yml` (ASan/UBSan, library
   static/shared/LSan, clang-tidy, Flatpak), `s3-integration.yml` (Docker
@@ -79,7 +98,7 @@ What exists:
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M2** (browser UI).
+Next: **M3** (transfer engine).
 
 ## Devlog
 
@@ -144,11 +163,17 @@ cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DQBUCKET_WARNIN
 cmake --build build-release && ctest --test-dir build-release
 # clang-tidy 18 like CI (pip/wheel `clang-tidy==18.1.8`), on build/compile_commands.json
 run-clang-tidy -p build -quiet '^(?!.*_autogen).*/(src|tests)/.*\.cpp$'
-# real S3 servers in Docker (Ceph RGW, VersityGW, Garage)
+# real S3 servers in Docker (Ceph RGW, VersityGW, Garage): the library's
+# it_s3_backend and the app's jobs (it_operations)
 libs/qbucket-s3/tests/docker/it-up.sh
-cmake -S libs/qbucket-s3 -B build-s3 -DQBUCKET_S3_IT_LOCAL=ON && cmake --build build-s3
-ctest --test-dir build-s3 -L docker
-# Hetzner: set -a; . ~/.config/qbucket-it/hetzner.env; set +a; build-s3/tests/it_s3_backend
+cmake -S . -B build -DQBUCKET_S3_IT_LOCAL=ON && cmake --build build
+ctest --test-dir build -L docker
+# Hetzner (qbucket-it-* buckets with a guard object only):
+#   set -a; . ~/.config/qbucket-it/hetzner.env; set +a
+#   build/libs/qbucket-s3/tests/it_s3_backend    (+ QBUCKET_IT_SECOND_BUCKET=qbucket-it-lock)
+#   build/tests/it_operations; build/tests/it_browser   (it_browser: read-only account)
+# listing budgets (release build)
+build-release/bench/bench_listing --keys 100000 --flat-keys 1000000
 ```
 
 The extended CI (`ci-extended.yml`, `s3-integration.yml`) can be started by
@@ -160,8 +185,8 @@ Inherited from xyz-profiler — keep both projects consistent.
 
 - `namespace qbucket`. **No `Q` class prefix** — that reads as Qt API.
 - Layering: library `qbucket-s3` ← app `domain` ← `accounts` ←
-  `controllers` / `models` ← `ui`. Nothing below `models` includes widget
-  headers.
+  `controllers` ← `models` ← `ui`. Nothing below `ui` includes widget
+  headers; models reach S3 only through `AccountSessions`.
 - Business logic in `QObject` controllers; the UI connects to signals and
   calls public methods. Dialogs are `QDialog` subclasses.
 - **The UI never blocks, on any action or data size.** The GUI thread only
@@ -228,6 +253,29 @@ Each of these cost time there; don't relearn them.
   `ENVIRONMENT` is split as a CMake list).
 - **A `&` in a tab or button label is a mnemonic** — "Headers & Meta"
   rendered as "Headers _Meta". Use `&&` or avoid the character.
+- **`QTreeView` calls `fetchMore()` from every layout pass**
+  (`QTreeViewPrivate::layout`) — with asynchronous pages it pages through
+  the whole bucket. `ObjectTableModel` doesn't implement
+  `canFetchMore`/`fetchMore`; the browser calls `loadMore()` near the end
+  of the list. For large flat lists use **`QTableView`**: the tree relays
+  out every row item after each inserted page (47 ms vs. 12 ms at 1M rows).
+- **No `QSortFilterProxyModel` over big listings**: it sorts synchronously
+  on the GUI thread. `ObjectTableModel` sorts itself (thread pool above
+  5 000 rows, applied with `layoutChanged`).
+- **`QAbstractItemModelTester` re-checks the whole model on every change**
+  (30 s with thousands of rows) and calls `fetchMore` inside its own reset
+  handling — use it on small models; `fetchMore` must not insert rows
+  synchronously.
+- **A widget hidden by a `QStackedWidget` loses the focus** (the list
+  swapped for "Loading…" → Backspace dead). Park the focus on the message
+  page and hand it back.
+- **Two shortcuts with the same key are none** — a window shortcut plus a
+  widget shortcut for F5 is "ambiguous" and fires neither.
+- **Theme names are `Dark` / `Light` / `System`**; anything else paints
+  dark.
+- **Plural forms need `translations/qbucket_en.ts`** (plurals only, loaded
+  before the locale's file), or English shows "1 object(s)". New `%n`
+  strings: run `update_translations`, fill both `.ts` files.
 - **The tab-bar base ignores the palette.** With `setDocumentMode(true)`
   the style paints the tab bar's base line in a fixed `#393e43` in both
   themes, and `QTabWidget::pane { border-top }` has no effect. The QSS
@@ -240,10 +288,11 @@ QBucket almost always runs against **production data**. Robustness beats
 convenience and speed: **check once too often rather than once too
 little.** Full rules in `PLAN.md` §12; the ones every change must respect:
 
-- **One mutation gate:** every write/delete/copy/config change goes through
-  `OperationController` (read-only accounts, environment marker,
-  confirmation, journal, verification). The UI never calls the library's
-  mutating API directly.
+- **One mutation gate:** every write/delete/copy/config change is a `Job`
+  of the `OperationController` (read-only accounts, capabilities,
+  environment marker, confirmation, journal, verification). The UI never
+  calls the library's mutating API directly — `tools/check-mutation-gate.sh`
+  (ctest `mutation_gate`) fails on such calls outside `src/controllers/`.
 - **Dynamic capability safeguard** (`PLAN.md` §3.3): features are probed
   read-only on connect / bucket open; an `Unsupported` feature makes the
   action impossible (library short-circuit, `OperationController`
@@ -319,6 +368,12 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
 - Path-style vs. virtual-hosted is per provider preset, overridable per
   account. Dotted bucket names need path-style over TLS.
 - ETags are quoted and only equal the MD5 for single-part, non-KMS objects.
+- **CopyObject with `x-amz-metadata-directive: COPY` does not keep the
+  storage class** (the copy lands in the default class) and never copies
+  ACLs. Pass the class along; compare size + (single-part) ETag before
+  deleting a source.
+- Hetzner copies between buckets of one project, although its docs say
+  otherwise (devlog 005; `it_s3_backend crossBucketCopy`).
 - "Folders" are prefixes; a `prefix/` marker object may or may not exist.
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.

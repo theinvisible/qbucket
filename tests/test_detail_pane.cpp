@@ -42,7 +42,7 @@ class TestDetailPane : public QObject {
 private slots:
     void initTestCase()
     {
-        m_theme.apply(QStringLiteral("light"));
+        m_theme.apply(QStringLiteral("Light"));
     }
 
     void init()
@@ -164,10 +164,10 @@ private slots:
         view.show();
         m_server->clearRequests();
         QVERIFY(!view.grab().isNull());
-        m_theme.apply(QStringLiteral("dark"));
+        m_theme.apply(QStringLiteral("Dark"));
         QVERIFY(!view.grab().isNull());
         QCOMPARE(m_server->requestCount(), 0);
-        m_theme.apply(QStringLiteral("light"));
+        m_theme.apply(QStringLiteral("Light"));
     }
 
 private:

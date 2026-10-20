@@ -20,6 +20,11 @@ namespace {
 void installTranslators()
 {
     // Keep the translators alive for the application's lifetime.
+    // English plural forms first ("1 object", not "1 object(s)"), for every
+    // language without its own file; a translation installed later wins.
+    static QTranslator plurals;
+    if (plurals.load(QStringLiteral(":/i18n/qbucket_en")))
+        QApplication::installTranslator(&plurals);
     static QTranslator appTranslator;
     if (appTranslator.load(QLocale(), QStringLiteral("qbucket"),
                            QStringLiteral("_"), QStringLiteral(":/i18n")))

@@ -638,7 +638,19 @@ Hetzner (one region available; the others per Hetzner's docs),
 all unit tests green, the Hetzner capability matrix is checked in, and
 `s3ls` lists a Hetzner bucket from a standalone library build.
 
-### M2 — Browser UI — **L** (1 week)
+### M2 — Browser UI — **L** (1 week) — ✅ done (devlog 005)
+
+Implemented in 12 stages on `main`; changes against the text below: the
+model sorts and filters itself (no proxy — a synchronous proxy sort of
+100k rows blocks the GUI); paging is the browser's call (`loadMore`),
+because `QTreeView` calls `fetchMore` from every layout pass; the object
+list is a `QTableView`; Ctrl+V (paste = copy / move) moves to M4 with the
+object operations, Ctrl+C copies keys / `s3://` URIs; renaming objects
+above 5 GiB waits for UploadPartCopy (M3/M4); the Versions view stays
+disabled until M5. The §13.5 M2 items (capability enforcement and page,
+re-validation, `OperationController`, read-only + environment marker,
+plan / preview / verify for delete and rename, compact model, `bench/`)
+are in.
 
 - `AccountTreeModel` (accounts → buckets, lazy), "add external bucket"
 - `ObjectTableModel` with `canFetchMore`/`fetchMore` (1000 keys per page),
@@ -946,6 +958,22 @@ release time:
 - 2026-10-20 — Object keys with `.` / `..` path segments are **refused**:
   QNAM normalises them on the wire, the request would address another
   object.
+- 2026-10-20 — **Every mutation is a `Job`** of the `OperationController`
+  (plan → preview → execute → verify → report); destructive jobs decide on
+  capability results younger than a minute (probing first), a failed
+  probe refuses. Production accounts need an explicit second tick, scopes
+  above 1 000 objects a typed name. Bulk plans live in on-disk plan files.
+- 2026-10-20 — **Delete** uses DeleteObjects only where `BatchDelete` is
+  confirmed (profile), single deletes otherwise; verification re-lists and
+  checks again after 3 s and 10 s before reporting leftovers.
+- 2026-10-20 — **Rename** = per object CopyObject with
+  `x-amz-copy-source-if-match` and the storage class, HEAD of the copy,
+  then DeleteObject; never overwrites; > 5 GiB waits for UploadPartCopy.
+- 2026-10-20 — Object list: **own sort / filter in the model, `QTableView`,
+  browser-driven paging** (see M2). English plural forms ship as a
+  plurals-only translation.
+- 2026-10-20 — Hetzner: **CrossBucketCopy is Supported** in the profile —
+  verified by writing (devlog 005), against Hetzner's own page.
 
 ## 11. Open questions
 
