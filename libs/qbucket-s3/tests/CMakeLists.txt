@@ -42,12 +42,12 @@ endfunction()
 # strictness defines (keywords on, implicit casts allowed). The strict side is
 # test_public_headers itself.
 add_library(qbucket_s3_headers_relaxed OBJECT public_headers_relaxed.cpp)
-target_link_libraries(qbucket_s3_headers_relaxed PRIVATE qbucket::s3)
+target_link_libraries(qbucket_s3_headers_relaxed PRIVATE qbucket::s3 qbucket::s3_transfer)
 qbucket_s3_apply_warnings(qbucket_s3_headers_relaxed)
 
 qbucket_s3_add_test(test_public_headers
     SOURCES test_public_headers.cpp
-    LIBS    qbucket_s3_headers_relaxed
+    LIBS    qbucket_s3_headers_relaxed qbucket::s3_transfer
 )
 
 # --- Unit tests ----------------------------------------------------------------
@@ -96,6 +96,12 @@ qbucket_s3_add_test(test_s3client_multipart
     SOURCES test_s3client_multipart.cpp
     LIBS    qbucket::s3_testsupport
 )
+
+# --- Transfers (qbucket::s3_transfer) ------------------------------------------
+qbucket_s3_add_test(test_part_planner         SOURCES test_part_planner.cpp         LIBS qbucket::s3_transfer)
+qbucket_s3_add_test(test_hasher               SOURCES test_hasher.cpp               LIBS qbucket::s3_transfer)
+qbucket_s3_add_test(test_adaptive_concurrency SOURCES test_adaptive_concurrency.cpp LIBS qbucket::s3_transfer)
+qbucket_s3_add_test(test_resume_store         SOURCES test_resume_store.cpp         LIBS qbucket::s3_transfer)
 
 # --- Integration tests (opt-in) --------------------------------------------------
 # it_s3_backend runs against whatever QBUCKET_IT_* in the environment points at

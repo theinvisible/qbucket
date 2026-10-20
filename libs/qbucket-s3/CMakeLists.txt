@@ -25,7 +25,7 @@ option(QBUCKET_S3_WARNINGS_AS_ERRORS  "Treat compiler warnings as errors"       
 set(QBUCKET_S3_SANITIZE "" CACHE STRING
     "Sanitizers for GCC/Clang: empty, 'address,undefined' or 'thread'")
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Network)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Network Concurrent)
 
 include(GNUInstallDirs)
 include(GenerateExportHeader)
@@ -144,6 +144,42 @@ target_include_directories(qbucket_s3
 target_link_libraries(qbucket_s3 PUBLIC Qt6::Core Qt6::Network)
 qbucket_s3_apply_build_options(qbucket_s3)
 
+# --- qbucket::s3_transfer ----------------------------------------------------
+# Transfers on top of the public Session API: part planning, hashing,
+# adaptive concurrency, resume persistence, uploader / downloader / copier.
+add_library(qbucket_s3_transfer ${_s3_lib_type}
+    include/qbucket/s3/transfer/AdaptiveConcurrency.h
+    include/qbucket/s3/transfer/Hasher.h
+    include/qbucket/s3/transfer/JsonFileResumeStore.h
+    include/qbucket/s3/transfer/PartPlanner.h
+    include/qbucket/s3/transfer/ResumeStore.h
+    src/transfer/AdaptiveConcurrency.cpp
+    src/transfer/Hasher.cpp
+    src/transfer/PartPlanner.cpp
+    src/transfer/ResumeStore.cpp
+)
+add_library(qbucket::s3_transfer ALIAS qbucket_s3_transfer)
+
+generate_export_header(qbucket_s3_transfer
+    BASE_NAME QBUCKET_S3_TRANSFER
+    EXPORT_FILE_NAME ${_s3_generated_include}/qbucket/s3/transfer/Export.h
+)
+
+set_target_properties(qbucket_s3_transfer PROPERTIES
+    EXPORT_NAME s3_transfer
+    OUTPUT_NAME qbucket-s3-transfer
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+    AUTOMOC ON
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+)
+if(NOT QBUCKET_S3_BUILD_SHARED)
+    target_compile_definitions(qbucket_s3_transfer PUBLIC QBUCKET_S3_TRANSFER_STATIC_DEFINE)
+endif()
+target_link_libraries(qbucket_s3_transfer PUBLIC qbucket::s3 Qt6::Core Qt6::Concurrent)
+qbucket_s3_apply_build_options(qbucket_s3_transfer)
+
 # --- qbucket::s3_testsupport -------------------------------------------------
 # FakeS3Server for this library's tests and for consumers' own tests. Always
 # static: it is test code, and that spares it an export macro of its own.
@@ -179,7 +215,7 @@ endif()
 if(QBUCKET_S3_INSTALL)
     include(CMakePackageConfigHelpers)
 
-    install(TARGETS qbucket_s3 qbucket_s3_testsupport
+    install(TARGETS qbucket_s3 qbucket_s3_transfer qbucket_s3_testsupport
         EXPORT QBucketS3Targets
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -86,6 +86,15 @@ version bump may break the API.
   objects with data, multipart, ranges, part numbers, conditional writes,
   copies, listings, scripted faults, a discard mode for huge uploads.
   `FakeS3Server::setRecordBodies()`.
+- `qbucket::s3_transfer` (Qt Concurrent), namespace `qbucket::s3::transfer`:
+  `planParts` / `PartPlan` (64 MiB threshold, parts of at least 8 MiB in
+  whole MiB, within the profile's limits, at most 5 TiB), `hashRange` /
+  `hashRangeNow` (MD5 + optional SHA-256 of a file range on a thread pool,
+  cancellable), ETag helpers (`md5Etag`, `compositeEtag`, `etagPartCount`,
+  `sameEtag`), `AdaptiveConcurrency` (AIMD, one decrease per window),
+  `ResumeStore` with `TransferRecord` / `PartRecord`, and
+  `JsonFileResumeStore` (atomic record, appended part lines, survives a torn
+  last line).
 
 ### Fixed
 
