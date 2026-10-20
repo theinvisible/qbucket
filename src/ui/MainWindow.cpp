@@ -13,6 +13,7 @@
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "controllers/TransferService.h"
+#include "controllers/UploadJob.h"
 #include "ui/AccountSidebar.h"
 #include "ui/CapabilitiesDialog.h"
 #include "ui/LogPanel.h"
@@ -33,6 +34,7 @@
 #include <QButtonGroup>
 #include <QCloseEvent>
 #include <QDockWidget>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
@@ -215,6 +217,15 @@ void MainWindow::updateMutationActions_()
         folder = m_operations->check(here.account, here.bucket, {}, false);
     m_actNewFolder->setEnabled(folder.allowed);
     m_newFolderBtn->setEnabled(folder.allowed);
+    // Uploading may overwrite (after the preview): the account must allow writes.
+    for (QAction* a : {m_actUploadFiles, m_actUploadFolder}) {
+        if (!a)
+            continue;
+        a->setEnabled(folder.allowed);
+        a->setToolTip(folder.allowed ? tr("Upload into s3://%1/%2").arg(here.bucket, here.prefix) : folder.reason);
+    }
+    m_uploadBtn->setEnabled(folder.allowed);
+    m_uploadBtn->setToolTip(folder.allowed ? tr("Upload files or folders to the current location") : folder.reason);
     m_actNewFolder->setToolTip(folder.allowed ? tr("Create a folder here") : folder.reason);
     m_newFolderBtn->setToolTip(folder.allowed ? tr("New folder") : folder.reason);
     // Deleting needs no feature (BatchDelete or one by one) — only the account.
@@ -261,6 +272,39 @@ void MainWindow::deleteSelection_()
     if (items.isEmpty())
         return;
     m_operations->start(new DeleteJob(*account, here.bucket, items, m_operations->planDir()));
+}
+
+void MainWindow::chooseUploadFiles_()
+{
+    auto* dlg = new QFileDialog(this, tr("Upload Files"));
+    dlg->setFileMode(QFileDialog::ExistingFiles);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QFileDialog::filesSelected, this, [this](const QStringList& files) {
+        // Chosen in the dialog: a single file without conflicts goes ahead.
+        startUpload_(files, files.size() != 1);
+    });
+    dlg->open();
+}
+
+void MainWindow::chooseUploadFolder_()
+{
+    auto* dlg = new QFileDialog(this, tr("Upload Folder"));
+    dlg->setFileMode(QFileDialog::Directory);
+    dlg->setOption(QFileDialog::ShowDirsOnly);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QFileDialog::filesSelected, this, [this](const QStringList& dirs) { startUpload_(dirs, true); });
+    dlg->open();
+}
+
+void MainWindow::startUpload_(const QStringList& paths, bool alwaysConfirm)
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket() || paths.isEmpty())
+        return;
+    UploadJob::Options options;
+    options.alwaysConfirm = alwaysConfirm;
+    m_operations->start(new UploadJob(*account, here.bucket, here.prefix, paths, m_operations->planDir(), options));
 }
 
 void MainWindow::newFolder_()
@@ -327,8 +371,20 @@ void MainWindow::showJobReport_(Job* job)
     QStringList details = job->report().failures;
     if (!job->report().verification.isEmpty())
         details.prepend(job->report().verification);
+    details += job->report().notes;
     if (!details.isEmpty())
         box->setDetailedText(details.join(u'\n'));
+    // "Retry Failed": a new upload of exactly the files that failed.
+    if (const auto* up = qobject_cast<const UploadJob*>(job); up && !up->failedItems().isEmpty()) {
+        QPushButton* retry = box->addButton(tr("Retry Failed"), QMessageBox::ActionRole);
+        const QList<UploadJob::Item> items = up->failedItems();
+        const Account account = up->account();
+        const QString bucket = up->bucket();
+        connect(box, &QMessageBox::buttonClicked, this, [this, retry, items, account, bucket](QAbstractButton* b) {
+            if (b == retry && m_operations)
+                m_operations->start(new UploadJob(account, bucket, items, m_operations->planDir()));
+        });
+    }
     // "Retry Failed": a new delete of exactly the keys that failed.
     if (const auto* del = qobject_cast<const DeleteJob*>(job); del && !del->failedKeys().isEmpty()) {
         QPushButton* retry = box->addButton(tr("Retry Failed"), QMessageBox::ActionRole);
@@ -368,6 +424,15 @@ void MainWindow::connectBrowser_()
     m_actNewFolder = m_editMenu->addAction(tr("&New Folder…"), this, &MainWindow::newFolder_);
     m_actNewFolder->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     connect(m_newFolderBtn, &QToolButton::clicked, m_actNewFolder, &QAction::trigger);
+    m_actUploadFiles = m_editMenu->addAction(tr("&Upload Files…"), this, &MainWindow::chooseUploadFiles_);
+    m_actUploadFiles->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_U));
+    m_actUploadFolder = m_editMenu->addAction(tr("Upload F&older…"), this, &MainWindow::chooseUploadFolder_);
+    auto* uploadMenu = new QMenu(m_uploadBtn);
+    uploadMenu->addAction(m_actUploadFiles);
+    uploadMenu->addAction(m_actUploadFolder);
+    m_uploadBtn->setMenu(uploadMenu);
+    m_uploadBtn->setPopupMode(QToolButton::MenuButtonPopup);
+    connect(m_uploadBtn, &QToolButton::clicked, m_actUploadFiles, &QAction::trigger);
     connect(m_browser->deleteAction(), &QAction::triggered, this, &MainWindow::deleteSelection_);
     connect(m_browser->renameAction(), &QAction::triggered, this, &MainWindow::renameSelection_);
     connect(m_deleteBtn, &QToolButton::clicked, m_browser->deleteAction(), &QAction::trigger);

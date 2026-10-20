@@ -5,6 +5,7 @@
 #include "ui/Theme.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -71,6 +72,31 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
         lay->addWidget(list);
     }
 
+    // Targets that exist already, and what to do with them.
+    if (p.conflicts > 0) {
+        auto* head = new QLabel(tr("%n of them exist already:", nullptr, int(p.conflicts)));
+        head->setStyleSheet(QStringLiteral("color: %1;").arg(Theme::warningColor().name()));
+        lay->addWidget(head);
+        auto* conflicts = new QListWidget;
+        conflicts->setObjectName(QStringLiteral("previewConflicts"));
+        conflicts->addItems(p.conflictSamples);
+        if (p.conflicts > p.conflictSamples.size())
+            conflicts->addItem(tr("… and %n more", nullptr, int(p.conflicts - p.conflictSamples.size())));
+        conflicts->setMaximumHeight(140);
+        conflicts->setSelectionMode(QAbstractItemView::NoSelection);
+        lay->addWidget(conflicts);
+        auto* row = new QHBoxLayout;
+        row->addWidget(new QLabel(tr("Existing objects:")));
+        m_policy = new QComboBox;
+        m_policy->setObjectName(QStringLiteral("conflictPolicy"));
+        m_policy->addItem(tr("Skip them"), int(Job::ConflictPolicy::Skip));
+        m_policy->addItem(tr("Overwrite them"), int(Job::ConflictPolicy::Overwrite));
+        m_policy->addItem(tr("Keep both (upload as “name (1)”)"), int(Job::ConflictPolicy::KeepBoth));
+        m_policy->setCurrentIndex(m_policy->findData(int(job->conflictPolicy())));
+        row->addWidget(m_policy, 1);
+        lay->addLayout(row);
+    }
+
     // Consequences.
     const auto warn = [lay](const QString& text, const QColor& color) {
         auto* label = new QLabel(text);
@@ -111,10 +137,13 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
         if (m_answered || !m_job)
             return;
         m_answered = true;
-        if (result == QDialog::Accepted)
+        if (result == QDialog::Accepted) {
+            if (m_policy)
+                m_job->setConflictPolicy(Job::ConflictPolicy(m_policy->currentData().toInt()));
             m_job->confirm();
-        else
+        } else {
             m_job->cancel();
+        }
     });
     // Ended elsewhere (refused, cancelled): nothing left to confirm.
     connect(job, &Job::finished, this, [this] {

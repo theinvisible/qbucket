@@ -15,12 +15,17 @@
 #include "controllers/RenameJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/TransferService.h"
+#include "controllers/UploadJob.h"
 #include "support/FakeKeychainBackend.h"
 
 #include "accounts/AccountStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 
+#include <QCryptographicHash>
+#include <QDir>
+#include <QFile>
 #include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -77,6 +82,9 @@ private slots:
         m_journal = std::make_unique<Journal>(m_dir.filePath(QStringLiteral("journal")));
         m_ops = std::make_unique<OperationController>(m_accounts.get(), m_sessions.get(), m_caps.get(),
                                                       m_journal.get(), m_log.get());
+        m_transfers = std::make_unique<TransferService>(m_dir.filePath(QStringLiteral("transfers")), nullptr);
+        m_ops->setTransfers(m_transfers.get());
+        m_ops->setPlanDir(m_dir.filePath(QStringLiteral("plans")));
 
         if (env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1")) {
             s3::CreateBucketParams params;
@@ -120,7 +128,25 @@ private slots:
             session()->deleteObject(m_bucket, k, QString(), &ctx, [&](const s3::Result<s3::DeleteObjectResult>&) { done = true; });
             QTRY_VERIFY_WITH_TIMEOUT(done, 30000);
         }
+        // Unfinished multipart uploads of this run (a failed upload job).
+        s3::ListMultipartUploadsParams up;
+        up.bucket = m_bucket;
+        up.prefix = m_root;
+        std::optional<s3::Result<s3::ListMultipartUploadsPage>> open;
+        QObject listCtx;
+        session()->listMultipartUploads(up, &listCtx, [&](s3::Result<s3::ListMultipartUploadsPage> r) { open.emplace(std::move(r)); });
+        QTRY_VERIFY_WITH_TIMEOUT(open.has_value(), 30000);
+        if (*open) {
+            for (const s3::MultipartUploadInfo& u : (*open)->uploads) {
+                QVERIFY(u.key.startsWith(m_root));
+                QObject ctx;
+                bool done = false;
+                session()->abortMultipartUpload(m_bucket, u.key, u.uploadId, &ctx, [&](const s3::Result<void>&) { done = true; });
+                QTRY_VERIFY_WITH_TIMEOUT(done, 30000);
+            }
+        }
         m_ops.reset();
+        m_transfers.reset();
         m_journal.reset();
         m_caps.reset();
         m_sessions.reset();
@@ -187,6 +213,62 @@ private slots:
         }
     }
 
+    // A folder tree with an empty folder and a large file (multipart;
+    // QBUCKET_IT_UPLOAD_MIB, default 70), then the same again: everything
+    // exists, nothing is overwritten unasked.
+    void uploadAFolder()
+    {
+        const QString local = m_dir.filePath(QStringLiteral("upload/tree ä"));
+        QDir().mkpath(local + QStringLiteral("/sub/deeper"));
+        QDir().mkpath(local + QStringLiteral("/empty"));
+        QStringList small;
+        for (const QString& rel : {QStringLiteral("a.txt"), QStringLiteral("sub/b c.txt"), QStringLiteral("sub/deeper/ü+%.bin")}) {
+            QFile f(local + u'/' + rel);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write(rel.toUtf8().repeated(100));
+            small.append(rel);
+        }
+        bool ok = false;
+        const qint64 mib = qEnvironmentVariableIntValue("QBUCKET_IT_UPLOAD_MIB", &ok);
+        const qint64 bigSize = (ok && mib > 0 ? mib : 70) * 1024 * 1024 + 17;
+        QByteArray chunk(qsizetype(1024) * 1024, Qt::Uninitialized);
+        for (qsizetype i = 0; i < chunk.size(); ++i)
+            chunk[i] = char((i * 31 + 7) & 0xFF);
+        {
+            QFile f(local + QStringLiteral("/big.bin"));
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            for (qint64 written = 0; written < bigSize;) {
+                const qint64 n = std::min<qint64>(chunk.size(), bigSize - written);
+                QCOMPARE(f.write(chunk.constData(), n), n);
+                written += n;
+            }
+        }
+        const QString target = m_root + QStringLiteral("uploaded/");
+        auto* job = new UploadJob(m_account, m_bucket, target, {local}, m_ops->planDir(), {});
+        run(job);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().succeeded, small.size() + 2);   // + big.bin + the empty folder
+        qInfo().noquote() << job->report().verification;
+        const QString base = target + QStringLiteral("tree ä/");
+        for (const QString& rel : small)
+            QVERIFY2(exists(base + rel), qPrintable(rel));
+        QVERIFY(exists(base + QStringLiteral("empty/")));
+        std::optional<s3::Result<s3::ObjectMeta>> head;
+        QObject ctx;
+        session()->headObject(m_bucket, base + QStringLiteral("big.bin"), QString(), &ctx,
+                              [&](s3::Result<s3::ObjectMeta> r) { head.emplace(std::move(r)); });
+        QTRY_VERIFY_WITH_TIMEOUT(head.has_value(), 30000);
+        QVERIFY(*head);
+        QCOMPARE((*head)->size, bigSize);
+        QVERIFY((*head)->etag.contains(u'-'));   // multipart
+
+        auto* again = new UploadJob(m_account, m_bucket, target, {local}, m_ops->planDir(), {});
+        run(again);
+        QCOMPARE(again->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(again->report().succeeded, 0);
+        QCOMPARE(again->preview().conflicts, small.size() + 1);
+    }
+
 private:
     bool put(const QString& key, const QByteArray& data)
     {
@@ -241,6 +323,7 @@ private:
     std::unique_ptr<ActivityLog> m_log;
     std::unique_ptr<CapabilityController> m_caps;
     std::unique_ptr<Journal> m_journal;
+    std::unique_ptr<TransferService> m_transfers;
     std::unique_ptr<OperationController> m_ops;
 };
 

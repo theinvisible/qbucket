@@ -30,6 +30,9 @@ public:
     Q_ENUM(Phase)
     enum class Outcome { None, Succeeded, PartlyFailed, Failed, Cancelled, Refused };
     Q_ENUM(Outcome)
+    // What a transfer does with a target that exists already.
+    enum class ConflictPolicy { Skip, Overwrite, KeepBoth };
+    Q_ENUM(ConflictPolicy)
 
     // What the confirmation shows: the exact scope, from a fresh plan.
     struct Preview {
@@ -42,6 +45,10 @@ public:
         QStringList warnings;
         bool permanent = false;  // nothing to recover afterwards (unversioned bucket)
         QString typeToConfirm;   // non-empty: has to be typed to confirm
+        // Transfers: targets that exist already, and a few of them
+        // ("name — here 12 MB, 2026-10-20; there 10 MB, 2026-09-01").
+        qint64 conflicts = 0;
+        QStringList conflictSamples;
     };
     struct Report {
         qint64 succeeded = 0;
@@ -50,6 +57,7 @@ public:
         QStringList failures;    // "key: reason", the first kMaxListed
         QString verification;    // what the verify step found
         bool verified = false;
+        QStringList notes;       // skipped items and why, the first kMaxListed
     };
     static constexpr int kMaxListed = 50;
     // A file / object a transfer is working on right now.
@@ -97,6 +105,9 @@ public:
     void pause();
     void resume();
     [[nodiscard]] bool isPaused() const { return m_paused; }
+    // Chosen in the preview, before confirm().
+    void setConflictPolicy(ConflictPolicy policy) { m_conflictPolicy = policy; }
+    [[nodiscard]] ConflictPolicy conflictPolicy() const { return m_conflictPolicy; }
     [[nodiscard]] bool isCancelled() const { return m_cancelled; }
     [[nodiscard]] bool isConfirmed() const { return m_confirmed; }
 
@@ -149,6 +160,7 @@ private:
     qint64 m_bytesTotal = -1;
     bool m_cancelled = false;
     bool m_paused = false;
+    ConflictPolicy m_conflictPolicy = ConflictPolicy::Skip;
     bool m_confirmed = false;
     OperationController* m_controller = nullptr;
 };

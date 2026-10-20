@@ -70,7 +70,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="313"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="357"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -150,7 +150,7 @@
 <context>
     <name>qbucket::OperationPreviewDialog</name>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="54"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="55"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n object</numerusform>
@@ -158,11 +158,20 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="68"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="69"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="84"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… and %n more</numerusform>
             <numerusform>… and %n more</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="77"/>
+        <source>%n of them exist already:</source>
+        <translation>
+            <numerusform>%n of them exists already:</numerusform>
+            <numerusform>%n of them exist already:</numerusform>
         </translation>
     </message>
 </context>
@@ -182,6 +191,49 @@
         <translation>
             <numerusform>not verified: %n object still under the old name</numerusform>
             <numerusform>not verified: %n objects still under the old name</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::UploadJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/UploadJob.cpp" line="96"/>
+        <source>Upload %n file(s) to s3://%1</source>
+        <translation>
+            <numerusform>Upload %n file to s3://%1</numerusform>
+            <numerusform>Upload %n files to s3://%1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/UploadJob.cpp" line="99"/>
+        <source>Upload %n item(s) to s3://%1/%2</source>
+        <translation>
+            <numerusform>Upload %n item to s3://%1/%2</numerusform>
+            <numerusform>Upload %n items to s3://%1/%2</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/UploadJob.cpp" line="379"/>
+        <source>%n empty folder(s) become folder markers.</source>
+        <translation>
+            <numerusform>%n empty folder becomes a folder marker.</numerusform>
+            <numerusform>%n empty folders become folder markers.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/UploadJob.cpp" line="381"/>
+        <source>%n file(s) or folder(s) are left out (links to folders, unreadable or special files, names too long) — first: %1</source>
+        <translation>
+            <numerusform>%n file or folder is left out (links to folders, unreadable or special files, names too long) — first: %1</numerusform>
+            <numerusform>%n files or folders are left out (links to folders, unreadable or special files, names too long) — first: %1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/UploadJob.cpp" line="795"/>
+        <source>%n file(s) verified by MD5</source>
+        <translation>
+            <numerusform>%n file verified by MD5</numerusform>
+            <numerusform>%n files verified by MD5</numerusform>
         </translation>
     </message>
 </context>

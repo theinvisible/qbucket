@@ -138,9 +138,20 @@ qbucket_add_test(test_operation_controller
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_local_scanner
+    test_local_scanner.cpp
+    qbucket_controllers
+)
+
 qbucket_add_test(test_transfer_service
     test_transfer_service.cpp
     qbucket_controllers
+)
+
+qbucket_add_test(test_upload_job
+    test_upload_job.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
 )
 
 qbucket_add_test(test_create_folder_job

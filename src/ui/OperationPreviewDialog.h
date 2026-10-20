@@ -4,6 +4,7 @@
 #include <QPointer>
 
 class QCheckBox;
+class QComboBox;
 class QLineEdit;
 class QPushButton;
 
@@ -27,6 +28,8 @@ public:
     [[nodiscard]] QPushButton* confirmButton() const { return m_confirm; }
     [[nodiscard]] QCheckBox* productionCheck() const { return m_production; }
     [[nodiscard]] QLineEdit* typedConfirmation() const { return m_typed; }
+    // Transfers with existing targets: what to do with them.
+    [[nodiscard]] QComboBox* conflictPolicy() const { return m_policy; }
 
 private:
     void updateButton_();
@@ -35,6 +38,7 @@ private:
     QPushButton* m_confirm = nullptr;
     QCheckBox* m_production = nullptr;
     QLineEdit* m_typed = nullptr;
+    QComboBox* m_policy = nullptr;
     bool m_answered = false;
 };
 

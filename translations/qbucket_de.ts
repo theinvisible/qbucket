@@ -1223,6 +1223,49 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::LocalScanner</name>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="44"/>
+        <source>the name is too long for S3 (1024 bytes)</source>
+        <translation>der Name ist für S3 zu lang (1024 Bytes)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="75"/>
+        <source>the folder cannot be read</source>
+        <translation>der Ordner lässt sich nicht lesen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="108"/>
+        <source>a link to a folder is not followed</source>
+        <translation>einem Link auf einen Ordner wird nicht gefolgt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="116"/>
+        <source>not found</source>
+        <translation>nicht gefunden</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="120"/>
+        <source>not a regular file</source>
+        <translation>keine normale Datei</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="124"/>
+        <source>the file cannot be read</source>
+        <translation>die Datei lässt sich nicht lesen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="196"/>
+        <source>a drive or root folder cannot be uploaded as a whole</source>
+        <translation>ein Laufwerk oder Stammordner lässt sich nicht als Ganzes hochladen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/LocalScanner.cpp" line="202"/>
+        <source>another file or folder of this name is part of the upload</source>
+        <translation>eine andere Datei oder ein anderer Ordner dieses Namens gehört schon zum Upload</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::LogPanel</name>
     <message>
         <location filename="../src/ui/LogPanel.cpp" line="16"/>
@@ -1233,83 +1276,98 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::MainWindow</name>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="159"/>
+        <location filename="../src/ui/MainWindow.cpp" line="161"/>
         <source>No system keychain available — secrets are kept for this session only (%1).</source>
         <translation>Kein Schlüsselbund verfügbar — geheime Schlüssel werden nur für diese Sitzung gehalten (%1).</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="206"/>
+        <location filename="../src/ui/MainWindow.cpp" line="208"/>
         <source>The operation journal could not be written: %1</source>
         <translation>Das Operationsjournal konnte nicht geschrieben werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="213"/>
-        <location filename="../src/ui/MainWindow.cpp" line="221"/>
+        <location filename="../src/ui/MainWindow.cpp" line="215"/>
+        <location filename="../src/ui/MainWindow.cpp" line="232"/>
         <source>Open a bucket first.</source>
         <translation>Öffne zuerst einen Bucket.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="218"/>
+        <location filename="../src/ui/MainWindow.cpp" line="225"/>
+        <source>Upload into s3://%1/%2</source>
+        <translation>Nach s3://%1/%2 hochladen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="229"/>
         <source>Create a folder here</source>
         <translation>Hier einen Ordner anlegen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="238"/>
+        <location filename="../src/ui/MainWindow.cpp" line="249"/>
         <source>Rename Folder</source>
         <translation>Ordner umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="238"/>
+        <location filename="../src/ui/MainWindow.cpp" line="249"/>
         <source>Rename</source>
         <translation>Umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="239"/>
+        <location filename="../src/ui/MainWindow.cpp" line="250"/>
         <source>New name for “%1”:</source>
         <translation>Neuer Name für „%1“:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="244"/>
+        <location filename="../src/ui/MainWindow.cpp" line="255"/>
         <source>Not renamed: %1</source>
         <translation>Nicht umbenannt: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="273"/>
+        <location filename="../src/ui/MainWindow.cpp" line="279"/>
+        <source>Upload Files</source>
+        <translation>Dateien hochladen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="291"/>
+        <source>Upload Folder</source>
+        <translation>Ordner hochladen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="317"/>
         <source>New Folder</source>
         <translation>Neuer Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="274"/>
+        <location filename="../src/ui/MainWindow.cpp" line="318"/>
         <source>Name of the new folder in s3://%1/%2:</source>
         <translation>Name des neuen Ordners in s3://%1/%2:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="278"/>
+        <location filename="../src/ui/MainWindow.cpp" line="322"/>
         <source>No folder created: %1</source>
         <translation>Kein Ordner angelegt: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="303"/>
+        <location filename="../src/ui/MainWindow.cpp" line="347"/>
         <source>planning</source>
         <translation>wird geplant</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="306"/>
+        <location filename="../src/ui/MainWindow.cpp" line="350"/>
         <source>verifying</source>
         <translation>wird geprüft</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="309"/>
+        <location filename="../src/ui/MainWindow.cpp" line="353"/>
         <source>%1 of %2</source>
         <translation>%1 von %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="310"/>
+        <location filename="../src/ui/MainWindow.cpp" line="354"/>
         <source>running</source>
         <translation>läuft</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="313"/>
+        <location filename="../src/ui/MainWindow.cpp" line="357"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) und %n weitere</numerusform>
@@ -1317,306 +1375,318 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="314"/>
+        <location filename="../src/ui/MainWindow.cpp" line="358"/>
         <source>%1 (%2)</source>
         <translation>%1 (%2)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="334"/>
+        <location filename="../src/ui/MainWindow.cpp" line="379"/>
+        <location filename="../src/ui/MainWindow.cpp" line="390"/>
         <source>Retry Failed</source>
         <translation>Fehlgeschlagene wiederholen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="368"/>
+        <location filename="../src/ui/MainWindow.cpp" line="424"/>
         <source>&amp;New Folder…</source>
         <translation>&amp;Neuer Ordner…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="407"/>
+        <location filename="../src/ui/MainWindow.cpp" line="427"/>
+        <source>&amp;Upload Files…</source>
+        <translation>Dateien &amp;hochladen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="429"/>
+        <source>Upload F&amp;older…</source>
+        <translation>&amp;Ordner hochladen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="472"/>
         <source>What “%1” supports has changed — see Tools → Server Capabilities.</source>
         <translation>Was „%1“ unterstützt, hat sich geändert — siehe Extras → Server-Fähigkeiten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="491"/>
+        <location filename="../src/ui/MainWindow.cpp" line="556"/>
         <source>&amp;File</source>
         <translation>&amp;Datei</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="492"/>
+        <location filename="../src/ui/MainWindow.cpp" line="557"/>
         <source>Add &amp;Account…</source>
         <translation>&amp;Konto hinzufügen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="495"/>
+        <location filename="../src/ui/MainWindow.cpp" line="560"/>
         <source>&amp;Quit</source>
         <translation>&amp;Beenden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="498"/>
+        <location filename="../src/ui/MainWindow.cpp" line="563"/>
         <source>&amp;Edit</source>
         <translation>&amp;Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="501"/>
+        <location filename="../src/ui/MainWindow.cpp" line="566"/>
         <source>&amp;View</source>
         <translation>&amp;Ansicht</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="504"/>
+        <location filename="../src/ui/MainWindow.cpp" line="569"/>
         <source>&amp;Folders</source>
         <translation>&amp;Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="505"/>
+        <location filename="../src/ui/MainWindow.cpp" line="570"/>
         <source>F&amp;lat Listing</source>
         <translation>&amp;Flache Liste</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="506"/>
+        <location filename="../src/ui/MainWindow.cpp" line="571"/>
         <source>&amp;Versions</source>
         <translation>&amp;Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="526"/>
+        <location filename="../src/ui/MainWindow.cpp" line="591"/>
         <source>&amp;Back</source>
         <translation>&amp;Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="528"/>
+        <location filename="../src/ui/MainWindow.cpp" line="593"/>
         <source>&amp;Forward</source>
         <translation>&amp;Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="530"/>
+        <location filename="../src/ui/MainWindow.cpp" line="595"/>
         <source>&amp;Up One Level</source>
         <translation>Eine Ebene &amp;nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="532"/>
+        <location filename="../src/ui/MainWindow.cpp" line="597"/>
         <source>&amp;Refresh</source>
         <translation>&amp;Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="534"/>
+        <location filename="../src/ui/MainWindow.cpp" line="599"/>
         <source>&amp;Go to Path…</source>
         <translation>&amp;Gehe zu Pfad…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="540"/>
+        <location filename="../src/ui/MainWindow.cpp" line="605"/>
         <source>&amp;Theme</source>
         <translation>&amp;Design</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="542"/>
+        <location filename="../src/ui/MainWindow.cpp" line="607"/>
         <source>&amp;Dark</source>
         <translation>&amp;Dunkel</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="543"/>
+        <location filename="../src/ui/MainWindow.cpp" line="608"/>
         <source>&amp;Light</source>
         <translation>&amp;Hell</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="544"/>
+        <location filename="../src/ui/MainWindow.cpp" line="609"/>
         <source>Follow &amp;System</source>
         <translation>&amp;System folgen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="563"/>
+        <location filename="../src/ui/MainWindow.cpp" line="628"/>
         <source>&amp;Tools</source>
         <translation>E&amp;xtras</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="564"/>
+        <location filename="../src/ui/MainWindow.cpp" line="629"/>
         <source>Server &amp;Capabilities…</source>
         <translation>Server-&amp;Fähigkeiten…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="567"/>
+        <location filename="../src/ui/MainWindow.cpp" line="632"/>
         <source>&amp;Settings…</source>
         <translation>&amp;Einstellungen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="571"/>
+        <location filename="../src/ui/MainWindow.cpp" line="636"/>
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="572"/>
+        <location filename="../src/ui/MainWindow.cpp" line="637"/>
         <source>&amp;About QBucket…</source>
         <translation>&amp;Über QBucket…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="573"/>
+        <location filename="../src/ui/MainWindow.cpp" line="638"/>
         <source>About &amp;Qt…</source>
         <translation>Über &amp;Qt…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="581"/>
+        <location filename="../src/ui/MainWindow.cpp" line="646"/>
         <source>Main</source>
         <translation>Haupt</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="600"/>
+        <location filename="../src/ui/MainWindow.cpp" line="665"/>
         <source>Upload</source>
         <translation>Hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="602"/>
+        <location filename="../src/ui/MainWindow.cpp" line="228"/>
+        <location filename="../src/ui/MainWindow.cpp" line="667"/>
         <source>Upload files or folders to the current location</source>
         <translation>Dateien oder Ordner an den aktuellen Ort hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="606"/>
+        <location filename="../src/ui/MainWindow.cpp" line="671"/>
         <source>Download the selection</source>
         <translation>Auswahl herunterladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="219"/>
-        <location filename="../src/ui/MainWindow.cpp" line="610"/>
+        <location filename="../src/ui/MainWindow.cpp" line="230"/>
+        <location filename="../src/ui/MainWindow.cpp" line="675"/>
         <source>New folder</source>
         <translation>Neuer Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="614"/>
+        <location filename="../src/ui/MainWindow.cpp" line="679"/>
         <source>Delete the selection</source>
         <translation>Auswahl löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="620"/>
+        <location filename="../src/ui/MainWindow.cpp" line="685"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="624"/>
+        <location filename="../src/ui/MainWindow.cpp" line="689"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="628"/>
+        <location filename="../src/ui/MainWindow.cpp" line="693"/>
         <source>Up one level</source>
         <translation>Eine Ebene nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="632"/>
+        <location filename="../src/ui/MainWindow.cpp" line="697"/>
         <source>Refresh</source>
         <translation>Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="640"/>
+        <location filename="../src/ui/MainWindow.cpp" line="705"/>
         <source>Filter this folder…</source>
         <translation>Diesen Ordner filtern…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="659"/>
+        <location filename="../src/ui/MainWindow.cpp" line="724"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="660"/>
+        <location filename="../src/ui/MainWindow.cpp" line="725"/>
         <source>Flat</source>
         <translation>Flach</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="661"/>
+        <location filename="../src/ui/MainWindow.cpp" line="726"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="677"/>
+        <location filename="../src/ui/MainWindow.cpp" line="742"/>
         <source>Not available yet</source>
         <translation>Noch nicht verfügbar</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="680"/>
+        <location filename="../src/ui/MainWindow.cpp" line="745"/>
         <source>Folders: browse by prefix · Flat: every key below the current prefix · Versions: all object versions</source>
         <translation>Ordner: nach Präfix navigieren · Flach: alle Keys unterhalb des aktuellen Präfixes · Versionen: alle Objektversionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="686"/>
+        <location filename="../src/ui/MainWindow.cpp" line="751"/>
         <source>Toggle light / dark</source>
         <translation>Hell / dunkel umschalten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="693"/>
+        <location filename="../src/ui/MainWindow.cpp" line="758"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="766"/>
-        <location filename="../src/ui/MainWindow.cpp" line="773"/>
+        <location filename="../src/ui/MainWindow.cpp" line="831"/>
+        <location filename="../src/ui/MainWindow.cpp" line="838"/>
         <source>Transfers</source>
         <translation>Übertragungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="773"/>
+        <location filename="../src/ui/MainWindow.cpp" line="838"/>
         <source>No transfers.</source>
         <translation>Keine Übertragungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="774"/>
+        <location filename="../src/ui/MainWindow.cpp" line="839"/>
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="781"/>
+        <location filename="../src/ui/MainWindow.cpp" line="846"/>
         <source>&amp;Transfers Panel</source>
         <translation>&amp;Übertragungsbereich</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="456"/>
-        <location filename="../src/ui/MainWindow.cpp" line="793"/>
+        <location filename="../src/ui/MainWindow.cpp" line="521"/>
+        <location filename="../src/ui/MainWindow.cpp" line="858"/>
         <source>Not connected</source>
         <translation>Nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="458"/>
-        <location filename="../src/ui/MainWindow.cpp" line="807"/>
+        <location filename="../src/ui/MainWindow.cpp" line="523"/>
+        <location filename="../src/ui/MainWindow.cpp" line="872"/>
         <source>Offline</source>
         <translation>Offline</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="465"/>
+        <location filename="../src/ui/MainWindow.cpp" line="530"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="470"/>
+        <location filename="../src/ui/MainWindow.cpp" line="535"/>
         <source>Refreshing…</source>
         <translation>Wird aktualisiert…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="470"/>
+        <location filename="../src/ui/MainWindow.cpp" line="535"/>
         <source>Online</source>
         <translation>Online</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="474"/>
+        <location filename="../src/ui/MainWindow.cpp" line="539"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="801"/>
+        <location filename="../src/ui/MainWindow.cpp" line="866"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="880"/>
+        <location filename="../src/ui/MainWindow.cpp" line="945"/>
         <source>Account “%1” saved — its secret is kept for this session only.</source>
         <translation>Konto „%1“ gespeichert — sein geheimer Schlüssel wird nur für diese Sitzung gehalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="881"/>
+        <location filename="../src/ui/MainWindow.cpp" line="946"/>
         <source>Account “%1” saved.</source>
         <translation>Konto „%1“ gespeichert.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="888"/>
+        <location filename="../src/ui/MainWindow.cpp" line="953"/>
         <source>About QBucket</source>
         <translation>Über QBucket</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="889"/>
+        <location filename="../src/ui/MainWindow.cpp" line="954"/>
         <source>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;A native browser for S3 and S3-compatible object storage.&lt;/p&gt;&lt;p&gt;Built with Qt %2 Widgets. Licensed under the MIT license.&lt;/p&gt;</source>
         <translation>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;Ein nativer Browser für S3 und S3-kompatiblen Object Storage.&lt;/p&gt;&lt;p&gt;Erstellt mit Qt %2 Widgets. Lizenziert unter der MIT-Lizenz.&lt;/p&gt;</translation>
     </message>
@@ -1878,12 +1948,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::OperationPreviewDialog</name>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="25"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="26"/>
         <source>%1 — %2</source>
         <translation>%1 — %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="54"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="55"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n Objekt</numerusform>
@@ -1891,30 +1961,59 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="56"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="57"/>
         <source>%1, %2</source>
         <translation>%1, %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="68"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="69"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="84"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… und %n weiteres</numerusform>
             <numerusform>… und %n weitere</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="77"/>
+        <source>%n of them exist already:</source>
+        <translation>
+            <numerusform>%n davon existiert bereits:</numerusform>
+            <numerusform>%n davon existieren bereits:</numerusform>
+        </translation>
+    </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="84"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="89"/>
+        <source>Existing objects:</source>
+        <translation>Vorhandene Objekte:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="92"/>
+        <source>Skip them</source>
+        <translation>Überspringen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="93"/>
+        <source>Overwrite them</source>
+        <translation>Überschreiben</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="94"/>
+        <source>Keep both (upload as “name (1)”)</source>
+        <translation>Beide behalten (als „Name (1)“ hochladen)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="110"/>
         <source>This cannot be undone: the bucket keeps no earlier versions.</source>
         <translation>Das lässt sich nicht rückgängig machen: Der Bucket behält keine früheren Versionen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="88"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="114"/>
         <source>This is a production account — I have checked the scope above.</source>
         <translation>Das ist ein Produktivkonto — ich habe den Umfang oben geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="93"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="119"/>
         <source>Type “%1” to confirm:</source>
         <translation>Zur Bestätigung „%1“ eintippen:</translation>
     </message>
@@ -2177,6 +2276,133 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/ui/SettingsDialog.cpp" line="157"/>
         <source>Parts are sent and fetched in parallel up to this limit; when a server signals overload, QBucket halves it and slowly grows it again. New transfer threads apply to connections opened from now on.</source>
         <translation>Teile werden bis zu dieser Grenze parallel gesendet und geholt; meldet ein Server Überlastung, halbiert QBucket sie und erhöht sie dann langsam wieder. Neue Übertragungs-Threads gelten für Verbindungen, die ab jetzt geöffnet werden.</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::UploadJob</name>
+    <message numerus="yes">
+        <location filename="../src/controllers/UploadJob.cpp" line="96"/>
+        <source>Upload %n file(s) to s3://%1</source>
+        <translation>
+            <numerusform>%n Datei nach s3://%1 hochladen</numerusform>
+            <numerusform>%n Dateien nach s3://%1 hochladen</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="98"/>
+        <source>Upload “%1” to s3://%2/%3</source>
+        <translation>„%1“ nach s3://%2/%3 hochladen</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/UploadJob.cpp" line="99"/>
+        <source>Upload %n item(s) to s3://%1/%2</source>
+        <translation>
+            <numerusform>%n Element nach s3://%1/%2 hochladen</numerusform>
+            <numerusform>%n Elemente nach s3://%1/%2 hochladen</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="151"/>
+        <source>%1: not found</source>
+        <translation>%1: nicht gefunden</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="165"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="203"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="363"/>
+        <source>The plan could not be written: %1</source>
+        <translation>Der Plan konnte nicht geschrieben werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="242"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="310"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="510"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="548"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="575"/>
+        <source>Not connected.</source>
+        <translation>Nicht verbunden.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="266"/>
+        <source>Could not list “%1”: %2</source>
+        <translation>„%1“ ließ sich nicht auflisten: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="325"/>
+        <source>Could not look up “%1”: %2</source>
+        <translation>„%1“ ließ sich nicht abfragen: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="345"/>
+        <source>%1 — here %2; there %3</source>
+        <translation>%1 — hier %2; dort %3</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="373"/>
+        <source>Upload</source>
+        <translation>Hochladen</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/UploadJob.cpp" line="379"/>
+        <source>%n empty folder(s) become folder markers.</source>
+        <translation>
+            <numerusform>%n leerer Ordner wird als Ordnermarker angelegt.</numerusform>
+            <numerusform>%n leere Ordner werden als Ordnermarker angelegt.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/UploadJob.cpp" line="381"/>
+        <source>%n file(s) or folder(s) are left out (links to folders, unreadable or special files, names too long) — first: %1</source>
+        <translation>
+            <numerusform>%n Datei oder Ordner bleibt außen vor (Links auf Ordner, unlesbare oder besondere Dateien, zu lange Namen) — erste: %1</numerusform>
+            <numerusform>%n Dateien oder Ordner bleiben außen vor (Links auf Ordner, unlesbare oder besondere Dateien, zu lange Namen) — erste: %1</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="392"/>
+        <source>The bucket keeps versions: overwritten objects stay as earlier versions.</source>
+        <translation>Der Bucket behält Versionen: Überschriebene Objekte bleiben als frühere Versionen erhalten.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="394"/>
+        <source>Overwriting replaces those objects for good: the bucket keeps no versions.</source>
+        <translation>Überschreiben ersetzt diese Objekte endgültig: Der Bucket behält keine Versionen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="472"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="598"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="621"/>
+        <source>exists already</source>
+        <translation>existiert bereits</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="535"/>
+        <source>appeared on the server after the plan; not overwritten unconfirmed</source>
+        <translation>ist nach dem Plan auf dem Server aufgetaucht; ohne Bestätigung nicht überschrieben</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="537"/>
+        <location filename="../src/controllers/UploadJob.cpp" line="680"/>
+        <source>appeared on the server meanwhile</source>
+        <translation>ist inzwischen auf dem Server aufgetaucht</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="789"/>
+        <source>nothing to upload</source>
+        <translation>nichts hochzuladen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/UploadJob.cpp" line="791"/>
+        <source>%1 verified by MD5, %2 by size only (the server&apos;s ETag is no MD5 for them)</source>
+        <translation>%1 per MD5 geprüft, %2 nur über die Größe (deren ETag ist beim Server kein MD5)</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/UploadJob.cpp" line="795"/>
+        <source>%n file(s) verified by MD5</source>
+        <translation>
+            <numerusform>%n Datei per MD5 geprüft</numerusform>
+            <numerusform>%n Dateien per MD5 geprüft</numerusform>
+        </translation>
     </message>
 </context>
 </TS>

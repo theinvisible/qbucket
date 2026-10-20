@@ -54,6 +54,8 @@ add_library(qbucket_controllers STATIC
     controllers/Job.cpp
     controllers/Journal.h
     controllers/Journal.cpp
+    controllers/LocalScanner.h
+    controllers/LocalScanner.cpp
     controllers/OperationController.h
     controllers/OperationController.cpp
     controllers/PlanFile.h
@@ -70,6 +72,8 @@ add_library(qbucket_controllers STATIC
     controllers/SettingsController.cpp
     controllers/TransferService.h
     controllers/TransferService.cpp
+    controllers/UploadJob.h
+    controllers/UploadJob.cpp
 )
 target_include_directories(qbucket_controllers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_controllers

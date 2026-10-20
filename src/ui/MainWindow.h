@@ -69,6 +69,10 @@ private:
     void updateMutationActions_();
     void newFolder_();
     void deleteSelection_();
+    void chooseUploadFiles_();
+    void chooseUploadFolder_();
+    // Uploads local files / folders into the current location.
+    void startUpload_(const QStringList& paths, bool alwaysConfirm);
     void renameSelection_();
     void restoreWindowState_();
     void saveWindowState_();
@@ -112,6 +116,8 @@ private:
     QAction*      m_actThemeSystem  = nullptr;
     QAction*      m_actCapabilities = nullptr;
     QAction*      m_actNewFolder    = nullptr;
+    QAction*      m_actUploadFiles  = nullptr;
+    QAction*      m_actUploadFolder = nullptr;
     QAction*      m_actSettings     = nullptr;
     QAction*      m_actAbout        = nullptr;
     QAction*      m_actAboutQt      = nullptr;

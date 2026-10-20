@@ -21,8 +21,19 @@ class PlanFile : public QObject {
     Q_OBJECT
 
 public:
+    // Fresh: a new, empty plan (a leftover file is removed). Existing: the
+    // records already in the file (written by a worker, e.g. a directory
+    // scan) — `records` of them.
+    enum class Mode { Fresh, Existing };
+
     explicit PlanFile(const QString& path, QObject* parent = nullptr);
+    PlanFile(const QString& path, Mode mode, qint64 records, QObject* parent = nullptr);
     ~PlanFile() override;
+
+    // The on-disk form of one record (with the line break) and back — for
+    // workers that write plan files themselves.
+    [[nodiscard]] static QByteArray encodeRecord(const QStringList& fields);
+    [[nodiscard]] static QStringList decodeRecord(const QByteArray& line);
 
     [[nodiscard]] QString path() const { return m_path; }
     [[nodiscard]] qint64 count() const { return m_count; }
