@@ -131,6 +131,10 @@ private slots:
                                                       m_journal.get(), m_log.get());
         QVERIFY(m_h->sessions->session(m_h->account.id));
         QTRY_VERIFY(m_caps->isLoaded(m_h->account.id));
+        // The server probe started with the session must be over before a
+        // test counts requests (slow runners: it arrived mid-test).
+        QTRY_VERIFY_WITH_TIMEOUT(m_caps->serverSet(m_h->account.id).probedAt.isValid()
+                                     && !m_caps->isProbing(m_h->account.id), 10000);
     }
 
     void cleanup()
