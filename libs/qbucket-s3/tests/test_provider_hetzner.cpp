@@ -1,8 +1,10 @@
+#include "core/ErrorMapping.h"
 #include "http/S3Uri.h"
 
 #include <qbucket/s3/providers/HetznerProfile.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
 
+#include <QFile>
 #include <QtTest>
 
 using namespace qbucket::s3;
@@ -39,6 +41,42 @@ private Q_SLOTS:
         QCOMPARE(p.locationConstraintFor(region), region);
         QCOMPARE(p.regionFromLocationConstraint(region), region);
         QVERIFY(!p.endpointFor(QString()).isValid());
+    }
+
+    void sporadicAccessDeniedIsRetryable()
+    {
+        QFile f(QStringLiteral(TEST_DATA_DIR "/hetzner/error-access-denied-sporadic.xml"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        Error e = errorFromResponse(403, f.readAll());
+        HetznerProfile().mapError(e);
+        QVERIFY(e.retryable);
+        QCOMPARE(e.category, ErrorCategory::NotPermitted);   // stays a permission error
+
+        Error head = errorFromResponse(403, QByteArray());   // HEAD: no body at all
+        HetznerProfile().mapError(head);
+        QVERIFY(head.retryable);
+
+        Error explained = errorFromResponse(403, "<Error><Code>AccessDenied</Code>"
+                                                 "<Message>Bucket policy denies it</Message></Error>");
+        HetznerProfile().mapError(explained);
+        QVERIFY(!explained.retryable);
+        Error signature = errorFromResponse(403, "<Error><Code>SignatureDoesNotMatch</Code></Error>");
+        HetznerProfile().mapError(signature);
+        QVERIFY(!signature.retryable);
+    }
+
+    void encryptionReadProbeDoesNotUnlockWrites()
+    {
+        CapabilityEntry e{CapabilityState::Supported, CapabilitySource::Probed,
+                          QDateTime::currentDateTimeUtc(), 404,
+                          QStringLiteral("ServerSideEncryptionConfigurationNotFoundError"), false, 0};
+        HetznerProfile().reviewProbe(Feature::BucketEncryption, e);
+        QCOMPARE(e.state, CapabilityState::Unsupported);
+        QCOMPARE(HetznerProfile().capabilities().state(Feature::BucketEncryption), CapabilityState::Unsupported);
+
+        CapabilityEntry cors{CapabilityState::Supported, CapabilitySource::Probed, {}, 404, {}, false, 0};
+        HetznerProfile().reviewProbe(Feature::Cors, cors);
+        QCOMPARE(cors.state, CapabilityState::Supported);
     }
 
     void virtualHostedRequests()

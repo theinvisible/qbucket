@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8"?><Error><Code>NoSuchBucketPolicy</Code><Message>The bucket policy does not exist</Message><BucketName>qbucket-it-test</BucketName><RequestId>tx00000e2ce0f36015cc263-006ad731d4-2f652cf7-nbg1-prod1-ceph5</RequestId><HostId>2f652cf7-nbg1-prod1-ceph5-nbg1</HostId></Error>

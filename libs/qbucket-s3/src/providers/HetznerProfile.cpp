@@ -62,4 +62,29 @@ CapabilitySet HetznerProfile::capabilities() const
     return set;
 }
 
+void HetznerProfile::reviewProbe(Feature feature, CapabilityEntry& entry) const
+{
+    // GET ?encryption reaches RGW (404 …NotFoundError: "supported, not set"),
+    // but PUT/DELETE ?encryption are intercepted by Hetzner's proxy — DELETE
+    // was executed as DeleteBucket (tests/data/hetzner/README.md). The read
+    // answer must not unlock the write.
+    if (feature == Feature::BucketEncryption && entry.state == CapabilityState::Supported) {
+        entry.state = CapabilityState::Unsupported;
+        entry.s3Code = QStringLiteral("ProfileOverride:WritesInterceptedByProxy");
+    }
+}
+
+void HetznerProfile::mapError(Error& error) const
+{
+    // Observed 2026-10-20 on nbg1: 10–30 % of identical, valid requests
+    // answered 403 AccessDenied with an empty <Message> (or, for HEAD, a
+    // bare 403). Retrying is safe for idempotent requests; a genuine denial
+    // simply fails again and keeps its NotPermitted category.
+    if (error.httpStatus == 403 && error.category == ErrorCategory::NotPermitted
+        && (error.code.isEmpty() || error.code == QLatin1String("AccessDenied"))
+        && (error.message.isEmpty() || error.message == QLatin1String("HTTP 403"))) {
+        error.retryable = true;
+    }
+}
+
 } // namespace qbucket::s3

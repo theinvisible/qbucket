@@ -46,6 +46,16 @@ private Q_SLOTS:
         }
     }
 
+    void profileMarkedRetryable()
+    {
+        Error denied = Error::make(ErrorCategory::NotPermitted, QString());
+        denied.httpStatus = 403;
+        QVERIFY(!RetryPolicy::isRetryable(denied, true));
+        denied.retryable = true;
+        QVERIFY(RetryPolicy::isRetryable(denied, true));
+        QVERIFY(!RetryPolicy::isRetryable(denied, false));   // never for non-idempotent requests
+    }
+
     void exponentialBackoffWithFullJitter()
     {
         const RetryPolicy max(fixedRandom(0.999999));

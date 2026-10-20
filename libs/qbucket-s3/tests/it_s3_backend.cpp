@@ -52,8 +52,13 @@ Result<T> await(Start start, int timeoutMs = 60000)
     return std::move(*out);
 }
 
-#define VERIFY_OK(result) \
-    QVERIFY2(result, qPrintable((result) ? QString() : (result).error().toString()))
+// Evaluates `result` exactly once — it is usually a request.
+#define VERIFY_OK(result)                                                                   \
+    do {                                                                                    \
+        const auto& verifyOkResult_ = (result);                                             \
+        QVERIFY2(verifyOkResult_,                                                           \
+                 qPrintable(verifyOkResult_ ? QString() : verifyOkResult_.error().toString())); \
+    } while (false)
 
 // Keys that broke S3 clients before: encoding, Unicode, delimiters, XML.
 QStringList nastyKeys()

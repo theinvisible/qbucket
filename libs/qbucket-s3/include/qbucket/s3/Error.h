@@ -50,6 +50,11 @@ struct QBUCKET_S3_EXPORT Error {
     // the server may or may not have executed it. Never retried blindly.
     bool outcomeUnknown = false;
 
+    // A provider profile marked this failure as worth another attempt
+    // although its category isn't Transient (e.g. Hetzner's sporadic 403s).
+    // Retried for idempotent requests only; the category stays as it is.
+    bool retryable = false;
+
     [[nodiscard]] bool isTransient() const noexcept
     {
         return category == ErrorCategory::Transient;

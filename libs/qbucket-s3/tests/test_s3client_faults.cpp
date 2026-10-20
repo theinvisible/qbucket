@@ -1,6 +1,7 @@
 #include "client/S3Client.h"
 
 #include <qbucket/s3/providers/GenericS3Profile.h>
+#include <qbucket/s3/providers/HetznerProfile.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 
 #include <QElapsedTimer>
@@ -282,6 +283,31 @@ private Q_SLOTS:
         QVERIFY(await<void>([&](auto cb) { client->headBucket(QStringLiteral("moved"), std::move(cb)); }));
         QCOMPARE(plain.requestCount(), 2);
         QVERIFY(plain.requests().last().header("Authorization").contains("/eu-y/s3/"));
+    }
+
+    void hetznerSporadicDenialIsRetried()
+    {
+        FakeS3Server plain;
+        QVERIFY(plain.listen());
+        Matcher any;
+        plain.addRoute(any, {FakeResponse::s3Error(403, "AccessDenied", ""), FakeResponse()});
+        ClientConfig cfg;
+        cfg.endpoint.url = plain.endpointUrl();
+        cfg.endpoint.region = QStringLiteral("nbg1");
+        cfg.profile = std::make_shared<HetznerProfile>();
+        cfg.credentials = std::make_shared<StaticCredentialsProvider>(testCredentials());
+        cfg.retry.baseDelayMs = 1;
+        S3Client client(cfg);
+        QVERIFY(await<void>([&](auto cb) { client.headBucket(QStringLiteral("bkt"), std::move(cb)); }));
+        QCOMPARE(plain.requestCount(), 2);
+
+        // A persistent denial still ends as NotPermitted, after the attempts.
+        plain.clearRoutes();
+        plain.clearRequests();
+        plain.on("", QString(), FakeResponse::s3Error(403, "AccessDenied", ""));
+        const Result<void> r = await<void>([&](auto cb) { client.headBucket(QStringLiteral("bkt"), std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::NotPermitted);
+        QCOMPARE(plain.requestCount(), 4);
     }
 
     void redirectWithoutRegionFails()

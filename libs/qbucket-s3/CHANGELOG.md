@@ -56,6 +56,11 @@ version bump may break the API.
   Unsupported features, `capabilityLearned` from real 501s;
   `ProviderProfile::capabilities()` and `reviewProbe()`.
 
+- `Error::retryable` — a provider profile marks a failure as worth retrying
+  (idempotent requests only, category unchanged). `HetznerProfile` uses it
+  for Hetzner's sporadic empty-message 403s and overrides the misleading
+  `?encryption` read probe.
+
 ### Safety
 
 - Retries only where safe: transient failures of idempotent requests, and

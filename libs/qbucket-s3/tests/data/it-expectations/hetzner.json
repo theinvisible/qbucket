@@ -1,0 +1,26 @@
+{
+    "_comment": "Hetzner Object Storage, location nbg1, 2026-10-20 (Ceph RGW behind a front proxy). Bucket without versioning / object lock, so legal hold and retention can't be told (Unknown). bucket.encryption is overridden to Unsupported by HetznerProfile::reviewProbe: GET ?encryption reaches RGW, but DELETE ?encryption was executed by the proxy as DeleteBucket. Sporadic 403 AccessDenied with an empty message are retried (HetznerProfile::mapError).",
+    "capabilities": {
+        "bucket.acl": "Supported",
+        "bucket.cors": "Supported",
+        "bucket.encryption": "Unsupported",
+        "bucket.lifecycle": "Supported",
+        "bucket.logging": "Unsupported",
+        "bucket.multipart-listing": "Supported",
+        "bucket.notifications": "Unsupported",
+        "bucket.object-lock": "Supported",
+        "bucket.ownership-controls": "Unsupported",
+        "bucket.policy": "Supported",
+        "bucket.policy-status": "Supported",
+        "bucket.public-access-block": "Supported",
+        "bucket.replication": "Unsupported",
+        "bucket.tagging": "Unsupported",
+        "bucket.versioning": "Supported",
+        "bucket.versions-listing": "Supported",
+        "bucket.website": "Unsupported",
+        "object.acl": "Supported",
+        "object.legal-hold": "Unknown",
+        "object.retention": "Unknown",
+        "object.tagging": "Supported"
+    }
+}

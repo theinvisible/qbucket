@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8"?><Error><Code>ServerSideEncryptionConfigurationNotFoundError</Code><Message>The server side encryption configuration was not found</Message><BucketName>qbucket-it-test</BucketName><RequestId>tx00000e1425b5411ee1b79-006ad731d4-188f7842-nbg1-prod1-ceph5</RequestId><HostId>188f7842-nbg1-prod1-ceph5-nbg1</HostId></Error>

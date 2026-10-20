@@ -425,6 +425,16 @@ feature with state, source, time checked, and the raw response code —
 exportable as text for bug reports and for maintaining the provider
 profiles.
 
+**Read probes don't unlock writes** (found on Hetzner, 2026-10-20): a
+provider may answer `GET ?subresource` from its storage layer while a
+front proxy treats `PUT/DELETE ?subresource` it doesn't know as a plain
+bucket operation — Hetzner executed `DELETE /?encryption` as DeleteBucket.
+Destructive configuration writes therefore require confirmed *write*
+support (provider profile or deep probe); profiles override misleading read
+answers via `ProviderProfile::reviewProbe`. Deep probes always put a guard
+object into their scratch bucket first, so a misinterpreted DeleteBucket
+fails with BucketNotEmpty.
+
 **Rule for all future work:** a new feature or operation is only complete
 with its `Feature` entry, its probe (or a documented reason why it's
 write-only), its `requires()` declaration, and tests against a backend that
@@ -560,7 +570,7 @@ updated.
 **Done when:** the empty app starts on Windows and as a Flatpak on Linux,
 theme switches live, CI is green.
 
-### M1 — S3 protocol core — **L** (1–1.5 weeks) — stages 1–14 done (devlog 003), Hetzner run open
+### M1 — S3 protocol core — **L** (1–1.5 weeks) — ✅ done (devlogs 003, 004)
 
 Implemented in 15 stages on `main`; changes against the text below:
 Session API is callback + context (§3 threading); `S3Client` is private;

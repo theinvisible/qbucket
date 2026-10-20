@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="UTF-8"?><Error><Code>ObjectLockConfigurationNotFoundError</Code><Message></Message><BucketName>qbucket-it-test</BucketName><RequestId>tx000003386d4d0e3e12f90-006ad731d4-2f4f48d1-nbg1-prod1-ceph5</RequestId><HostId>2f4f48d1-nbg1-prod1-ceph5-nbg1</HostId></Error>

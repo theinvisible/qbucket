@@ -13,6 +13,8 @@ RetryPolicy::RetryPolicy(RetryOptions options)
 
 bool RetryPolicy::isRetryable(const Error& error, bool idempotent)
 {
+    if (error.retryable && idempotent)
+        return true;
     if (error.category != ErrorCategory::Transient)
         return false;
     if (idempotent)

@@ -45,7 +45,8 @@ convenient):
 ## Status
 
 **M0 (skeleton) done** — devlog 001; verified on Linux in devlog 002.
-**M1 stages 1–14 done** — devlog 003; stage 15 (Hetzner validation) open.
+**M1 done** — devlog 003 (library, accounts), devlog 004 (Hetzner
+validation, nbg1); first CI run pending.
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -74,8 +75,9 @@ What exists:
 - CI: Windows, Linux, ASan/UBSan, clang-tidy, Flatpak, `s3-standalone`
   (static/shared/Windows/ASan+LSan), `s3-integration.yml` (Docker backends).
 
-Next: **M1 stage 15** — Hetzner integration run (one region), fixtures,
-`docs/providers/hetzner.md`; then **M2** (browser UI).
+Provider knowledge: `docs/providers/hetzner.md`.
+
+Next: **M2** (browser UI).
 
 ## Devlog
 
@@ -244,6 +246,11 @@ little.** Full rules in `PLAN.md` §12; the ones every change must respect:
   session tokens.
 - Object-lock governance bypass only per operation with explicit
   confirmation; never implicit.
+- **A read probe never unlocks a write.** PUT/DELETE on a bucket
+  subresource only for features with confirmed *write* support (profile or
+  deep probe). Hetzner's proxy executed `DELETE /?encryption` as
+  DeleteBucket (`docs/providers/hetzner.md`). Write probes only on a scratch
+  bucket that holds a guard object.
 
 ## Performance rules
 

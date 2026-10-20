@@ -18,7 +18,8 @@ struct RetryOptions {
 
 // When to try a failed request again. Pure; thread-safe.
 //
-// Only transient failures are retried, and only when that cannot do harm:
+// Only transient failures (or ones a provider profile marked retryable) are
+// retried, and only when that cannot do harm:
 // idempotent requests always, others only when they provably never reached
 // the server (connection refused, DNS, TLS handshake). A lost reply of a
 // non-idempotent request (outcomeUnknown) is never retried — the caller
