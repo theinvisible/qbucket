@@ -4,9 +4,13 @@
 
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFileDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -42,6 +46,7 @@ SettingsDialog::SettingsDialog(SettingsController* settings, QWidget* parent)
     root->addLayout(body, 1);
 
     addCategory_(tr("Appearance"), buildAppearancePage_());
+    addCategory_(tr("Transfers"), buildTransfersPage_());
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close);
     buttons->setContentsMargins(12, 10, 12, 12);
@@ -98,6 +103,63 @@ QWidget* SettingsDialog::buildAppearancePage_()
     hint->setObjectName(QStringLiteral("emptyState"));
     hint->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     hint->setContentsMargins(0, 0, 0, 0);
+    lay->addWidget(hint);
+
+    lay->addStretch(1);
+    return page;
+}
+
+QWidget* SettingsDialog::buildTransfersPage_()
+{
+    auto* page = new QWidget;
+    page->setObjectName(QStringLiteral("transfersPage"));
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(20, 18, 20, 18);
+
+    auto* form = new QFormLayout;
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+    auto* dirRow = new QHBoxLayout;
+    m_downloadDir = new QLineEdit(m_settings->downloadDirectory());
+    m_downloadDir->setObjectName(QStringLiteral("downloadDirectory"));
+    connect(m_downloadDir, &QLineEdit::editingFinished, this, [this] {
+        m_settings->setDownloadDirectory(m_downloadDir->text());
+        m_downloadDir->setText(m_settings->downloadDirectory());
+    });
+    auto* browse = new QPushButton(tr("Choose…"));
+    connect(browse, &QPushButton::clicked, this, [this] {
+        const QString dir = QFileDialog::getExistingDirectory(this, tr("Download Folder"), m_settings->downloadDirectory());
+        if (dir.isEmpty())
+            return;
+        m_settings->setDownloadDirectory(dir);
+        m_downloadDir->setText(m_settings->downloadDirectory());
+    });
+    dirRow->addWidget(m_downloadDir, 1);
+    dirRow->addWidget(browse);
+    form->addRow(tr("Download folder:"), dirRow);
+
+    m_parallelParts = new QSpinBox;
+    m_parallelParts->setObjectName(QStringLiteral("parallelParts"));
+    m_parallelParts->setRange(SettingsController::kMinParallelParts, SettingsController::kMaxParallelParts);
+    m_parallelParts->setValue(m_settings->transferParallelParts());
+    connect(m_parallelParts, &QSpinBox::valueChanged, m_settings, &SettingsController::setTransferParallelParts);
+    form->addRow(tr("Parallel parts per account:"), m_parallelParts);
+
+    m_threads = new QSpinBox;
+    m_threads->setObjectName(QStringLiteral("transferThreads"));
+    m_threads->setRange(SettingsController::kMinTransferThreads, SettingsController::kMaxTransferThreads);
+    m_threads->setValue(m_settings->transferThreads());
+    connect(m_threads, &QSpinBox::valueChanged, m_settings, &SettingsController::setTransferThreads);
+    form->addRow(tr("Transfer threads per account:"), m_threads);
+    lay->addLayout(form);
+
+    auto* hint = new QLabel(
+        tr("Parts are sent and fetched in parallel up to this limit; when a server signals overload, "
+           "QBucket halves it and slowly grows it again. New transfer threads apply to connections "
+           "opened from now on."));
+    hint->setWordWrap(true);
+    hint->setObjectName(QStringLiteral("emptyState"));
+    hint->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     lay->addWidget(hint);
 
     lay->addStretch(1);

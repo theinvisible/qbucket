@@ -1,5 +1,7 @@
 #include "controllers/SettingsController.h"
 
+#include <algorithm>
+
 #include <QDir>
 #include <QSettings>
 #include <QStandardPaths>
@@ -13,6 +15,15 @@ constexpr auto kKeyBrowseMode     = "ui/browse_mode";
 constexpr auto kKeyWindowGeometry = "ui/window_geometry";
 constexpr auto kKeyWindowState    = "ui/window_state";
 constexpr auto kKeyMainSplitter   = "ui/main_splitter_state";
+constexpr auto kKeyDownloadDir    = "transfers/download_directory";
+constexpr auto kKeyParallelParts  = "transfers/parallel_parts";
+constexpr auto kKeyThreads        = "transfers/threads";
+
+QString systemDownloadDirectory()
+{
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    return dir.isEmpty() ? QDir::homePath() : dir;
+}
 
 QString settingsPath()
 {
@@ -65,6 +76,13 @@ void SettingsController::load_()
     m_windowGeometry    = m_store->value(QLatin1String(kKeyWindowGeometry)).toString();
     m_windowState       = m_store->value(QLatin1String(kKeyWindowState)).toString();
     m_mainSplitterState = m_store->value(QLatin1String(kKeyMainSplitter)).toString();
+    m_downloadDirectory = m_store->value(QLatin1String(kKeyDownloadDir)).toString();
+    if (m_downloadDirectory.isEmpty())
+        m_downloadDirectory = systemDownloadDirectory();
+    m_parallelParts = std::clamp(m_store->value(QLatin1String(kKeyParallelParts), 16).toInt(),
+                                 kMinParallelParts, kMaxParallelParts);
+    m_transferThreads = std::clamp(m_store->value(QLatin1String(kKeyThreads), 4).toInt(),
+                                   kMinTransferThreads, kMaxTransferThreads);
 }
 
 void SettingsController::write_(const QString& key, const QVariant& value)
@@ -89,6 +107,33 @@ void SettingsController::setBrowseMode(const QString& mode)
     m_browseMode = next;
     write_(QString::fromLatin1(kKeyBrowseMode), m_browseMode);
     emit browseModeChanged();
+}
+
+void SettingsController::setDownloadDirectory(const QString& dir)
+{
+    const QString next = dir.trimmed().isEmpty() ? systemDownloadDirectory() : QDir::cleanPath(dir.trimmed());
+    if (m_downloadDirectory == next) return;
+    m_downloadDirectory = next;
+    write_(QString::fromLatin1(kKeyDownloadDir), m_downloadDirectory);
+    emit transferSettingsChanged();
+}
+
+void SettingsController::setTransferParallelParts(int parts)
+{
+    const int next = std::clamp(parts, kMinParallelParts, kMaxParallelParts);
+    if (m_parallelParts == next) return;
+    m_parallelParts = next;
+    write_(QString::fromLatin1(kKeyParallelParts), m_parallelParts);
+    emit transferSettingsChanged();
+}
+
+void SettingsController::setTransferThreads(int threads)
+{
+    const int next = std::clamp(threads, kMinTransferThreads, kMaxTransferThreads);
+    if (m_transferThreads == next) return;
+    m_transferThreads = next;
+    write_(QString::fromLatin1(kKeyThreads), m_transferThreads);
+    emit transferSettingsChanged();
 }
 
 void SettingsController::setWindowGeometry(const QString& base64)

@@ -68,10 +68,12 @@ add_library(qbucket_controllers STATIC
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h
     controllers/SettingsController.cpp
+    controllers/TransferService.h
+    controllers/TransferService.cpp
 )
 target_include_directories(qbucket_controllers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_controllers
-    PUBLIC  qbucket_domain qbucket_accounts qbucket::s3 Qt6::Core
+    PUBLIC  qbucket_domain qbucket_accounts qbucket::s3 qbucket::s3_transfer Qt6::Core
     PRIVATE qbucket::compile_options
 )
 

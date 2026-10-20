@@ -94,6 +94,26 @@ private Q_SLOTS:
         QVERIFY(c.tryAcquire());
     }
 
+    void maximumCanChange()
+    {
+        AdaptiveConcurrency c({8, 1, 16, 1});
+        c.setMaximum(3);
+        QCOMPARE(c.limit(), 3);
+        for (int i = 0; i < 10; ++i) {
+            const auto s = c.tryAcquire();
+            c.release(*s, Outcome::Succeeded);
+        }
+        QCOMPARE(c.limit(), 3);
+        c.setMaximum(5);
+        for (int i = 0; i < 10; ++i) {
+            const auto s = c.tryAcquire();
+            c.release(*s, Outcome::Succeeded);
+        }
+        QCOMPARE(c.limit(), 5);
+        c.setMaximum(0);   // never below the minimum
+        QCOMPARE(c.limit(), 1);
+    }
+
     void sanitisesOptions()
     {
         AdaptiveConcurrency c({0, 0, -3, 0});

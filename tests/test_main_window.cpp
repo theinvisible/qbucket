@@ -1,5 +1,6 @@
 #include "controllers/SettingsController.h"
 #include "ui/MainWindow.h"
+#include "ui/SettingsDialog.h"
 #include "ui/Theme.h"
 #include "ui/ThemeManager.h"
 
@@ -9,6 +10,7 @@
 #include <QDockWidget>
 #include <QFile>
 #include <QLineEdit>
+#include <QSpinBox>
 #include <QStandardPaths>
 #include <QTabBar>
 #include <QToolButton>
@@ -135,6 +137,27 @@ private slots:
     }
 
 private:
+    void transfersSettingsPage()
+    {
+        SettingsController settings;
+        SettingsDialog dlg(&settings);
+        auto* parts = dlg.findChild<QSpinBox*>(QStringLiteral("parallelParts"));
+        auto* threads = dlg.findChild<QSpinBox*>(QStringLiteral("transferThreads"));
+        auto* dir = dlg.findChild<QLineEdit*>(QStringLiteral("downloadDirectory"));
+        QVERIFY(parts && threads && dir);
+        QCOMPARE(dir->text(), settings.downloadDirectory());
+        parts->setValue(8);
+        threads->setValue(2);
+        QCOMPARE(settings.transferParallelParts(), 8);
+        QCOMPARE(settings.transferThreads(), 2);
+        dir->setText(QDir::tempPath());
+        emit dir->editingFinished();
+        QCOMPARE(settings.downloadDirectory(), QDir::cleanPath(QDir::tempPath()));
+        parts->setValue(16);
+        threads->setValue(4);
+        settings.setDownloadDirectory(QString());
+    }
+
     static void saveScreenshot(QWidget& window, const QString& fileName)
     {
         const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");

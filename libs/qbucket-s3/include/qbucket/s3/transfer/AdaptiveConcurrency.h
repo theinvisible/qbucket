@@ -45,6 +45,10 @@ public:
     [[nodiscard]] int inFlight() const { return m_inFlight; }
     [[nodiscard]] const Options& options() const { return m_options; }
 
+    // A new ceiling (e.g. from the settings); the limit follows it down at
+    // once and grows to it as usual.
+    void setMaximum(int max);
+
     // A slot if fewer than limit() are taken.
     [[nodiscard]] std::optional<Slot> tryAcquire();
     void release(Slot slot, Outcome outcome);

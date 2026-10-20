@@ -52,6 +52,12 @@ public:
         bool verified = false;
     };
     static constexpr int kMaxListed = 50;
+    // A file / object a transfer is working on right now.
+    struct ActiveItem {
+        QString name;
+        qint64 done = 0;
+        qint64 total = -1;
+    };
 
     Job(const Account& account, const QString& bucket, QObject* parent = nullptr);
     ~Job() override;
@@ -66,12 +72,21 @@ public:
     [[nodiscard]] QString errorText() const { return m_error; }   // Failed / Refused
     [[nodiscard]] qint64 progressDone() const { return m_done; }
     [[nodiscard]] qint64 progressTotal() const { return m_total; }
+    // Transfers: bytes moved so far / in all (-1: not known).
+    [[nodiscard]] qint64 bytesDone() const { return m_bytesDone; }
+    [[nodiscard]] qint64 bytesTotal() const { return m_bytesTotal; }
+    [[nodiscard]] virtual QList<ActiveItem> activeItems() const { return {}; }
 
     // One line for menus, logs and the progress view.
     [[nodiscard]] virtual QString title() const = 0;
     // Features the operation needs; checked before planning and executing.
     [[nodiscard]] virtual QList<s3::Feature> requiredFeatures() const { return {}; }
     [[nodiscard]] virtual bool isDestructive() const { return true; }
+    // False: the job only reads from the server (a download) — allowed on
+    // read-only accounts. It may still write local files.
+    [[nodiscard]] virtual bool isMutating() const { return true; }
+    // Transfers can pause while executing; everything is kept for resume().
+    [[nodiscard]] virtual bool canPause() const { return false; }
     // False: confirmed by starting it (e.g. creating a folder) — the plan
     // still runs, the preview isn't shown.
     [[nodiscard]] virtual bool needsConfirmation() const { return true; }
@@ -79,6 +94,9 @@ public:
     // The user's answer to the preview.
     void confirm();
     void cancel();
+    void pause();
+    void resume();
+    [[nodiscard]] bool isPaused() const { return m_paused; }
     [[nodiscard]] bool isCancelled() const { return m_cancelled; }
     [[nodiscard]] bool isConfirmed() const { return m_confirmed; }
 
@@ -86,6 +104,7 @@ signals:
     void phaseChanged(qbucket::Job::Phase phase);
     void previewReady();
     void progressChanged();
+    void pausedChanged(bool paused);
     void finished();
 
 protected:
@@ -95,9 +114,12 @@ protected:
     virtual void execute() = 0;   // → executed_()  | finish_()
     virtual void verify() = 0;    // → finish_()
     virtual void onCancel() {}    // stop what runs; then finish_() with what was done
+    virtual void onPause() {}     // no new work; what runs may finish
+    virtual void onResume() {}
 
     void setPreview_(const Preview& preview);
     void setProgress_(qint64 done, qint64 total);
+    void setBytes_(qint64 done, qint64 total);
     void executed_();
     void finish_(const Report& report);
     void fail_(const QString& error);
@@ -123,7 +145,10 @@ private:
     QString m_error;
     qint64 m_done = 0;
     qint64 m_total = 0;
+    qint64 m_bytesDone = 0;
+    qint64 m_bytesTotal = -1;
     bool m_cancelled = false;
+    bool m_paused = false;
     bool m_confirmed = false;
     OperationController* m_controller = nullptr;
 };

@@ -94,6 +94,31 @@ private slots:
         QCOMPARE(s.themeName(), QStringLiteral("Dark"));
         QCOMPARE(s.browseMode(), QStringLiteral("folders"));
     }
+
+    void transferSettings()
+    {
+        SettingsController s;
+        QVERIFY(!s.downloadDirectory().isEmpty());   // the system's download folder
+        QCOMPARE(s.transferParallelParts(), 16);
+        QCOMPARE(s.transferThreads(), 4);
+        QSignalSpy changed(&s, &SettingsController::transferSettingsChanged);
+        s.setTransferParallelParts(1000);
+        QCOMPARE(s.transferParallelParts(), SettingsController::kMaxParallelParts);
+        s.setTransferParallelParts(SettingsController::kMaxParallelParts);
+        QCOMPARE(changed.count(), 1);
+        s.setTransferThreads(0);
+        QCOMPARE(s.transferThreads(), SettingsController::kMinTransferThreads);
+        s.setDownloadDirectory(QStringLiteral("/tmp/x/../downloads/"));
+        QCOMPARE(s.downloadDirectory(), QStringLiteral("/tmp/downloads"));
+        QCOMPARE(changed.count(), 3);
+
+        SettingsController reloaded;
+        QCOMPARE(reloaded.transferParallelParts(), SettingsController::kMaxParallelParts);
+        QCOMPARE(reloaded.transferThreads(), 1);
+        QCOMPARE(reloaded.downloadDirectory(), QStringLiteral("/tmp/downloads"));
+        reloaded.setDownloadDirectory(QString());   // back to the default
+        QVERIFY(reloaded.downloadDirectory() != QStringLiteral("/tmp/downloads"));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestSettingsController)

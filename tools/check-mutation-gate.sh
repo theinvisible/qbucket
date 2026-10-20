@@ -7,6 +7,9 @@
 set -eu
 pattern='(->|\.)(putObject|deleteObjects?|copyObject|createMultipartUpload|uploadPart|uploadPartCopy|completeMultipartUpload|abortMultipartUpload|createBucket|deleteBucket)[[:space:]]*\('
 hits=$(grep -rnE "$pattern" src --include='*.cpp' --include='*.h' | grep -v '^src/controllers/' || true)
+# The transfer engine's writers (Uploader, Copier) as well.
+writers='qbucket/s3/transfer/(Uploader|Copier)\.h'
+hits="$hits$(grep -rnE "$writers" src --include='*.cpp' --include='*.h' | grep -v '^src/controllers/' || true)"
 if [ -n "$hits" ]; then
     echo "Mutating S3 calls outside src/controllers/ (PLAN.md §12.1):"
     echo "$hits"

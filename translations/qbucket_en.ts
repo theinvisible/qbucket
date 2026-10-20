@@ -70,7 +70,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="304"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="313"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -123,7 +123,7 @@
 <context>
     <name>qbucket::OperationController</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="155"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="158"/>
         <source>done: %n changed</source>
         <translation>
             <numerusform>done: %n changed</numerusform>
@@ -131,7 +131,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="161"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="164"/>
         <source>failed: %n not changed</source>
         <translation>
             <numerusform>failed: %n not changed</numerusform>
@@ -139,7 +139,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="165"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="168"/>
         <source>cancelled: %n changed before</source>
         <translation>
             <numerusform>cancelled: %n changed before</numerusform>

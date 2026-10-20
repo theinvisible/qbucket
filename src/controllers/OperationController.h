@@ -15,6 +15,7 @@ class ActivityLog;
 class CapabilityController;
 class Job;
 class Journal;
+class TransferService;
 
 // The one gate for every mutation (PLAN.md §12.1). Nothing in the app
 // calls the library's writing API except a Job started here (a CI check
@@ -46,8 +47,9 @@ public:
     };
     // May this account do something needing `features` in `bucket`?
     // Cheap and synchronous — for enabling actions and their tooltips.
+    // mutating false (a download): allowed on read-only accounts.
     [[nodiscard]] Check check(const QUuid& account, const QString& bucket, const QList<s3::Feature>& features,
-                              bool destructive) const;
+                              bool destructive, bool mutating = true) const;
 
     // Takes ownership and starts planning — or refuses (finished with
     // Outcome::Refused). Always asynchronous: connect to the job first.
@@ -57,6 +59,9 @@ public:
     [[nodiscard]] AccountSessions* sessions() const { return m_sessions; }
     [[nodiscard]] Journal* journal() const { return m_journal; }
     [[nodiscard]] CapabilityController* capabilities() const { return m_capabilities; }
+    // Shared by the transfer jobs (limiters, resume store); set by the window.
+    [[nodiscard]] TransferService* transfers() const { return m_transfers; }
+    void setTransfers(TransferService* transfers) { m_transfers = transfers; }
     // Where bulk jobs keep their plan files (AppDataLocation/plans).
     [[nodiscard]] QString planDir() const { return m_planDir; }
     void setPlanDir(const QString& dir) { m_planDir = dir; }
@@ -86,6 +91,7 @@ private:
     ActivityLog* m_log;
     QList<QPointer<Job>> m_jobs;
     QString m_planDir;
+    TransferService* m_transfers = nullptr;
 };
 
 } // namespace qbucket

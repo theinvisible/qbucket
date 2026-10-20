@@ -24,6 +24,7 @@ class CapabilityStore;
 class Job;
 class Journal;
 class OperationController;
+class TransferService;
 class AccountSidebar;
 class DetailPane;
 class ObjectBrowser;
@@ -89,6 +90,7 @@ private:
     CapabilityController* m_capabilities = nullptr;
     Journal*            m_journal = nullptr;
     OperationController* m_operations = nullptr;
+    TransferService* m_transfers = nullptr;
 
     // Menu actions
     QMenu*        m_editMenu        = nullptr;

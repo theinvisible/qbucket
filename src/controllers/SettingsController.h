@@ -36,8 +36,24 @@ public:
     QString windowState()       const { return m_windowState; }
     QString mainSplitterState() const { return m_mainSplitterState; }
 
+    // Transfers (M3). Where downloads go unless the user picks a folder;
+    // empty in the INI: the system's download folder.
+    QString downloadDirectory() const { return m_downloadDirectory; }
+    // Parts in flight per account at most (the adaptive limit's ceiling).
+    int transferParallelParts() const { return m_parallelParts; }
+    // Transfer threads per account (each with its own connections); for
+    // sessions created after a change.
+    int transferThreads() const { return m_transferThreads; }
+    static constexpr int kMinParallelParts = 1;
+    static constexpr int kMaxParallelParts = 64;
+    static constexpr int kMinTransferThreads = 1;
+    static constexpr int kMaxTransferThreads = 16;
+
     void setThemeName(const QString& name);
     void setBrowseMode(const QString& mode);
+    void setDownloadDirectory(const QString& dir);
+    void setTransferParallelParts(int parts);
+    void setTransferThreads(int threads);
     void setWindowGeometry(const QString& base64);
     void setWindowState(const QString& base64);
     void setMainSplitterState(const QString& base64);
@@ -51,6 +67,7 @@ public:
 signals:
     void themeNameChanged();
     void browseModeChanged();
+    void transferSettingsChanged();
 
 private:
     void load_();
@@ -62,6 +79,9 @@ private:
     QString    m_windowGeometry;
     QString    m_windowState;
     QString    m_mainSplitterState;
+    QString    m_downloadDirectory;
+    int        m_parallelParts = 16;
+    int        m_transferThreads = 4;
 };
 
 } // namespace qbucket

@@ -42,6 +42,7 @@ s3::Result<s3::Session*> AccountSessions::session(const QUuid& account)
     // the library default.
     options.transferTimeoutMs = s3::SessionOptions{}.transferTimeoutMs;
     options.initialClockOffsetSecs = m_clockOffsets.value(account);
+    options.transferLanes = m_transferLanes;
     if (const QString problem = options.endpoint.validationError(); !problem.isEmpty())
         return s3::Error::make(s3::ErrorCategory::InvalidRequest,
                                QStringLiteral("the endpoint is not valid: %1").arg(problem));

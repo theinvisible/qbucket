@@ -12,6 +12,7 @@
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/TransferService.h"
 #include "ui/AccountSidebar.h"
 #include "ui/CapabilitiesDialog.h"
 #include "ui/LogPanel.h"
@@ -126,6 +127,14 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_capabilities = new CapabilityController(m_accounts, m_sessions, m_capStore, m_activity, this);
         m_journal = new Journal(this);
         m_operations = new OperationController(m_accounts, m_sessions, m_capabilities, m_journal, m_activity, this);
+        m_transfers = new TransferService(this);
+        m_operations->setTransfers(m_transfers);
+        const auto applyTransferSettings = [this] {
+            m_sessions->setTransferLanes(m_settings->transferThreads());
+            m_transfers->setMaxParallelParts(m_settings->transferParallelParts());
+        };
+        applyTransferSettings();
+        connect(m_settings, &SettingsController::transferSettingsChanged, this, applyTransferSettings);
     }
 
     buildMenuBar_();

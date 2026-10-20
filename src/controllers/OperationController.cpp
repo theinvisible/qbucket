@@ -33,12 +33,13 @@ OperationController::~OperationController()
 }
 
 OperationController::Check OperationController::check(const QUuid& account, const QString& bucket,
-                                                      const QList<s3::Feature>& features, bool destructive) const
+                                                      const QList<s3::Feature>& features, bool destructive,
+                                                      bool mutating) const
 {
     const std::optional<Account> a = m_accounts->account(account);
     if (!a)
         return {false, tr("The account no longer exists.")};
-    if (a->readOnly)
+    if (a->readOnly && mutating)
         return {false, tr("“%1” is a read-only account. Switch that off in the account settings to change "
                           "anything.").arg(a->name)};
     for (const s3::Feature f : features) {
@@ -59,7 +60,7 @@ void OperationController::start(Job* job)
         if (!guard || guard->phase() != Job::Phase::Created)
             return;
         const Check gate = check(guard->account().id, guard->bucket(), guard->requiredFeatures(),
-                                 guard->isDestructive());
+                                 guard->isDestructive(), guard->isMutating());
         if (!gate.allowed) {
             guard->refuse_(gate.reason);
             return;
@@ -98,7 +99,8 @@ void OperationController::previewed_(Job* job)
 
 void OperationController::confirm_(Job* job)
 {
-    const Check gate = check(job->account().id, job->bucket(), job->requiredFeatures(), job->isDestructive());
+    const Check gate = check(job->account().id, job->bucket(), job->requiredFeatures(), job->isDestructive(),
+                             job->isMutating());
     if (!gate.allowed) {
         job->refuse_(gate.reason);
         return;
@@ -119,7 +121,8 @@ void OperationController::confirm_(Job* job)
             guard->refuse_(tr("Could not confirm what the server supports right now; nothing was changed."));
             return;
         }
-        const Check again = check(guard->account().id, guard->bucket(), guard->requiredFeatures(), true);
+        const Check again = check(guard->account().id, guard->bucket(), guard->requiredFeatures(), true,
+                                  guard->isMutating());
         if (!again.allowed) {
             guard->refuse_(again.reason);
             return;

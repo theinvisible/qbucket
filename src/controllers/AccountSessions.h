@@ -53,6 +53,11 @@ public:
 
     [[nodiscard]] qint64 clockOffsetSecs(const QUuid& account) const { return m_clockOffsets.value(account); }
 
+    // Transfer threads of sessions created from now on (SessionOptions::
+    // transferLanes); running sessions keep theirs.
+    void setTransferLanes(int lanes) { m_transferLanes = lanes; }
+    [[nodiscard]] int transferLanes() const { return m_transferLanes; }
+
 signals:
     void sessionStarted(const QUuid& account);
     // The session is gone (replaced, account removed, shutdown); requests
@@ -79,6 +84,7 @@ private:
     QHash<QUuid, qint64> m_clockOffsets;
     bool m_shutDown = false;
     bool m_allStoppedSent = false;
+    int m_transferLanes = 4;
 };
 
 } // namespace qbucket

@@ -122,6 +122,7 @@ version bump may break the API.
   pinned, a lost Complete resolved with HEAD, the copy's size checked, the
   upload aborted on failure. Verified against Ceph RGW, VersityGW, Garage and
   Hetzner (`it_s3_backend multipartCopy`).
+- `AdaptiveConcurrency::setMaximum()`.
 - `examples/s3cp` — resumable uploads and downloads from the command line.
 - `FakeObjectStore::setDelay()`.
 

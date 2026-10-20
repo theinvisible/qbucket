@@ -45,10 +45,23 @@ public:
     int planned = 0;
     int executed = 0;
     int verified = 0;
+    bool mutating = true;
+    bool pausable = false;
+    bool holdExecution = false;   // stay in Executing until release()
+    int pauses = 0;
+    int resumes = 0;
 
     [[nodiscard]] QString title() const override { return QStringLiteral("Test job"); }
     [[nodiscard]] QList<s3::Feature> requiredFeatures() const override { return m_features; }
     [[nodiscard]] bool isDestructive() const override { return m_destructive; }
+    [[nodiscard]] bool isMutating() const override { return mutating; }
+    [[nodiscard]] bool canPause() const override { return pausable; }
+
+    void release()
+    {
+        setBytes_(100, 100);
+        executed_();
+    }
 
 protected:
     void plan() override
@@ -63,10 +76,16 @@ protected:
             setPreview_(p);
         }, Qt::QueuedConnection);
     }
+    void onPause() override { ++pauses; }
+    void onResume() override { ++resumes; }
     void execute() override
     {
         ++executed;
         executedEver.insert(this);
+        if (holdExecution) {
+            setBytes_(10, 100);
+            return;
+        }
         QMetaObject::invokeMethod(this, [this] {
             Journal::Record r = record_(QStringLiteral("DeleteObjects"), QStringLiteral("photos/a.jpg"));
             r.httpStatus = 200;
@@ -193,6 +212,67 @@ private slots:
         QCOMPARE(job->planned, 0);
         QVERIFY(job->errorText().contains(QLatin1String("read-only")));
         QVERIFY(!m_ops->check(ro.id, QStringLiteral("bkt"), {}, false).allowed);
+    }
+
+    void aReadOnlyAccountMayStillRead()
+    {
+        // A download: allowed on a read-only account, writes nothing remote.
+        Account ro = m_h->account;
+        ro.readOnly = true;
+        QVERIFY(m_h->accounts->save(ro));
+        auto* job = new TestJob(ro, 1, false);
+        job->mutating = false;
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        QSignalSpy done(job, &Job::finished);
+        m_ops->start(job);
+        QVERIFY(preview.wait(5000));
+        job->confirm();
+        QVERIFY(done.wait(5000));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY(m_ops->check(ro.id, QStringLiteral("bkt"), {}, false, false).allowed);
+        QVERIFY(!m_ops->check(ro.id, QStringLiteral("bkt"), {}, false, true).allowed);
+    }
+
+    void pauseAndResumeWhileExecuting()
+    {
+        auto* job = new TestJob(m_h->account, 1, false);
+        job->pausable = true;
+        job->holdExecution = true;
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        QSignalSpy paused(job, &Job::pausedChanged);
+        QSignalSpy done(job, &Job::finished);
+        job->pause();   // not yet executing: no effect
+        QVERIFY(!job->isPaused());
+        m_ops->start(job);
+        QVERIFY(preview.wait(5000));
+        job->confirm();
+        QTRY_COMPARE(job->phase(), Job::Phase::Executing);
+        QCOMPARE(job->bytesDone(), 10);
+        QCOMPARE(job->bytesTotal(), 100);
+        job->pause();
+        job->pause();
+        QVERIFY(job->isPaused());
+        QCOMPARE(job->pauses, 1);
+        job->resume();
+        QVERIFY(!job->isPaused());
+        QCOMPARE(job->resumes, 1);
+        QCOMPARE(paused.size(), 2);
+        job->release();   // verifies and finishes right away
+        QCOMPARE(done.size(), 1);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+
+        // Jobs that can't pause ignore it.
+        auto* plain = new TestJob(m_h->account, 1, false);
+        plain->holdExecution = true;
+        QSignalSpy plainDone(plain, &Job::finished);
+        m_ops->start(plain);
+        QVERIFY(preview.wait(5000));
+        plain->confirm();
+        QTRY_COMPARE(plain->phase(), Job::Phase::Executing);
+        plain->pause();
+        QVERIFY(!plain->isPaused());
+        plain->release();
+        QCOMPARE(plainDone.size(), 1);
     }
 
     void readOnlySwitchedOnAfterThePreviewStillStops()

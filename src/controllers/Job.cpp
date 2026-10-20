@@ -36,6 +36,24 @@ void Job::cancel()
         finish_(Report{});
 }
 
+void Job::pause()
+{
+    if (!canPause() || m_paused || m_cancelled || m_phase != Phase::Executing)
+        return;
+    m_paused = true;
+    onPause();
+    emit pausedChanged(true);
+}
+
+void Job::resume()
+{
+    if (!m_paused || m_phase == Phase::Finished)
+        return;
+    m_paused = false;
+    onResume();
+    emit pausedChanged(false);
+}
+
 void Job::setPreview_(const Preview& preview)
 {
     if (m_phase != Phase::Planning || m_cancelled)
@@ -53,6 +71,13 @@ void Job::setProgress_(qint64 done, qint64 total)
 {
     m_done = done;
     m_total = total;
+    emit progressChanged();
+}
+
+void Job::setBytes_(qint64 done, qint64 total)
+{
+    m_bytesDone = done;
+    m_bytesTotal = total;
     emit progressChanged();
 }
 

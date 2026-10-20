@@ -19,6 +19,17 @@ AdaptiveConcurrency::AdaptiveConcurrency(Options options, QObject* parent)
     m_limit = std::clamp(m_options.initial, m_options.min, m_options.max);
 }
 
+void AdaptiveConcurrency::setMaximum(int max)
+{
+    m_options.max = std::max(m_options.min, max);
+    if (m_limit > m_options.max) {
+        m_limit = m_options.max;
+        Q_EMIT limitChanged(m_limit);
+    }
+    if (m_inFlight < m_limit)
+        Q_EMIT slotAvailable();
+}
+
 std::optional<AdaptiveConcurrency::Slot> AdaptiveConcurrency::tryAcquire()
 {
     if (m_inFlight >= m_limit)
