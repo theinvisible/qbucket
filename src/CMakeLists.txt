@@ -11,6 +11,30 @@ target_link_libraries(qbucket_diagnostics
     PRIVATE qbucket::compile_options
 )
 
+# --- Domain: plain app-level value types -------------------------------------
+add_library(qbucket_domain INTERFACE)
+target_include_directories(qbucket_domain INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(qbucket_domain INTERFACE qbucket::s3 Qt6::Core)
+
+# --- Accounts: account store, keychain-backed secrets ------------------------
+add_library(qbucket_accounts STATIC
+    accounts/AccountStore.h
+    accounts/AccountStore.cpp
+    accounts/KeychainBackend.h
+    accounts/KeychainCredentialsProvider.h
+    accounts/KeychainCredentialsProvider.cpp
+    accounts/QtKeychain.h
+    accounts/QtKeychainBackend.h
+    accounts/QtKeychainBackend.cpp
+    accounts/SecretStore.h
+    accounts/SecretStore.cpp
+)
+target_include_directories(qbucket_accounts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(qbucket_accounts
+    PUBLIC  qbucket_domain qbucket_diagnostics qbucket::s3 Qt6::Core
+    PRIVATE qbucket::keychain qbucket::compile_options
+)
+
 # --- Controllers (application logic, no widgets) ---------------------------
 add_library(qbucket_controllers STATIC
     controllers/SettingsController.h

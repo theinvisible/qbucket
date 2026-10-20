@@ -85,6 +85,7 @@ qt_standard_project_setup()
 
 include(GNUInstallDirs)
 include(cmake/QBucketCompileOptions.cmake)
+include(cmake/QBucketQtKeychain.cmake)
 
 if(QBUCKET_BUILD_TESTS)
     enable_testing()

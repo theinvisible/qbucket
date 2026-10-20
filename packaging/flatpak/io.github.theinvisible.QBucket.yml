@@ -30,12 +30,33 @@ cleanup:
   - '*.a'
 
 modules:
+  # Secrets go to the keychain through QtKeychain → libsecret (in the KDE
+  # runtime), which uses the Secret portal inside the sandbox.
+  - name: qtkeychain
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_WITH_QT6=ON
+      - -DBUILD_TRANSLATIONS=OFF
+      - -DBUILD_TEST_APPLICATION=OFF
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /mkspecs
+    sources:
+      - type: archive
+        url: https://github.com/frankosterfeld/qtkeychain/archive/refs/tags/0.15.0.tar.gz
+        sha256: f4254dc8f0933b06d90672d683eab08ef770acd8336e44dfa030ce041dc2ca22
+
   - name: qbucket
     buildsystem: cmake-ninja
     builddir: true
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DQBUCKET_BUILD_TESTS=OFF
+      # The build is offline: use the qtkeychain module above.
+      - -DQBUCKET_QTKEYCHAIN_PROVIDER=SYSTEM
     sources:
       - type: dir
         path: ../..

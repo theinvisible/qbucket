@@ -52,3 +52,18 @@ qbucket_add_test(test_main_window
     test_main_window.cpp
     qbucket_app_ui
 )
+
+qbucket_add_test(test_account_store
+    test_account_store.cpp
+    qbucket_accounts
+)
+
+qbucket_add_test(test_secret_store
+    test_secret_store.cpp
+    qbucket_accounts
+)
+
+qbucket_add_test(test_keychain_credentials_provider
+    test_keychain_credentials_provider.cpp
+    qbucket_accounts
+)

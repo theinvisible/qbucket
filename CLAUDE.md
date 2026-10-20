@@ -92,7 +92,9 @@ Screenshots go to `docs/devlog/img/`.
 - **S3:** own client on `QNetworkAccessManager` (SigV4 + `QXmlStreamReader`).
   No AWS SDK.
 - **Secrets:** every password / secret key is stored with **QtKeychain**
-  (FetchContent) through `accounts/SecretStore` — never in the INI, a JSON
+  (`cmake/QBucketQtKeychain.cmake`: installed package if it matches our Qt,
+  else FetchContent 0.15.0 static; Flatpak builds it as a manifest module)
+  through `accounts/SecretStore` — never in the INI, a JSON
   file, logs or the transfer resume store. No plaintext fallback: without a
   keychain backend the account asks once per session and keeps the secret
   in memory only.
