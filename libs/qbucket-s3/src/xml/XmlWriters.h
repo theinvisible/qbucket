@@ -16,6 +16,9 @@ namespace qbucket::s3::xml {
 QBUCKET_S3_EXPORT Result<QByteArray> buildDeleteRequest(const QList<ObjectIdentifier>& objects,
                                                         bool quiet);
 
+// <CreateBucketConfiguration> with a LocationConstraint.
+QBUCKET_S3_EXPORT QByteArray buildCreateBucketConfiguration(const QString& locationConstraint);
+
 // Escapes text for element content; CR, LF and tab become character
 // references so the server's XML parser cannot normalise them away.
 QBUCKET_S3_EXPORT QByteArray escapeText(const QString& text);

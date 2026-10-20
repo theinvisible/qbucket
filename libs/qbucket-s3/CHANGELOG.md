@@ -26,6 +26,9 @@ version bump may break the API.
 - `Operation` enum, `ProviderProfile` hooks (endpoints, signing region,
   limits, `prepareRequest`, `normalizeListing`, `mapError`) and
   `GenericS3Profile`.
+- Value types for object and bucket writes: `ObjectData` with `Integrity`,
+  `PutObjectParams` / `PutObjectResult`, `DeleteObjectResult`,
+  `CreateBucketParams`; `ProviderProfile::locationConstraintFor()`.
 
 ### Safety
 

@@ -68,6 +68,44 @@ struct ObjectMeta {
     QMap<QString, QString> userMetadata;  // x-amz-meta-* without the prefix, lower-case names
 };
 
+// How far a download's content could be verified. Reported honestly: an
+// ETag is only an MD5 for single-part uploads without SSE-KMS / SSE-C.
+enum class Integrity : quint8 {
+    Md5Verified,     // MD5 of the received bytes equals the ETag
+    SizeVerified,    // only the length could be checked
+};
+
+struct ObjectData {
+    ObjectMeta meta;
+    QByteArray data;
+    Integrity integrity = Integrity::SizeVerified;
+};
+
+struct PutObjectParams {
+    QString bucket;
+    QString key;
+    QByteArray data;                      // sent with Content-MD5
+    QString contentType;                  // empty: application/octet-stream
+    QMap<QString, QString> metadata;      // x-amz-meta-*; printable ASCII only (for now)
+    QString storageClass;                 // empty: server default
+};
+
+struct PutObjectResult {
+    QString etag;
+    QString versionId;                    // versioned buckets only
+};
+
+struct DeleteObjectResult {
+    QString versionId;                    // version removed, or of the new delete marker
+    bool deleteMarker = false;            // a delete marker was created / removed
+};
+
+struct CreateBucketParams {
+    QString bucket;
+    QString region;                       // → LocationConstraint via the provider profile
+    bool objectLockEnabled = false;       // only possible at creation
+};
+
 struct ObjectIdentifier {
     QString key;
     QString versionId;        // empty: current version

@@ -24,6 +24,11 @@ QString ProviderProfile::regionFromLocationConstraint(const QString& constraint)
     return constraint;
 }
 
+QString ProviderProfile::locationConstraintFor(const QString& region) const
+{
+    return region == QLatin1String("us-east-1") ? QString() : region;
+}
+
 void ProviderProfile::prepareRequest(RequestContext& /*ctx*/) const {}
 
 void ProviderProfile::normalizeListing(ListPage& page) const

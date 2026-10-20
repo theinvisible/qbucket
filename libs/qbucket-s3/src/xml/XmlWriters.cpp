@@ -59,4 +59,12 @@ Result<QByteArray> buildDeleteRequest(const QList<ObjectIdentifier>& objects, bo
     return out;
 }
 
+QByteArray buildCreateBucketConfiguration(const QString& locationConstraint)
+{
+    return R"(<?xml version="1.0" encoding="UTF-8"?>)"
+           R"(<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">)"
+           "<LocationConstraint>" + escapeText(locationConstraint) + "</LocationConstraint>"
+           "</CreateBucketConfiguration>";
+}
+
 } // namespace qbucket::s3::xml

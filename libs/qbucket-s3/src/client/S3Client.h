@@ -41,6 +41,25 @@ public:
     quint64 headObject(const QString& bucket, const QString& key, const QString& versionId,
                        Done<ObjectMeta> done);
 
+    // In memory, up to ClientConfig::maxResponseBytes; MD5-verified against
+    // the ETag where that is meaningful (see Integrity). Streaming to files
+    // is the transfer engine's job.
+    quint64 getObject(const QString& bucket, const QString& key, const QString& versionId,
+                      Done<ObjectData> done);
+    // Single PUT with Content-MD5.
+    quint64 putObject(const PutObjectParams& params, Done<PutObjectResult> done);
+    quint64 deleteObject(const QString& bucket, const QString& key, const QString& versionId,
+                         Done<DeleteObjectResult> done);
+    // One batch (at most ProviderProfile::maxDeleteBatch()), with Content-MD5.
+    // Every requested key ends up in deleted or failed — keys the server did
+    // not report are listed as failed ("NotReported").
+    quint64 deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
+                          Done<DeleteObjectsResult> done);
+    // Bucket lifecycle — exposed for tooling and tests; applications gate
+    // these behind their own confirmation/policy layer.
+    quint64 createBucket(const CreateBucketParams& params, Done<void> done);
+    quint64 deleteBucket(const QString& bucket, Done<void> done);
+
     void abort(quint64 operationId);
     void abortAll();
 
@@ -54,6 +73,9 @@ private:
     void endOp(const std::shared_ptr<Op>& op);
     template <typename T>
     quint64 failLater(Done<T> done, Error error);
+    // One request → parse(RawResponse) → done.
+    template <typename T, typename Parse>
+    quint64 single(RequestSpec spec, Done<T> done, Parse parse);
 
     void listBucketsPage(const std::shared_ptr<Op>& op, const QString& token, BucketList acc,
                          QSet<QString> seenTokens, Done<BucketList> done);

@@ -58,6 +58,9 @@ public:
     [[nodiscard]] virtual QString signingRegion(const QString& region) const;
     // GetBucketLocation value → region ("" → us-east-1, "EU" → eu-west-1).
     [[nodiscard]] virtual QString regionFromLocationConstraint(const QString& constraint) const;
+    // CreateBucket LocationConstraint for a region; empty: send no
+    // CreateBucketConfiguration (S3: us-east-1).
+    [[nodiscard]] virtual QString locationConstraintFor(const QString& region) const;
 
     // --- limits ---
     [[nodiscard]] virtual qint64 minPartSize() const { return Q_INT64_C(5) * 1024 * 1024; }
