@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QSet>
 #include <QSignalSpy>
 #include <QtTest>
 
@@ -26,6 +27,9 @@ namespace {
 const QByteArray kBuckets = "<ListAllMyBucketsResult><Buckets>"
                             "<Bucket><Name>bkt</Name><CreationDate>2026-01-01T00:00:00Z</CreationDate></Bucket>"
                             "</Buckets></ListAllMyBucketsResult>";
+
+// Jobs whose execute() ran — still known after they were deleted.
+QSet<const void*> executedEver;
 
 // Plans `objects` keys, "changes" them by journaling, verifies.
 class TestJob : public Job {
@@ -62,6 +66,7 @@ protected:
     void execute() override
     {
         ++executed;
+        executedEver.insert(this);
         QMetaObject::invokeMethod(this, [this] {
             Journal::Record r = record_(QStringLiteral("DeleteObjects"), QStringLiteral("photos/a.jpg"));
             r.httpStatus = 200;
@@ -100,6 +105,7 @@ private slots:
 
     void init()
     {
+        executedEver.clear();   // addresses of deleted jobs get reused
         m_h = std::make_unique<AccountHarness>(QStringLiteral("Prod"));
         QVERIFY(m_h->ok());
         m_failProbes = false;
@@ -195,8 +201,8 @@ private slots:
         Account ro = m_h->account;
         ro.readOnly = true;
         QVERIFY(m_h->accounts->save(ro));
-        job->confirm();
-        QTRY_COMPARE(job->outcome(), Job::Outcome::Refused);
+        job->confirm();   // the gate is checked again, synchronously
+        QCOMPARE(job->outcome(), Job::Outcome::Refused);
         QCOMPARE(job->executed, 0);
     }
 
@@ -252,8 +258,10 @@ private slots:
         job->confirm();   // starts the probe
         job->cancel();
         QCOMPARE(job->outcome(), Job::Outcome::Cancelled);
-        QTest::qWait(500);
-        QCOMPARE(job->executed, 0);
+        const QPointer<TestJob> guard(job);
+        QTest::qWait(500);   // the probe's answer arrives: nothing may execute
+        QVERIFY(!guard);     // deleted after finishing, never executed
+        QVERIFY(executedEver.isEmpty());
     }
 
     void aFailedProbeBeforeExecutingIsNoGreenLight()

@@ -3,8 +3,10 @@
 #include <qbucket/s3/testing/FakeS3Server.h>
 
 #include <QList>
+#include <QSet>
 #include <QString>
 #include <QUrl>
+#include <QXmlStreamReader>
 
 #include <algorithm>
 
@@ -38,6 +40,76 @@ public:
                   [](const FakeObject& a, const FakeObject& b) { return a.key.toUtf8() < b.key.toUtf8(); });
     }
     [[nodiscard]] const QList<FakeObject>& objects() const { return m_objects; }
+    [[nodiscard]] bool contains(const QString& key) const { return indexOf(key) >= 0; }
+    [[nodiscard]] QStringList keys() const
+    {
+        QStringList out;
+        for (const FakeObject& o : m_objects)
+            out.append(o.key);
+        return out;
+    }
+    void remove(const QString& key)
+    {
+        const qsizetype i = indexOf(key);
+        if (i >= 0)
+            m_objects.removeAt(i);
+    }
+
+    // Keys a delete refuses (object lock, permissions).
+    QSet<QString> locked;
+    // Batch / single deletes and PUTs seen.
+    int deleteBatches = 0;
+    int singleDeletes = 0;
+
+    // A path-style bucket: GET listing, HEAD, PUT, DELETE, POST ?delete.
+    [[nodiscard]] s3::testing::FakeResponse handle(const s3::testing::RecordedRequest& req)
+    {
+        using s3::testing::FakeResponse;
+        const QString path = QUrl::fromPercentEncoding(req.path);
+        const qsizetype slash = path.indexOf(u'/', 1);
+        const QString key = slash < 0 ? QString() : path.mid(slash + 1);
+        if (req.method == "GET" && key.isEmpty())
+            return list(req);
+        if (req.method == "HEAD" && !key.isEmpty()) {
+            const qsizetype i = indexOf(key);
+            return i < 0 ? FakeResponse::s3Error(404, "NotFound")
+                         : FakeResponse().withHeader("Content-Length", QByteArray::number(m_objects[i].size))
+                               .withHeader("ETag", "\"0\"");
+        }
+        if (req.method == "PUT" && !key.isEmpty()) {
+            remove(key);
+            add(key, req.body.size());
+            sort();
+            return FakeResponse().withHeader("ETag", "\"0\"");
+        }
+        if (req.method == "DELETE" && !key.isEmpty()) {
+            ++singleDeletes;
+            if (locked.contains(key))
+                return FakeResponse::s3Error(403, "AccessDenied", "locked");
+            remove(key);
+            FakeResponse r;
+            r.status = 204;
+            return r;
+        }
+        if (req.method == "POST" && req.hasQueryItem("delete")) {
+            ++deleteBatches;
+            QByteArray body = "<DeleteResult>";
+            QXmlStreamReader xml(req.body);
+            while (!xml.atEnd()) {
+                if (xml.readNext() != QXmlStreamReader::StartElement || xml.name() != QLatin1String("Key"))
+                    continue;
+                const QString k = xml.readElementText();
+                if (locked.contains(k)) {
+                    body += "<Error><Key>" + escape(k) + "</Key><Code>AccessDenied</Code><Message>locked</Message></Error>";
+                } else {
+                    remove(k);
+                    body += "<Deleted><Key>" + escape(k) + "</Key></Deleted>";
+                }
+            }
+            return FakeResponse::ok(body + "</DeleteResult>");
+        }
+        return FakeResponse::s3Error(501, "NotImplemented");
+    }
 
     [[nodiscard]] s3::testing::FakeResponse list(const s3::testing::RecordedRequest& req) const
     {
@@ -92,6 +164,15 @@ public:
     }
 
 private:
+    [[nodiscard]] qsizetype indexOf(const QString& key) const
+    {
+        for (qsizetype i = 0; i < m_objects.size(); ++i) {
+            if (m_objects[i].key == key)
+                return i;
+        }
+        return -1;
+    }
+
     static QByteArray escape(const QString& s)
     {
         return s.toHtmlEscaped().toUtf8();

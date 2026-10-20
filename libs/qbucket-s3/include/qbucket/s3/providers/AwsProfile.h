@@ -14,6 +14,9 @@ public:
     [[nodiscard]] QStringList regions() const override;
     [[nodiscard]] QUrl endpointFor(const QString& region) const override;
     [[nodiscard]] AddressingStyle defaultAddressing() const override;
+    // Write-only features S3 itself defines: DeleteObjects, copies between
+    // buckets.
+    [[nodiscard]] CapabilitySet capabilities() const override;
 };
 
 } // namespace qbucket::s3

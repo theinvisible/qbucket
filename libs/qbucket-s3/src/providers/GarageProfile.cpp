@@ -20,9 +20,11 @@ QString GarageProfile::signingRegion(const QString& region) const
 CapabilitySet GarageProfile::capabilities() const
 {
     // Write-only features the probes can't see (garagehq.deuxfleurs.fr,
-    // "S3 compatibility"): no versioning, no object lock, no SSE-C.
+    // "S3 compatibility"): no versioning, no object lock, no SSE-C;
+    // DeleteObjects is implemented.
     CapabilitySet set = ProviderProfile::capabilities();
     const CapabilityEntry no{CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0};
+    set.set(Feature::BatchDelete, {CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0});
     set.set(Feature::BucketVersioning, no);
     set.set(Feature::ObjectLock, no);
     set.set(Feature::SseC, no);

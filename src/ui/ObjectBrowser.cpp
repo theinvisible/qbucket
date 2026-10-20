@@ -390,8 +390,7 @@ void ObjectBrowser::buildActions_()
     // it handles them, the actions say why they can't be used.
     m_actRename = make(tr("&Rename…"), QKeySequence(Qt::Key_F2));
     m_actDelete = make(tr("&Delete…"), QKeySequence::Delete);
-    for (QAction* a : {m_actRename, m_actDelete})
-        a->setToolTip(tr("Not available yet"));
+    m_actRename->setToolTip(tr("Not available yet"));
 
     // Backspace goes up, like a file manager — wherever the focus is in
     // the browser (a line edit keeps its own Backspace).
@@ -408,6 +407,15 @@ void ObjectBrowser::updateActions_()
     m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
     m_actCopyKey->setEnabled(!rows.isEmpty());
     m_actCopyUri->setEnabled(!rows.isEmpty());
+    m_actDelete->setEnabled(!rows.isEmpty() && m_mutationsAllowed);
+    m_actDelete->setToolTip(m_mutationsAllowed ? tr("Delete the selection") : m_mutationsReason);
+}
+
+void ObjectBrowser::setMutationsAllowed(bool allowed, const QString& reason)
+{
+    m_mutationsAllowed = allowed;
+    m_mutationsReason = reason;
+    updateActions_();
 }
 
 QModelIndexList ObjectBrowser::selectedRows() const

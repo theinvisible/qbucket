@@ -57,6 +57,9 @@ public:
     [[nodiscard]] AccountSessions* sessions() const { return m_sessions; }
     [[nodiscard]] Journal* journal() const { return m_journal; }
     [[nodiscard]] CapabilityController* capabilities() const { return m_capabilities; }
+    // Where bulk jobs keep their plan files (AppDataLocation/plans).
+    [[nodiscard]] QString planDir() const { return m_planDir; }
+    void setPlanDir(const QString& dir) { m_planDir = dir; }
 
     // The Log line for a finished job.
     [[nodiscard]] static QString summary(const Job& job);
@@ -82,6 +85,7 @@ private:
     Journal* m_journal;
     ActivityLog* m_log;
     QList<QPointer<Job>> m_jobs;
+    QString m_planDir;
 };
 
 } // namespace qbucket

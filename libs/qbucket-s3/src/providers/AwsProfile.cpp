@@ -39,4 +39,13 @@ AddressingStyle AwsProfile::defaultAddressing() const
     return AddressingStyle::VirtualHosted;
 }
 
+CapabilitySet AwsProfile::capabilities() const
+{
+    CapabilitySet set = ProviderProfile::capabilities();
+    const CapabilityEntry yes{CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0};
+    set.set(Feature::BatchDelete, yes);
+    set.set(Feature::CrossBucketCopy, yes);
+    return set;
+}
+
 } // namespace qbucket::s3

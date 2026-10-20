@@ -19,6 +19,8 @@ private Q_SLOTS:
         QCOMPARE(p->endpointFor(QString()), QUrl(QStringLiteral("https://s3.us-east-1.amazonaws.com")));
         QCOMPARE(p->defaultAddressing(), AddressingStyle::VirtualHosted);
         QCOMPARE(p->signingRegion(QString()), QStringLiteral("us-east-1"));
+        QCOMPARE(p->capabilities().state(Feature::BatchDelete), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::CrossBucketCopy), CapabilityState::Supported);
     }
 
     void legacyLocationConstraints()

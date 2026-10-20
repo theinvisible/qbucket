@@ -18,6 +18,8 @@ private Q_SLOTS:
         QVERIFY(p);
         QCOMPARE(p->defaultAddressing(), AddressingStyle::Path);
         QCOMPARE(p->signingRegion(QString()), QStringLiteral("garage"));
+        QCOMPARE(p->capabilities().state(Feature::BatchDelete), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::BucketVersioning), CapabilityState::Unsupported);
     }
 
     void invalidSignatureIsAuthentication()

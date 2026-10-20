@@ -52,6 +52,9 @@ public:
     [[nodiscard]] QAction* renameAction() const { return m_actRename; }
     [[nodiscard]] QAction* deleteAction() const { return m_actDelete; }
 
+    // The gate's verdict for the mutating actions (MainWindow decides).
+    void setMutationsAllowed(bool allowed, const QString& reason);
+
     // Selected rows (column 0), in view order.
     [[nodiscard]] QModelIndexList selectedRows() const;
 
@@ -100,6 +103,8 @@ private:
     QAction* m_actCopyUri = nullptr;
     QAction* m_actRename = nullptr;
     QAction* m_actDelete = nullptr;
+    bool m_mutationsAllowed = false;
+    QString m_mutationsReason;
 };
 
 } // namespace qbucket

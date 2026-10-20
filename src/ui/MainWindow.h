@@ -67,6 +67,7 @@ private:
     void showJobReport_(Job* job);
     void updateMutationActions_();
     void newFolder_();
+    void deleteSelection_();
     void restoreWindowState_();
     void saveWindowState_();
 

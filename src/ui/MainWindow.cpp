@@ -7,6 +7,7 @@
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
 #include "controllers/CreateFolderJob.h"
+#include "controllers/DeleteJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -206,6 +207,25 @@ void MainWindow::updateMutationActions_()
     m_newFolderBtn->setEnabled(folder.allowed);
     m_actNewFolder->setToolTip(folder.allowed ? tr("Create a folder here") : folder.reason);
     m_newFolderBtn->setToolTip(folder.allowed ? tr("New folder") : folder.reason);
+    // Deleting needs no feature (BatchDelete or one by one) — only the account.
+    OperationController::Check del{false, tr("Open a bucket first.")};
+    if (m_operations && here.hasBucket())
+        del = m_operations->check(here.account, here.bucket, {}, true);
+    m_browser->setMutationsAllowed(del.allowed, del.reason);
+}
+
+void MainWindow::deleteSelection_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket())
+        return;
+    QList<DeleteJob::Item> items;
+    for (const QModelIndex& row : m_browser->selectedRows())
+        items.append({row.data(ObjectTableModel::KeyRole).toString(), row.data(ObjectTableModel::IsFolderRole).toBool()});
+    if (items.isEmpty())
+        return;
+    m_operations->start(new DeleteJob(*account, here.bucket, items, m_operations->planDir()));
 }
 
 void MainWindow::newFolder_()
@@ -274,6 +294,19 @@ void MainWindow::showJobReport_(Job* job)
         details.prepend(job->report().verification);
     if (!details.isEmpty())
         box->setDetailedText(details.join(u'\n'));
+    // "Retry Failed": a new delete of exactly the keys that failed.
+    if (const auto* del = qobject_cast<const DeleteJob*>(job); del && !del->failedKeys().isEmpty()) {
+        QPushButton* retry = box->addButton(tr("Retry Failed"), QMessageBox::ActionRole);
+        QList<DeleteJob::Item> items;
+        for (const QString& k : del->failedKeys())
+            items.append({k, false});
+        const Account account = del->account();
+        const QString bucket = del->bucket();
+        connect(box, &QMessageBox::buttonClicked, this, [this, retry, items, account, bucket](QAbstractButton* b) {
+            if (b == retry && m_operations)
+                m_operations->start(new DeleteJob(account, bucket, items, m_operations->planDir()));
+        });
+    }
     box->setAttribute(Qt::WA_DeleteOnClose);
     box->open();
 }
@@ -300,6 +333,12 @@ void MainWindow::connectBrowser_()
     m_actNewFolder = m_editMenu->addAction(tr("&New Folder…"), this, &MainWindow::newFolder_);
     m_actNewFolder->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     connect(m_newFolderBtn, &QToolButton::clicked, m_actNewFolder, &QAction::trigger);
+    connect(m_browser->deleteAction(), &QAction::triggered, this, &MainWindow::deleteSelection_);
+    connect(m_deleteBtn, &QToolButton::clicked, m_browser->deleteAction(), &QAction::trigger);
+    connect(m_browser->deleteAction(), &QAction::changed, this, [this] {
+        m_deleteBtn->setEnabled(m_browser->deleteAction()->isEnabled());
+        m_deleteBtn->setToolTip(m_browser->deleteAction()->toolTip());
+    });
     m_editMenu->addAction(m_browser->renameAction());
     m_editMenu->addAction(m_browser->deleteAction());
     connect(m_actEditPath, &QAction::triggered, m_browser, &ObjectBrowser::editPath);

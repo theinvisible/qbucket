@@ -6,6 +6,8 @@
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 
+#include <QStandardPaths>
+
 namespace qbucket {
 
 OperationController::OperationController(AccountStore* accounts, AccountSessions* sessions,
@@ -16,7 +18,8 @@ OperationController::OperationController(AccountStore* accounts, AccountSessions
       m_sessions(sessions),
       m_capabilities(capabilities),
       m_journal(journal),
-      m_log(log)
+      m_log(log),
+      m_planDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QStringLiteral("/plans"))
 {
 }
 

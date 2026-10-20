@@ -43,6 +43,9 @@ version bump may break the API.
 - `requestId` in `PutObjectResult`, `DeleteObjectResult` and
   `DeleteObjectsResult` (`x-amz-request-id`, for audit journals).
 
+- `AwsProfile` and `GarageProfile` know `BatchDelete` as supported (AWS also
+  `CrossBucketCopy`): write-only features the probes cannot confirm.
+
 ### Fixed
 
 - `ServerFingerprint::requestIdShape` no longer contains the length of

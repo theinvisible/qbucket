@@ -41,10 +41,12 @@ void Job::setPreview_(const Preview& preview)
     if (m_phase != Phase::Planning || m_cancelled)
         return;
     m_preview = preview;
+    // The phase first: whoever is asked may answer at once.
+    setPhase_(Phase::AwaitingConfirmation);
     if (m_controller)
         m_controller->previewed_(this);
-    setPhase_(Phase::AwaitingConfirmation);
-    emit previewReady();
+    if (m_phase == Phase::AwaitingConfirmation)
+        emit previewReady();
 }
 
 void Job::setProgress_(qint64 done, qint64 total)

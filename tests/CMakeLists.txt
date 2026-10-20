@@ -144,6 +144,18 @@ qbucket_add_test(test_create_folder_job
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_delete_job
+    test_delete_job.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
+qbucket_add_test(test_main_window_operations
+    test_main_window_operations.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

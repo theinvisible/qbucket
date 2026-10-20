@@ -11,6 +11,7 @@
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
 #include "controllers/CreateFolderJob.h"
+#include "controllers/DeleteJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "support/FakeKeychainBackend.h"
@@ -138,7 +139,49 @@ private slots:
         QCOMPARE(job->report().skipped, 1);
     }
 
+    void deleteAFolderRecursively()
+    {
+        const QString folder = m_root + QStringLiteral("doomed/");
+        const QStringList keys = {folder + QStringLiteral("a.txt"), folder + QStringLiteral("sub/b c.txt"),
+                                  folder + QStringLiteral("sub/deeper/ü+%.bin"), folder};
+        for (const QString& key : keys)
+            QVERIFY(put(key, key.endsWith(u'/') ? QByteArray() : key.toUtf8()));
+        const QString keep = m_root + QStringLiteral("doomed-not.txt");   // shares the prefix text
+        QVERIFY(put(keep, "keep"));
+
+        m_ops->setPlanDir(m_dir.filePath(QStringLiteral("plans")));
+        auto* job = new DeleteJob(m_account, m_bucket, {{folder, true}}, m_ops->planDir());
+        job->setRecheckDelaysForTesting(2000, 5000);
+        run(job);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().succeeded, keys.size());
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        QVERIFY(exists(keep));
+        for (const QString& key : keys)
+            QVERIFY2(!exists(key), qPrintable(key));
+    }
+
 private:
+    bool put(const QString& key, const QByteArray& data)
+    {
+        s3::PutObjectParams p;
+        p.bucket = m_bucket;
+        p.key = key;
+        p.data = data;
+        std::optional<bool> ok;
+        QObject ctx;
+        session()->putObject(p, &ctx, [&](const s3::Result<s3::PutObjectResult>& r) { ok = bool(r); });
+        return QTest::qWaitFor([&] { return ok.has_value(); }, 30000) && *ok;
+    }
+
+    bool exists(const QString& key)
+    {
+        std::optional<bool> found;
+        QObject ctx;
+        session()->headObject(m_bucket, key, QString(), &ctx, [&](const s3::Result<s3::ObjectMeta>& r) { found = bool(r); });
+        return QTest::qWaitFor([&] { return found.has_value(); }, 30000) && *found;
+    }
+
     s3::Session* session()
     {
         const s3::Result<s3::Session*> s = m_sessions->session(m_account.id);
