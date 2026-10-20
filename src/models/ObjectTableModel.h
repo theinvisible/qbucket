@@ -5,6 +5,7 @@
 
 #include <QAbstractTableModel>
 #include <QCollator>
+#include <QDateTime>
 #include <QStringList>
 #include <QTimer>
 #include <QUuid>
@@ -17,10 +18,16 @@ namespace qbucket {
 class AccountSessions;
 
 // The object list of one location (account, bucket, prefix), PLAN.md §13.1:
-// pages of 1000 keys through fetchMore, never the whole bucket; compact
+// pages of 1000 keys on request (loadMore), never the whole bucket; compact
 // rows, display strings made in data(); one insert per page (two with
 // folders first). Folder mode lists with "/" as delimiter, flat mode
 // without.
+//
+// Listings of recently visited locations are kept (up to kCachePages
+// pages each) and shown at once when the location is opened again —
+// marked stale while the same pages are listed afresh in the background,
+// then replaced in one go (PLAN.md §12.5: a cached view is never passed off
+// as current). reload() always lists afresh.
 //
 // Sorting and the live filter are the model's own (no proxy): with
 // 100k rows a synchronous proxy sort would stall the GUI. Rows are shown
@@ -48,7 +55,7 @@ public:
     enum class State {
         Idle,       // no location
         Loading,    // first page on its way, no rows yet
-        Ready,      // rows shown; more pages may follow (canFetchMore)
+        Ready,      // rows shown; more pages may follow (canLoadMore)
         Complete,   // every page loaded
         Error,      // the listing failed — rows so far stay, the listing is incomplete
     };
@@ -57,14 +64,19 @@ public:
     // Sorting runs in the background from this many rows on.
     static constexpr int kBackgroundSortRows = 5000;
     static constexpr int kPageSize = 1000;
+    static constexpr int kCacheEntries = 12;
+    static constexpr int kCachePages = 20;
+    static constexpr qsizetype kCacheRows = 300'000;   // over all entries
 
     explicit ObjectTableModel(AccountSessions* sessions, QObject* parent = nullptr);
     ~ObjectTableModel() override;
 
-    // Lists a location from its start. `prefix` ends with "/" or is empty.
+    // Lists a location from its start — or shows its cached listing, stale,
+    // while listing it again. `prefix` ends with "/" or is empty.
     void setLocation(const QUuid& account, const QString& bucket, const QString& prefix,
                      Mode mode = Mode::Folders);
     void clear();
+    // Lists the location afresh, never from the cache.
     void reload();
     // Server-side search: lists prefix + text (names starting with it);
     // empty: the whole location again.
@@ -87,6 +99,9 @@ public:
     [[nodiscard]] qsizetype loadedFolders() const { return m_folderRows; }
     [[nodiscard]] qint64 loadedBytes() const { return m_bytes; }
     [[nodiscard]] int pagesLoaded() const { return m_pages; }
+    // Showing a cached listing that is being refreshed.
+    [[nodiscard]] bool isStale() const { return m_stale; }
+    [[nodiscard]] QDateTime staleSince() const { return m_staleSince; }
     // True while a sort is due or running in the background.
     [[nodiscard]] bool isSorting() const { return m_sortRunning || m_sortDebounce.isActive(); }
 
@@ -94,10 +109,18 @@ public:
     [[nodiscard]] int columnCount(const QModelIndex& parent = {}) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
     [[nodiscard]] QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-    [[nodiscard]] bool canFetchMore(const QModelIndex& parent) const override;
-    void fetchMore(const QModelIndex& parent) override;
     // column -1: back to server order.
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+
+    // Paging is the caller's decision (the browser asks near the end of the
+    // list). Deliberately not canFetchMore/fetchMore: QTreeView calls those
+    // from every layout pass and would page through the whole bucket.
+    [[nodiscard]] bool canLoadMore() const;
+    // Requests the next page; its rows arrive from the event loop.
+    void loadMore();
+
+    // Row of a key in the current view; -1 if not shown.
+    [[nodiscard]] int rowOfKey(const QString& key) const;
 
     [[nodiscard]] int sortColumn() const { return m_sortColumn; }
     [[nodiscard]] Qt::SortOrder sortOrder() const { return m_sortOrder; }
@@ -107,6 +130,7 @@ signals:
     // After every page (counts, bytes).
     void pageLoaded();
     void sortFinished();
+    void staleChanged(bool stale);
 
 private:
     enum Flag : quint8 { Folder = 1 };
@@ -122,12 +146,30 @@ private:
         Qt::SortOrder order = Qt::AscendingOrder;
     };
 
-    void start_();
+    struct Snapshot {
+        QUuid account;
+        QString bucket;
+        QString prefix;
+        Mode mode = Mode::Folders;
+        std::vector<Row> rows;
+        std::vector<size_t> pageEnds;
+        QStringList storageClasses;
+        bool complete = false;
+        QDateTime at;
+    };
+
+    void start_(bool useCache);
     void fetchPage_();
     void onPage_(const s3::Result<s3::ListPage>& page);
+    void parsePage_(const s3::ListPage& page, std::vector<Row>& folders, std::vector<Row>& objects);
     void appendRows_(std::vector<Row>&& folders, std::vector<Row>&& objects);
     void setState_(State state);
     void resetListing_();
+    void keepForCache_();
+    [[nodiscard]] bool restoreSnapshot_();
+    void swapInFresh_();
+    void replaceRows_(std::vector<Row>&& rows, std::vector<size_t>&& pageEnds);
+    void setStale_(bool stale);
     void scheduleSort_();
     void runSort_();
     void applyOrder_(std::vector<quint32> order, quint64 version);
@@ -154,6 +196,7 @@ private:
     int m_pages = 0;
 
     std::vector<Row> m_rows;        // arrival order
+    std::vector<size_t> m_pageEnds; // m_rows.size() after each page
     std::vector<quint32> m_order;   // all rows, display order
     std::vector<quint32> m_view;    // m_order through the filter
     qsizetype m_folderRows = 0;     // in m_rows
@@ -161,6 +204,14 @@ private:
     qsizetype m_viewFolders = 0;    // leading folders in m_view (server order only)
     qint64 m_bytes = 0;
     QStringList m_storageClasses{QString()};
+
+    std::vector<std::unique_ptr<Snapshot>> m_cache;   // most recent first
+    bool m_stale = false;
+    QDateTime m_staleSince;
+    int m_stalePages = 0;            // pages of the cached listing
+    std::vector<Row> m_fresh;        // the refresh of a stale listing, until complete
+    std::vector<size_t> m_freshEnds;
+    int m_freshPages = 0;
 
     int m_sortColumn = -1;
     Qt::SortOrder m_sortOrder = Qt::AscendingOrder;

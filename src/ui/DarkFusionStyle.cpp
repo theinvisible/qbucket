@@ -140,6 +140,17 @@ QWidget#sidebar QTreeView { background: @panel2@; }
 QLabel#sectionHeader { color: @text3@; font-weight: 600; padding: 10px 12px 4px 12px; }
 QWidget#pathBar { background: @panel@; border-bottom: 1px solid @border@; }
 QLabel#pathText { color: @text2@; padding: 7px 12px; }
+QToolButton#crumb, QToolButton#crumbCurrent { background: transparent; border: none; border-radius: 5px; padding: 3px 6px; color: @text2@; }
+QToolButton#crumb:hover, QToolButton#crumbCurrent:hover { background: @hover@; color: @text@; }
+QToolButton#crumbCurrent { color: @text@; font-weight: 600; }
+QToolButton#crumb::menu-indicator { image: none; width: 0; }
+QLabel#crumbSep { color: @text3@; padding: 0 1px; }
+QLabel#crumbAccount { color: @text2@; padding: 0 2px 0 6px; }
+QLabel#envBadge { border-radius: 4px; padding: 0 5px; font-weight: 700; font-size: 8pt; }
+QLineEdit#pathEdit { border-radius: 5px; padding: 3px 8px; margin: 2px 6px; }
+QLabel#bannerInfo, QLabel#bannerError { background: @panel2@; border-bottom: 1px solid @border@; padding: 6px 12px; }
+QLabel#bannerInfo { color: @text2@; }
+QLabel#bannerError { color: @danger@; }
 QLabel#emptyState { color: @text3@; padding: 24px; }
 QLabel#paneTitle { color: @text@; font-weight: 600; padding: 12px 14px 6px 14px; }
 
@@ -216,6 +227,7 @@ QString resolve(const Palette& p)
     rep("@selLine@",      p.selLine);
     rep("@titlebar@",     p.titlebar);
     rep("@inset@",        p.inset);
+    rep("@danger@",       Theme::dangerColor());   // semantic, same in both themes
     return s;
 }
 

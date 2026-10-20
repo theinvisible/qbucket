@@ -19,6 +19,7 @@ namespace qbucket {
 
 class AccountSessions;
 class AccountSidebar;
+class ObjectBrowser;
 class AccountStore;
 class SecretStore;
 class SettingsController;
@@ -50,6 +51,9 @@ private:
     QWidget* buildObjectArea_();
     QWidget* buildDetailPane_();
     void connectSettings_();
+    void connectBrowser_();
+    void updateNavigation_();
+    void updateStatus_();
     void restoreWindowState_();
     void saveWindowState_();
 
@@ -74,6 +78,11 @@ private:
     QAction*      m_actFolders      = nullptr;
     QAction*      m_actFlat         = nullptr;
     QAction*      m_actVersions     = nullptr;
+    QAction*      m_actBack         = nullptr;
+    QAction*      m_actForward      = nullptr;
+    QAction*      m_actUp           = nullptr;
+    QAction*      m_actRefresh      = nullptr;
+    QAction*      m_actEditPath     = nullptr;
     QActionGroup* m_themeGroup      = nullptr;
     QAction*      m_actThemeDark    = nullptr;
     QAction*      m_actThemeLight   = nullptr;
@@ -100,9 +109,7 @@ private:
     // Central
     QSplitter*      m_splitter      = nullptr;
     AccountSidebar* m_sidebar       = nullptr;
-    QStackedWidget* m_objectStack   = nullptr;
-    QTreeView*      m_objectView    = nullptr;
-    QLabel*         m_pathText      = nullptr;
+    ObjectBrowser*  m_browser       = nullptr;
     QDockWidget*    m_transferDock  = nullptr;
 
     // Status bar

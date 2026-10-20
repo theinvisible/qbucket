@@ -4,6 +4,8 @@
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 #include "ui/AccountSidebar.h"
+#include "controllers/BrowseController.h"
+#include "ui/ObjectBrowser.h"
 #include "controllers/SettingsController.h"
 #include "ui/AccountDialog.h"
 #include "ui/IconFactory.h"
@@ -129,10 +131,101 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     }
     connect(m_sidebar, &AccountSidebar::statusMessage, this,
             [this](const QString& text, int timeoutMs) { statusBar()->showMessage(text, timeoutMs); });
-    connect(m_sidebar, &AccountSidebar::bucketSelected, this, [this](const QUuid& id, const QString& bucket) {
-        const std::optional<Account> a = m_accounts->account(id);
-        m_pathText->setText(a ? tr("%1 › %2").arg(a->name, bucket) : bucket);
+    connect(m_sidebar, &AccountSidebar::bucketSelected, m_browser, &ObjectBrowser::openBucket);
+    connect(m_sidebar, &AccountSidebar::accountSelected, this, [this](const QUuid& id) {
+        m_browser->navigation()->navigate({id, {}, {}});
     });
+    connectBrowser_();
+}
+
+// ---------------------------------------------------------------------------
+// Object browser: navigation, filter, status bar
+// ---------------------------------------------------------------------------
+void MainWindow::connectBrowser_()
+{
+    BrowseController* nav = m_browser->navigation();
+    connect(m_actBack, &QAction::triggered, nav, &BrowseController::back);
+    connect(m_actForward, &QAction::triggered, nav, &BrowseController::forward);
+    connect(m_actUp, &QAction::triggered, nav, &BrowseController::up);
+    connect(m_actRefresh, &QAction::triggered, m_browser, &ObjectBrowser::refresh);
+    connect(m_actEditPath, &QAction::triggered, m_browser, &ObjectBrowser::editPath);
+    connect(m_backBtn, &QToolButton::clicked, m_actBack, &QAction::trigger);
+    connect(m_forwardBtn, &QToolButton::clicked, m_actForward, &QAction::trigger);
+    connect(m_upBtn, &QToolButton::clicked, m_actUp, &QAction::trigger);
+    connect(m_refreshBtn, &QToolButton::clicked, m_actRefresh, &QAction::trigger);
+
+    // Backspace in the list goes up, like a file manager.
+    auto* upKey = new QAction(m_browser->view());
+    upKey->setShortcut(Qt::Key_Backspace);
+    upKey->setShortcutContext(Qt::WidgetShortcut);
+    connect(upKey, &QAction::triggered, nav, &BrowseController::up);
+    m_browser->view()->addAction(upKey);
+
+    connect(m_filterField, &QLineEdit::textChanged, this, [this](const QString& text) {
+        m_browser->setFilterText(text);
+        if (text.isEmpty() && m_browser->model() && !m_browser->model()->searchPrefix().isEmpty())
+            m_browser->searchPrefix(QString());
+    });
+    // Enter asks the server: names starting with the text (all pages).
+    connect(m_filterField, &QLineEdit::returnPressed, this,
+            [this] { m_browser->searchPrefix(m_filterField->text()); });
+
+    connect(nav, &BrowseController::historyChanged, this, &MainWindow::updateNavigation_);
+    connect(m_browser, &ObjectBrowser::locationChanged, this, [this] {
+        m_filterField->clear();   // the filter is per folder
+        updateNavigation_();
+    });
+    connect(m_browser, &ObjectBrowser::statusChanged, this, &MainWindow::updateStatus_);
+    updateNavigation_();
+    updateStatus_();
+}
+
+void MainWindow::updateNavigation_()
+{
+    const BrowseController* nav = m_browser->navigation();
+    const bool here = nav->current().hasBucket() && m_browser->model();
+    m_actBack->setEnabled(nav->canGoBack());
+    m_actForward->setEnabled(nav->canGoForward());
+    m_actUp->setEnabled(nav->canGoUp());
+    m_actRefresh->setEnabled(here);
+    m_actEditPath->setEnabled(nav->current().isValid());
+    m_backBtn->setEnabled(nav->canGoBack());
+    m_forwardBtn->setEnabled(nav->canGoForward());
+    m_upBtn->setEnabled(nav->canGoUp());
+    m_refreshBtn->setEnabled(here);
+    m_filterField->setEnabled(here);
+}
+
+void MainWindow::updateStatus_()
+{
+    const ObjectTableModel* model = m_browser->model();
+    const QString text = m_browser->statusText();
+    m_locationLabel->setText(text.isEmpty() ? tr("Not connected") : text);
+    QColor dot = Theme::current().text3;
+    QString state = tr("Offline");
+    if (model && m_browser->navigation()->current().hasBucket()) {
+        switch (model->state()) {
+        case ObjectTableModel::State::Idle:
+            break;
+        case ObjectTableModel::State::Loading:
+            dot = Theme::current().accent;
+            state = tr("Loading…");
+            break;
+        case ObjectTableModel::State::Ready:
+        case ObjectTableModel::State::Complete:
+            dot = Theme::successColor();
+            state = model->isStale() ? tr("Refreshing…") : tr("Online");
+            break;
+        case ObjectTableModel::State::Error:
+            dot = Theme::dangerColor();
+            state = tr("Error");
+            break;
+        }
+    }
+    m_connectionDot->setPixmap(statusDot(dot, devicePixelRatioF()));
+    m_connectionLabel->setText(state);
+    m_connectionLabel->setToolTip(model && model->state() == ObjectTableModel::State::Error ? model->errorText()
+                                                                                           : QString());
 }
 
 // ---------------------------------------------------------------------------
@@ -169,6 +262,23 @@ void MainWindow::buildMenuBar_()
         connect(action, &QAction::triggered, this,
                 [this, mode] { m_settings->setBrowseMode(mode); });
     }
+
+    // Versions arrive with M5.
+    m_actVersions->setEnabled(false);
+
+    view->addSeparator();
+    m_actBack = view->addAction(tr("&Back"));
+    setStandardShortcut(m_actBack, QKeySequence::Back);
+    m_actForward = view->addAction(tr("&Forward"));
+    setStandardShortcut(m_actForward, QKeySequence::Forward);
+    m_actUp = view->addAction(tr("&Up One Level"));
+    m_actUp->setShortcut(QKeySequence(Qt::ALT | Qt::Key_Up));
+    m_actRefresh = view->addAction(tr("&Refresh"));
+    setStandardShortcut(m_actRefresh, QKeySequence::Refresh);
+    m_actEditPath = view->addAction(tr("&Go to Path…"));
+    m_actEditPath->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));
+    for (QAction* a : {m_actBack, m_actForward, m_actUp, m_actRefresh, m_actEditPath})
+        a->setEnabled(false);
 
     view->addSeparator();
     auto* themeMenu = view->addMenu(tr("&Theme"));
@@ -303,6 +413,10 @@ void MainWindow::buildToolBar_()
         segLay->addWidget(btn);
         connect(btn, &QToolButton::clicked, this,
                 [this, mode] { m_settings->setBrowseMode(mode); });
+        if (mode == QLatin1String("versions")) {
+            btn->setEnabled(false);   // M5
+            btn->setToolTip(tr("Not available yet"));
+        }
     }
     seg->setToolTip(tr("Folders: browse by prefix · Flat: every key below the "
                        "current prefix · Versions: all object versions"));
@@ -375,53 +489,8 @@ QWidget* MainWindow::buildSidebar_()
 
 QWidget* MainWindow::buildObjectArea_()
 {
-    auto* area = new QWidget;
-    area->setMinimumWidth(360);
-    auto* lay = new QVBoxLayout(area);
-    lay->setContentsMargins(0, 0, 0, 0);
-    lay->setSpacing(0);
-
-    // Path bar. A clickable breadcrumb (PathBar) replaces this label in M2.
-    auto* pathBar = new QWidget;
-    pathBar->setObjectName(QStringLiteral("pathBar"));
-    auto* pathLay = new QHBoxLayout(pathBar);
-    pathLay->setContentsMargins(0, 0, 0, 0);
-    m_pathText = new QLabel(tr("No location"));
-    m_pathText->setObjectName(QStringLiteral("pathText"));
-    pathLay->addWidget(m_pathText);
-    lay->addWidget(pathBar);
-
-    m_objectStack = new QStackedWidget;
-
-    // Index 0: empty state.
-    m_objectStack->addWidget(
-        makeEmptyState(tr("Add an account to start browsing your buckets.")));
-
-    // Index 1: object list. Placeholder model until ObjectTableModel (M2).
-    // Column widths are fixed + Interactive on purpose: ResizeToContents is
-    // O(rows) per resize, fatal with 100k-row listings (xyz-profiler lesson).
-    auto* model = new QStandardItemModel(0, 4, this);
-    model->setHorizontalHeaderLabels(
-        {tr("Name"), tr("Size"), tr("Last Modified"), tr("Storage Class")});
-    m_objectView = new QTreeView;
-    m_objectView->setModel(model);
-    m_objectView->setRootIsDecorated(false);
-    m_objectView->setUniformRowHeights(true);
-    m_objectView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    m_objectView->setAllColumnsShowFocus(true);
-    auto* header = m_objectView->header();
-    header->setStretchLastSection(false);
-    header->setSectionResizeMode(0, QHeaderView::Stretch);
-    for (int col = 1; col < 4; ++col)
-        header->setSectionResizeMode(col, QHeaderView::Interactive);
-    header->resizeSection(1, 110);
-    header->resizeSection(2, 170);
-    header->resizeSection(3, 130);
-    m_objectStack->addWidget(m_objectView);
-
-    m_objectStack->setCurrentIndex(0);
-    lay->addWidget(m_objectStack, 1);
-    return area;
+    m_browser = new ObjectBrowser(m_accounts, m_sessions);
+    return m_browser;
 }
 
 QWidget* MainWindow::buildDetailPane_()
@@ -501,7 +570,8 @@ void MainWindow::connectSettings_()
             this, &MainWindow::applyThemeChoice_);
     connect(m_theme, &ThemeManager::themeChanged, this, [this] {
         refreshIcons_();
-        if (m_objectView)  m_objectView->viewport()->update();
+        if (m_browser) m_browser->view()->viewport()->update();
+        updateStatus_();
         if (m_sidebar) m_sidebar->refreshIcons();
     });
 }
@@ -513,6 +583,9 @@ void MainWindow::applyBrowseMode_()
         action->setChecked(action->data().toString() == mode);
     for (QAbstractButton* btn : m_browseSeg->buttons())
         btn->setChecked(btn->property("browseMode").toString() == mode);
+    if (m_browser)
+        m_browser->setMode(mode == QLatin1String("flat") ? ObjectTableModel::Mode::Flat
+                                                          : ObjectTableModel::Mode::Folders);
 }
 
 void MainWindow::applyThemeChoice_()

@@ -91,6 +91,11 @@ qbucket_add_test(test_account_tree_model
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_browse_controller
+    test_browse_controller.cpp
+    qbucket_controllers
+)
+
 qbucket_add_test(test_object_table_model
     test_object_table_model.cpp
     qbucket_models
@@ -99,6 +104,12 @@ qbucket_add_test(test_object_table_model
 
 qbucket_add_test(test_account_sidebar
     test_account_sidebar.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
+qbucket_add_test(test_object_browser
+    test_object_browser.cpp
     qbucket_app_ui
     qbucket::s3_testsupport
 )

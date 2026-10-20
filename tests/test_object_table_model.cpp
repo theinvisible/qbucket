@@ -94,17 +94,17 @@ private slots:
 
         QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 1000, 10000);
         QCOMPARE(model.state(), State::Ready);
-        QVERIFY(model.canFetchMore({}));
+        QVERIFY(model.canLoadMore());
         QCOMPARE(name(model, 0), key(0));
         QCOMPARE(model.index(5, ObjectTableModel::SizeColumn).data(ObjectTableModel::SizeRole).toLongLong(), 5);
 
-        model.fetchMore({});
-        QVERIFY(!model.canFetchMore({}));   // one page at a time
+        model.loadMore();
+        QVERIFY(!model.canLoadMore());   // one page at a time
         QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 2000, 10000);
-        model.fetchMore({});
+        model.loadMore();
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
         QCOMPARE(model.rowCount(), 2500);
-        QVERIFY(!model.canFetchMore({}));
+        QVERIFY(!model.canLoadMore());
         QCOMPARE(model.pagesLoaded(), 3);
         QCOMPARE(pages.size(), 3);
         QCOMPARE(model.loadedObjects(), 2500);
@@ -127,7 +127,7 @@ private slots:
         model.setLocation(m_account, QStringLiteral("bkt"), QString());
         // A common prefix counts against max-keys: "a" + 999 objects.
         QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 1000, 10000);
-        model.fetchMore({});
+        model.loadMore();
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
         QCOMPARE(model.rowCount(), 1202);
         QCOMPARE(name(model, 0), QStringLiteral("a"));
@@ -186,12 +186,12 @@ private slots:
         ObjectTableModel model(m_sessions.get());
         model.setLocation(m_account, QStringLiteral("bkt"), QString());
         QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 1000, 10000);
-        model.fetchMore({});
+        model.loadMore();
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Error, 10000);
         QCOMPARE(model.rowCount(), 1000);
         QCOMPARE(model.error().category, s3::ErrorCategory::NotPermitted);
         QVERIFY(!model.errorText().isEmpty());
-        QVERIFY(!model.canFetchMore({}));
+        QVERIFY(!model.canLoadMore());
     }
 
     void aFailedFirstPageIsAnErrorNotAnEmptyFolder()
@@ -221,7 +221,7 @@ private slots:
         ObjectTableModel model(m_sessions.get());
         model.setLocation(m_account, QStringLiteral("bkt"), QString());
         QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 1000, 10000);
-        model.fetchMore({});
+        model.loadMore();
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Error, 10000);
         QCOMPARE(model.error().category, s3::ErrorCategory::Protocol);
     }
@@ -293,7 +293,7 @@ private slots:
         for (int rows = 1000; rows <= 6000; rows += 1000) {
             QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), rows, 10000);
             if (rows < 6000)
-                model.fetchMore({});
+                model.loadMore();
         }
         const QPersistentModelIndex tracked = model.index(4321, 0);
         const QString trackedKey = tracked.data(ObjectTableModel::KeyRole).toString();
@@ -310,7 +310,7 @@ private slots:
         }
 
         // The last page arrives while sorted: appended first, then sorted in.
-        model.fetchMore({});
+        model.loadMore();
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
         QCOMPARE(model.rowCount(), 7000);
         QTRY_VERIFY_WITH_TIMEOUT(!model.isSorting(), 10000);
@@ -337,7 +337,7 @@ private slots:
         QCOMPARE(model.filterText(), QStringLiteral("R"));
         model.setFilterText(QStringLiteral("f0119"));
         QCOMPARE(model.rowCount(), 0);   // f01190–f01199 are on the next page
-        model.fetchMore({});
+        model.loadMore();
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
         QCOMPARE(model.rowCount(), 10);
         model.setFilterText(QString());
@@ -376,6 +376,107 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
         QCOMPARE(model.rowCount(), 1);
         QCOMPARE(m_server->requestCount(), 2);
+    }
+
+    void aRevisitShowsTheCacheStaleThenFresh()
+    {
+        m_bucket.add(QStringLiteral("a/1"));
+        m_bucket.add(QStringLiteral("b/1"));
+        m_bucket.sort();
+        ObjectTableModel model(m_sessions.get());
+        QSignalSpy stale(&model, &ObjectTableModel::staleChanged);
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("a/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("b/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+
+        m_bucket.add(QStringLiteral("a/2"));   // changed on the server meanwhile
+        m_bucket.sort();
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("a/"));
+        // At once, before any answer: the cached rows, marked stale.
+        QCOMPARE(model.rowCount(), 1);
+        QVERIFY(model.isStale());
+        QVERIFY(model.staleSince().isValid());
+        QVERIFY(!model.canLoadMore());
+        QCOMPARE(stale.size(), 1);
+        QTRY_VERIFY_WITH_TIMEOUT(!model.isStale(), 10000);
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(model.state(), State::Complete);
+        QCOMPARE(stale.size(), 2);
+    }
+
+    void aStaleRefreshRefetchesTheCachedPages()
+    {
+        for (int i = 0; i < 2500; ++i)
+            m_bucket.add(QStringLiteral("big/") + key(i));
+        m_bucket.add(QStringLiteral("small/x"));
+        m_bucket.sort();
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("big/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 1000, 10000);
+        model.loadMore();
+        QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 2000, 10000);
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("small/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        m_server->clearRequests();
+
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("big/"));
+        QCOMPARE(model.rowCount(), 2000);
+        QVERIFY(model.isStale());
+        QTRY_VERIFY_WITH_TIMEOUT(!model.isStale(), 10000);
+        QCOMPARE(m_server->requestCount(), 2);   // both cached pages, then swapped
+        QCOMPARE(model.rowCount(), 2000);
+        QCOMPARE(model.state(), State::Ready);
+        model.loadMore();
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        QCOMPARE(model.rowCount(), 2500);
+    }
+
+    void reloadNeverUsesTheCache()
+    {
+        m_bucket.add(QStringLiteral("x"));
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, QStringLiteral("bkt"), QString());
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        model.reload();
+        QCOMPARE(model.rowCount(), 0);
+        QVERIFY(!model.isStale());
+        QCOMPARE(model.state(), State::Loading);
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+    }
+
+    void aFailedRefreshKeepsTheStaleRows()
+    {
+        m_bucket.add(QStringLiteral("a/1"));
+        m_bucket.add(QStringLiteral("b/1"));
+        m_bucket.sort();
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("a/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("b/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        m_server->setFallbackHandler([](const RecordedRequest&) { return FakeResponse::s3Error(403, "AccessDenied"); });
+        model.setLocation(m_account, QStringLiteral("bkt"), QStringLiteral("a/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Error, 10000);
+        QVERIFY(model.isStale());   // never passed off as current
+        QCOMPARE(model.rowCount(), 1);
+    }
+
+    void searchesAreNotCached()
+    {
+        m_bucket.add(QStringLiteral("alpha"));
+        m_bucket.add(QStringLiteral("beta"));
+        m_bucket.sort();
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, QStringLiteral("bkt"), QString());
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        model.setSearchPrefix(QStringLiteral("al"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        QCOMPARE(model.rowCount(), 1);
+        model.setSearchPrefix(QString());   // back: the unsearched listing, from the cache
+        QVERIFY(model.isStale());
+        QCOMPARE(model.rowCount(), 2);
+        QTRY_VERIFY_WITH_TIMEOUT(!model.isStale(), 10000);
     }
 
 private:

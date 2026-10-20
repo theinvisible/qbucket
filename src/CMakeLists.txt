@@ -12,7 +12,10 @@ target_link_libraries(qbucket_diagnostics
 )
 
 # --- Domain: plain app-level value types -------------------------------------
-add_library(qbucket_domain INTERFACE)
+add_library(qbucket_domain INTERFACE
+    domain/Account.h
+    domain/Location.h
+)
 target_include_directories(qbucket_domain INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_domain INTERFACE qbucket::s3 Qt6::Core)
 
@@ -41,6 +44,8 @@ target_link_libraries(qbucket_accounts
 add_library(qbucket_controllers STATIC
     controllers/AccountSessions.h
     controllers/AccountSessions.cpp
+    controllers/BrowseController.h
+    controllers/BrowseController.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h
@@ -96,6 +101,10 @@ add_library(qbucket_app_ui STATIC
     ui/AccountTreeDelegate.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
+    ui/ObjectBrowser.h
+    ui/ObjectBrowser.cpp
+    ui/PathBar.h
+    ui/PathBar.cpp
     ui/SettingsDialog.h
     ui/SettingsDialog.cpp
 )
