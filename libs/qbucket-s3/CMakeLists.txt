@@ -50,14 +50,27 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/Endpoint.h
     include/qbucket/s3/Error.h
     include/qbucket/s3/Logging.h
+    include/qbucket/s3/Operation.h
     include/qbucket/s3/Presigner.h
     include/qbucket/s3/RequestObserver.h
     include/qbucket/s3/Result.h
     include/qbucket/s3/Types.h
+    include/qbucket/s3/providers/GenericS3Profile.h
+    include/qbucket/s3/providers/ProviderProfile.h
+    src/client/RequestPipeline.h
+    src/client/RequestPipeline.cpp
+    src/client/S3Client.h
+    src/client/S3Client.cpp
+    src/core/Credentials.cpp
     src/core/Endpoint.cpp
     src/core/Error.cpp
     src/core/ErrorMapping.h
     src/core/ErrorMapping.cpp
+    src/core/HttpDate.h
+    src/core/HttpDate.cpp
+    src/core/Mailbox.h
+    src/core/Mailbox.cpp
+    src/core/Operation.cpp
     src/core/RequestObserver.cpp
     src/http/S3Uri.h
     src/http/S3Uri.cpp
@@ -68,6 +81,7 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/logging/Logging.cpp
     src/logging/Redaction.h
     src/logging/Redaction.cpp
+    src/providers/ProviderProfile.cpp
     src/signing/SigV4Signer.cpp
     src/xml/XmlParsers.h
     src/xml/XmlParsers.cpp

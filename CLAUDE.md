@@ -282,6 +282,13 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.
 - Self-signed TLS: per-account certificate pinning, never a global ignore.
+- **QNAM normalises `.` / `..` path segments on the wire** — even
+  `%2E%2E`, and although `QUrl::path()` still shows them. A key
+  `a/../b` would address `b`. `S3Uri::build` refuses such keys
+  (`InvalidRequest`); never work around it by sending them anyway.
+- **moc mis-reads raw string literals** containing quotes in files with
+  `Q_OBJECT` (empty `.moc`, "undefined vtable"). Keep XML fixtures in
+  `tests/data/`, not in `R"(…)"` literals in test sources.
 
 ## References
 

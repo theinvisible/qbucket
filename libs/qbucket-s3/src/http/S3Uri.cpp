@@ -76,6 +76,18 @@ Result<S3Uri> S3Uri::build(const Endpoint& endpoint, AddressingStyle style, cons
     if (bucket.isEmpty() && !key.isEmpty())
         return Error::make(ErrorCategory::InvalidRequest, QStringLiteral("object key without a bucket"));
 
+    // QNetworkAccessManager drops "." / ".." path segments when it puts the
+    // request on the wire — even %2E-encoded ones, and although QUrl::path()
+    // still shows them. "a/../b" would address the object "b". Such keys
+    // cannot be sent safely; refuse rather than touch a different object.
+    for (const QStringView segment : QStringView(key).split(u'/')) {
+        if (segment == u"." || segment == u"..") {
+            return Error::make(ErrorCategory::InvalidRequest,
+                               QStringLiteral("object keys with \".\" or \"..\" path segments "
+                                              "cannot be addressed safely: ") + key);
+        }
+    }
+
     S3Uri uri;
     uri.m_style = effectiveStyle(style, bucket, endpoint.url);
 

@@ -21,3 +21,14 @@ version bump may break the API.
 - `qbucket::s3_testsupport` with `testing::FakeS3Server`: scriptable HTTP/1.1
   test server with fault injection and SigV4 verification (header and
   presigned form, clock-skew and payload-hash checks).
+- `CredentialsProvider` interface (asynchronous, thread-safe) with
+  `StaticCredentialsProvider` and `EnvCredentialsProvider`.
+- `Operation` enum, `ProviderProfile` hooks (endpoints, signing region,
+  limits, `prepareRequest`, `normalizeListing`, `mapError`) and
+  `GenericS3Profile`.
+
+### Safety
+
+- Object keys with `.` / `..` path segments are refused with
+  `InvalidRequest`: Qt's network stack normalises them away on the wire, so
+  the request would address a different object.

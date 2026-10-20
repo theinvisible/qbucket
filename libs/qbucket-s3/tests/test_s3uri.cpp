@@ -46,9 +46,8 @@ private Q_SLOTS:
         QTest::newRow("nested") << QStringLiteral("a/b/c.txt") << QByteArray("/bkt/a/b/c.txt");
         QTest::newRow("double slash") << QStringLiteral("dir//file") << QByteArray("/bkt/dir//file");
         QTest::newRow("leading slash") << QStringLiteral("/lead") << QByteArray("/bkt//lead");
-        QTest::newRow("dot segment") << QStringLiteral("./x") << QByteArray("/bkt/./x");
-        QTest::newRow("dotdot segment") << QStringLiteral("a/../x") << QByteArray("/bkt/a/../x");
-        QTest::newRow("only dots") << QStringLiteral("..") << QByteArray("/bkt/..");
+        QTest::newRow("dots in names") << QStringLiteral("a.b/.../.hidden/x.")
+                                       << QByteArray("/bkt/a.b/.../.hidden/x.");
         QTest::newRow("unicode NFC") << QStringLiteral("café") << QByteArray("/bkt/caf%C3%A9");
         QTest::newRow("unicode NFD") << QStringLiteral("café") << QByteArray("/bkt/cafe%CC%81");
         QTest::newRow("emoji") << QStringLiteral("\U0001F600.png") << QByteArray("/bkt/%F0%9F%98%80.png");
@@ -76,6 +75,27 @@ private Q_SLOTS:
         QCOMPARE(vh->host(), QByteArray("bkt.s3.example.com"));
         QCOMPARE(vh->canonicalUri(), path.mid(4));
         QCOMPARE(vh->url().toEncoded(), QByteArray("https://bkt.s3.example.com") + path.mid(4));
+    }
+
+    void refusesDotSegments_data()
+    {
+        QTest::addColumn<QString>("key");
+        QTest::newRow("dot") << QStringLiteral("./x");
+        QTest::newRow("dotdot") << QStringLiteral("a/../x");
+        QTest::newRow("only dots") << QStringLiteral("..");
+        QTest::newRow("trailing dot") << QStringLiteral("dir/.");
+        QTest::newRow("folder marker") << QStringLiteral("../");
+    }
+
+    // QNAM normalises these away on the wire (verified: "/bkt/a/../b" goes
+    // out as "/bkt/b"), so the request would hit a different object.
+    void refusesDotSegments()
+    {
+        QFETCH(QString, key);
+        const Result<S3Uri> uri = S3Uri::build(endpoint("https://s3.example.com"),
+                                               AddressingStyle::Path, QStringLiteral("bkt"), key);
+        QVERIFY(!uri);
+        QCOMPARE(uri.error().category, ErrorCategory::InvalidRequest);
     }
 
     void serviceAndBucketLevel()

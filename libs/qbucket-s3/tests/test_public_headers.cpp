@@ -6,11 +6,15 @@
 #include <qbucket/s3/Error.h>
 #include <qbucket/s3/Export.h>
 #include <qbucket/s3/Logging.h>
+#include <qbucket/s3/Operation.h>
 #include <qbucket/s3/Presigner.h>
 #include <qbucket/s3/RequestObserver.h>
 #include <qbucket/s3/Result.h>
 #include <qbucket/s3/Types.h>
 #include <qbucket/s3/Version.h>
+#include <qbucket/s3/providers/GenericS3Profile.h>
+#include <qbucket/s3/providers/ProviderProfile.h>
+#include <qbucket/s3/testing/FakeS3Server.h>
 
 #include <QtTest>
 
