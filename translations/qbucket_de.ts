@@ -735,6 +735,37 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::ObjectTableModel</name>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="554"/>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="556"/>
+        <source>Size</source>
+        <translation>Größe</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="558"/>
+        <source>Modified</source>
+        <translation>Geändert</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="560"/>
+        <source>Class</source>
+        <translation>Klasse</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/models/ObjectTableModel.cpp" line="566"/>
+        <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
+        <translation>
+            <numerusform>Sortiert innerhalb der %n bisher geladenen Zeile; weitere Seiten werden beim Eintreffen einsortiert.</numerusform>
+            <numerusform>Sortiert innerhalb der %n bisher geladenen Zeilen; weitere Seiten werden beim Eintreffen einsortiert.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::SettingsDialog</name>
     <message>
         <location filename="../src/ui/SettingsDialog.cpp" line="20"/>

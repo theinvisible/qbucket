@@ -56,6 +56,8 @@ target_link_libraries(qbucket_controllers
 add_library(qbucket_models STATIC
     models/AccountTreeModel.h
     models/AccountTreeModel.cpp
+    models/ObjectTableModel.h
+    models/ObjectTableModel.cpp
 )
 target_include_directories(qbucket_models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_models
