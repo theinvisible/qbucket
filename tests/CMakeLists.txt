@@ -138,11 +138,38 @@ qbucket_add_test(test_operation_controller
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_create_folder_job
+    test_create_folder_job.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui
     qbucket::s3_testsupport
 )
+
+# --- Integration: the app's jobs against a real S3 server --------------------
+# Opt-in like the library's it_s3_backend (QBUCKET_IT_* in the environment;
+# skipped when unset). With QBUCKET_S3_IT_LOCAL one test per Docker backend.
+qbucket_add_test(it_operations
+    it_operations.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+set_tests_properties(it_operations PROPERTIES LABELS integration TIMEOUT 600)
+if(QBUCKET_S3_IT_LOCAL)
+    foreach(backend ceph versitygw garage)
+        file(STRINGS ${CMAKE_SOURCE_DIR}/libs/qbucket-s3/tests/docker/env/${backend}.env _it_env REGEX "^QBUCKET_IT_")
+        add_test(NAME it_operations_${backend} COMMAND it_operations)
+        set_tests_properties(it_operations_${backend} PROPERTIES
+            ENVIRONMENT "${_it_env}"
+            LABELS "integration;docker"
+            TIMEOUT 600
+        )
+    endforeach()
+endif()
 
 # --- Static checks -----------------------------------------------------------
 # The mutation gate (PLAN.md §12.1): writing S3 calls only in src/controllers/.

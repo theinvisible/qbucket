@@ -72,6 +72,9 @@ public:
     // Features the operation needs; checked before planning and executing.
     [[nodiscard]] virtual QList<s3::Feature> requiredFeatures() const { return {}; }
     [[nodiscard]] virtual bool isDestructive() const { return true; }
+    // False: confirmed by starting it (e.g. creating a folder) — the plan
+    // still runs, the preview isn't shown.
+    [[nodiscard]] virtual bool needsConfirmation() const { return true; }
 
     // The user's answer to the preview.
     void confirm();

@@ -56,6 +56,8 @@ add_library(qbucket_controllers STATIC
     controllers/Journal.cpp
     controllers/OperationController.h
     controllers/OperationController.cpp
+    controllers/CreateFolderJob.h
+    controllers/CreateFolderJob.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
     controllers/SettingsController.h

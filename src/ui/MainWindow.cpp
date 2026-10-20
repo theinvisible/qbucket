@@ -6,6 +6,7 @@
 #include "controllers/AccountSessions.h"
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
+#include "controllers/CreateFolderJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -31,6 +32,7 @@
 #include <QDockWidget>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
@@ -163,6 +165,9 @@ void MainWindow::connectOperations_()
 {
     if (!m_operations)
         return;
+    // Read-only switched, capabilities learned: what may be done changes.
+    connect(m_accounts, &AccountStore::accountsChanged, this, &MainWindow::updateMutationActions_);
+    connect(m_capabilities, &CapabilityController::capabilitiesUpdated, this, &MainWindow::updateMutationActions_);
     connect(m_operations, &OperationController::previewNeeded, this, [this](Job* job) {
         auto* dlg = new OperationPreviewDialog(job, this);
         dlg->setAttribute(Qt::WA_DeleteOnClose);
@@ -189,6 +194,38 @@ void MainWindow::connectOperations_()
     connect(m_journal, &Journal::writeFailed, this, [this](const QString& message) {
         m_activity->add(ActivityLog::Level::Error, tr("The operation journal could not be written: %1").arg(message));
     });
+}
+
+void MainWindow::updateMutationActions_()
+{
+    const Location here = m_browser->navigation()->current();
+    OperationController::Check folder{false, tr("Open a bucket first.")};
+    if (m_operations && here.hasBucket())
+        folder = m_operations->check(here.account, here.bucket, {}, false);
+    m_actNewFolder->setEnabled(folder.allowed);
+    m_newFolderBtn->setEnabled(folder.allowed);
+    m_actNewFolder->setToolTip(folder.allowed ? tr("Create a folder here") : folder.reason);
+    m_newFolderBtn->setToolTip(folder.allowed ? tr("New folder") : folder.reason);
+}
+
+void MainWindow::newFolder_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket())
+        return;
+    auto* dlg = new QInputDialog(this);
+    dlg->setWindowTitle(tr("New Folder"));
+    dlg->setLabelText(tr("Name of the new folder in s3://%1/%2:").arg(here.bucket, here.prefix));
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QInputDialog::textValueSelected, this, [this, here, account](const QString& name) {
+        if (const QString problem = CreateFolderJob::validateName(name); !problem.isEmpty()) {
+            statusBar()->showMessage(tr("No folder created: %1").arg(problem), 10000);
+            return;
+        }
+        m_operations->start(new CreateFolderJob(*account, here.bucket, here.prefix, name));
+    });
+    dlg->open();
 }
 
 void MainWindow::updateJobStatus_()
@@ -260,6 +297,9 @@ void MainWindow::connectBrowser_()
     for (QAction* a : {m_browser->openAction(), m_browser->copyKeyAction(), m_browser->copyUriAction()})
         m_editMenu->addAction(a);
     m_editMenu->addSeparator();
+    m_actNewFolder = m_editMenu->addAction(tr("&New Folder…"), this, &MainWindow::newFolder_);
+    m_actNewFolder->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+    connect(m_newFolderBtn, &QToolButton::clicked, m_actNewFolder, &QAction::trigger);
     m_editMenu->addAction(m_browser->renameAction());
     m_editMenu->addAction(m_browser->deleteAction());
     connect(m_actEditPath, &QAction::triggered, m_browser, &ObjectBrowser::editPath);
@@ -315,6 +355,7 @@ void MainWindow::updateNavigation_()
     m_actRefresh->setEnabled(here || m_sessions);
     m_actEditPath->setEnabled(nav->current().isValid());
     m_actCapabilities->setEnabled(m_capabilities && nav->current().isValid());
+    updateMutationActions_();
     m_backBtn->setEnabled(nav->canGoBack());
     m_forwardBtn->setEnabled(nav->canGoForward());
     m_upBtn->setEnabled(nav->canGoUp());

@@ -78,6 +78,10 @@ QList<Job*> OperationController::jobs() const
 
 void OperationController::previewed_(Job* job)
 {
+    if (!job->needsConfirmation()) {
+        QMetaObject::invokeMethod(job, &Job::confirm, Qt::QueuedConnection);
+        return;
+    }
     Job::Preview& p = job->m_preview;
     if (job->isDestructive() && p.objects > kTypeToConfirmAbove && p.typeToConfirm.isEmpty()) {
         // Type the folder's (or bucket's) own name: hard to do by accident.

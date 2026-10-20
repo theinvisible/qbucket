@@ -65,6 +65,8 @@ private:
     void connectOperations_();
     void updateJobStatus_();
     void showJobReport_(Job* job);
+    void updateMutationActions_();
+    void newFolder_();
     void restoreWindowState_();
     void saveWindowState_();
 
@@ -105,6 +107,7 @@ private:
     QAction*      m_actThemeLight   = nullptr;
     QAction*      m_actThemeSystem  = nullptr;
     QAction*      m_actCapabilities = nullptr;
+    QAction*      m_actNewFolder    = nullptr;
     QAction*      m_actSettings     = nullptr;
     QAction*      m_actAbout        = nullptr;
     QAction*      m_actAboutQt      = nullptr;
