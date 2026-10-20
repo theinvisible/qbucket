@@ -5,10 +5,11 @@
 
 #include <QWidget>
 
+class QAction;
 class QLabel;
 class QPushButton;
 class QStackedWidget;
-class QTreeView;
+class QTableView;
 
 namespace qbucket {
 
@@ -32,7 +33,7 @@ public:
 
     [[nodiscard]] BrowseController* navigation() const { return m_nav; }
     [[nodiscard]] ObjectTableModel* model() const { return m_model; }
-    [[nodiscard]] QTreeView* view() const { return m_view; }
+    [[nodiscard]] QTableView* view() const { return m_view; }
     [[nodiscard]] PathBar* pathBar() const { return m_pathBar; }
 
     void openBucket(const QUuid& account, const QString& bucket);
@@ -42,6 +43,17 @@ public:
     void setFilterText(const QString& text);
     void searchPrefix(const QString& text);
     void editPath();
+
+    // Actions on the list's selection, for the Edit menu and the context
+    // menu; their shortcuts work while the list has the focus.
+    [[nodiscard]] QAction* openAction() const { return m_actOpen; }
+    [[nodiscard]] QAction* copyKeyAction() const { return m_actCopyKey; }
+    [[nodiscard]] QAction* copyUriAction() const { return m_actCopyUri; }
+    [[nodiscard]] QAction* renameAction() const { return m_actRename; }
+    [[nodiscard]] QAction* deleteAction() const { return m_actDelete; }
+
+    // Selected rows (column 0), in view order.
+    [[nodiscard]] QModelIndexList selectedRows() const;
 
     // "1 204 objects · 38.2 GB loaded · 3 selected" for the status bar.
     [[nodiscard]] QString statusText() const;
@@ -63,6 +75,10 @@ private:
     void rememberCurrent_();
     void restoreCurrent_();
     void showMessage_(const QString& text, bool retry);
+    void buildActions_();
+    void updateActions_();
+    void showContextMenu_(const QPoint& pos);
+    void copySelection_(bool asUri);
 
     AccountStore* m_accounts;
     AccountSessions* m_sessions;
@@ -73,10 +89,17 @@ private:
     PathBar* m_pathBar = nullptr;
     QLabel* m_banner = nullptr;
     QStackedWidget* m_stack = nullptr;
+    QWidget* m_messagePage = nullptr;
     QLabel* m_message = nullptr;
     QPushButton* m_retry = nullptr;
-    QTreeView* m_view = nullptr;
+    QTableView* m_view = nullptr;
     QString m_currentKey;   // kept across model resets
+
+    QAction* m_actOpen = nullptr;
+    QAction* m_actCopyKey = nullptr;
+    QAction* m_actCopyUri = nullptr;
+    QAction* m_actRename = nullptr;
+    QAction* m_actDelete = nullptr;
 };
 
 } // namespace qbucket

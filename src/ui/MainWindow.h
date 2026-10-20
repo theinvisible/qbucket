@@ -72,6 +72,7 @@ private:
     AccountSessions*    m_sessions = nullptr;   // with account management only
 
     // Menu actions
+    QMenu*        m_editMenu        = nullptr;
     QMenu*        m_viewMenu        = nullptr;
     QAction*      m_actAddAccount   = nullptr;
     QAction*      m_actQuit         = nullptr;

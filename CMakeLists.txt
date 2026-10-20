@@ -106,4 +106,5 @@ add_subdirectory(src)
 
 if(QBUCKET_BUILD_TESTS)
     add_subdirectory(tests)
+    add_subdirectory(bench)
 endif()

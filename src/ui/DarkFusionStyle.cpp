@@ -121,7 +121,10 @@ QPushButton#ghost { background: transparent; border-color: transparent; }
 QPushButton#ghost:hover { background: @hover@; }
 
 /* ---- Item views (sidebar tree, object list) ---- */
-QTreeView, QListView { background: @win@; border: none; color: @text@; outline: none; alternate-background-color: @win@; selection-background-color: @sel@; selection-color: @text@; }
+QTreeView, QListView, QTableView { background: @win@; border: none; color: @text@; outline: none; alternate-background-color: @win@; selection-background-color: @sel@; selection-color: @text@; }
+QTableView::item { border: none; padding: 0 4px; }
+QTableView::item:hover { background: @hover@; }
+QTableView::item:selected { background: @sel@; color: @text@; }
 QAbstractScrollArea { background: @win@; }
 QTreeView::item { border: none; padding: 3px 0; }
 QTreeView::item:hover { background: @hover@; }

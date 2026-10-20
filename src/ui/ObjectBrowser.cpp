@@ -6,16 +6,22 @@
 #include "ui/ObjectRowDelegate.h"
 #include "ui/PathBar.h"
 
+#include <QAction>
+#include <QClipboard>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLocale>
+#include <QMenu>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QStackedWidget>
 #include <QStyle>
-#include <QTreeView>
+#include <QTableView>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 namespace qbucket {
 
@@ -48,6 +54,10 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
 
     m_stack = new QStackedWidget;
     auto* messagePage = new QWidget;
+    // Holds the keyboard focus while the list is replaced by a message
+    // (loading a folder), so Backspace & co. keep working.
+    messagePage->setFocusPolicy(Qt::StrongFocus);
+    m_messagePage = messagePage;
     auto* messageLay = new QVBoxLayout(messagePage);
     messageLay->addStretch(1);
     m_message = new QLabel;
@@ -62,18 +72,28 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
     messageLay->addStretch(2);
     m_stack->addWidget(messagePage);
 
-    // Column widths are fixed + Interactive on purpose: ResizeToContents is
-    // O(rows) per resize, fatal with 100k-row listings (xyz-profiler lesson).
-    m_view = new QTreeView;
+    // A QTableView, not a QTreeView: the tree keeps an item per row and lays
+    // all of them out again after every inserted page — 47 ms per page at
+    // 1M rows against 9 ms (bench_listing). Column widths are fixed +
+    // Interactive: ResizeToContents is O(rows) per resize (xyz-profiler).
+    m_view = new QTableView;
     m_view->setObjectName(QStringLiteral("objectView"));
-    m_view->setRootIsDecorated(false);
-    m_view->setUniformRowHeights(true);
-    m_view->setItemsExpandable(false);
+    m_view->setShowGrid(false);
+    m_view->setWordWrap(false);
+    m_view->setCornerButtonEnabled(false);
+    m_view->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    m_view->setAllColumnsShowFocus(true);
+    m_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_view->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_view->verticalHeader()->hide();
+    m_view->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+    m_view->verticalHeader()->setDefaultSectionSize(fontMetrics().height() + 10);
+    m_view->horizontalHeader()->setHighlightSections(false);
+    m_view->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_view->setItemDelegate(new ObjectRowDelegate(m_view));
     m_stack->addWidget(m_view);
     lay->addWidget(m_stack, 1);
+    buildActions_();
 
     if (!m_sessions) {
         m_pathBar->clearLocation(tr("No location"));
@@ -83,7 +103,7 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
 
     m_model = new ObjectTableModel(m_sessions, this);
     m_view->setModel(m_model);
-    auto* header = m_view->header();
+    auto* header = m_view->horizontalHeader();
     header->setStretchLastSection(false);
     header->setSectionResizeMode(ObjectTableModel::NameColumn, QHeaderView::Stretch);
     for (int col = ObjectTableModel::SizeColumn; col < ObjectTableModel::ColumnCount; ++col)
@@ -129,8 +149,19 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
         restoreCurrent_();
         changed();
     });
-    connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged, this,
-            &ObjectBrowser::statusChanged);
+    connect(m_view->selectionModel(), &QItemSelectionModel::selectionChanged, this, [this] {
+        updateActions_();
+        emit statusChanged();
+    });
+    m_view->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_view, &QWidget::customContextMenuRequested, this, &ObjectBrowser::showContextMenu_);
+    connect(m_actOpen, &QAction::triggered, this, [this] {
+        const QModelIndexList rows = selectedRows();
+        if (rows.size() == 1)
+            onActivated_(rows.first());
+    });
+    connect(m_actCopyKey, &QAction::triggered, this, [this] { copySelection_(false); });
+    connect(m_actCopyUri, &QAction::triggered, this, [this] { copySelection_(true); });
 
     m_pathBar->clearLocation(tr("No location"));
     updatePage_();
@@ -248,7 +279,10 @@ void ObjectBrowser::updatePage_()
         return;
     }
     if (rows > 0) {
+        const bool focusBack = m_messagePage->hasFocus();
         m_stack->setCurrentIndex(kListPage);
+        if (focusBack)
+            m_view->setFocus();
         return;
     }
     switch (state) {
@@ -284,7 +318,10 @@ void ObjectBrowser::showMessage_(const QString& text, bool retry)
 {
     m_message->setText(text);
     m_retry->setVisible(retry);
+    const bool keepFocus = m_view->hasFocus();
     m_stack->setCurrentIndex(kMessagePage);
+    if (keepFocus)
+        m_messagePage->setFocus();
 }
 
 void ObjectBrowser::onActivated_(const QModelIndex& index)
@@ -334,6 +371,83 @@ void ObjectBrowser::restoreCurrent_()
         m_view->selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect
                                                              | QItemSelectionModel::Rows);
     }
+}
+
+void ObjectBrowser::buildActions_()
+{
+    const auto make = [this](const QString& text, const QKeySequence& key) {
+        auto* a = new QAction(text, this);
+        a->setShortcut(key);
+        a->setShortcutContext(Qt::WidgetShortcut);
+        a->setEnabled(false);
+        m_view->addAction(a);
+        return a;
+    };
+    m_actOpen = make(tr("&Open"), QKeySequence());
+    m_actCopyKey = make(tr("&Copy Key"), QKeySequence::Copy);
+    m_actCopyUri = make(tr("Copy S3 &URI"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C));
+    // Mutations go through the OperationController (PLAN.md §12.1); until
+    // it handles them, the actions say why they can't be used.
+    m_actRename = make(tr("&Rename…"), QKeySequence(Qt::Key_F2));
+    m_actDelete = make(tr("&Delete…"), QKeySequence::Delete);
+    for (QAction* a : {m_actRename, m_actDelete})
+        a->setToolTip(tr("Not available yet"));
+
+    // Backspace goes up, like a file manager — wherever the focus is in
+    // the browser (a line edit keeps its own Backspace).
+    auto* up = new QAction(this);
+    up->setShortcut(QKeySequence(Qt::Key_Backspace));
+    up->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    connect(up, &QAction::triggered, m_nav, &BrowseController::up);
+    addAction(up);
+}
+
+void ObjectBrowser::updateActions_()
+{
+    const QModelIndexList rows = selectedRows();
+    m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
+    m_actCopyKey->setEnabled(!rows.isEmpty());
+    m_actCopyUri->setEnabled(!rows.isEmpty());
+}
+
+QModelIndexList ObjectBrowser::selectedRows() const
+{
+    if (!m_view->selectionModel())
+        return {};
+    QModelIndexList rows = m_view->selectionModel()->selectedRows();
+    std::sort(rows.begin(), rows.end(), [](const QModelIndex& a, const QModelIndex& b) { return a.row() < b.row(); });
+    return rows;
+}
+
+void ObjectBrowser::copySelection_(bool asUri)
+{
+    const QString bucket = m_nav->current().bucket;
+    QStringList lines;
+    for (const QModelIndex& row : selectedRows()) {
+        const QString key = row.data(ObjectTableModel::KeyRole).toString();
+        lines.append(asUri ? QStringLiteral("s3://%1/%2").arg(bucket, key) : key);
+    }
+    if (lines.isEmpty())
+        return;
+    QGuiApplication::clipboard()->setText(lines.join(u'\n'));
+}
+
+void ObjectBrowser::showContextMenu_(const QPoint& pos)
+{
+    if (!m_model || !m_nav->current().hasBucket())
+        return;
+    QMenu menu(this);
+    menu.setToolTipsVisible(true);
+    if (m_actOpen->isEnabled())
+        menu.addAction(m_actOpen);
+    menu.addAction(m_actCopyKey);
+    menu.addAction(m_actCopyUri);
+    menu.addSeparator();
+    menu.addAction(m_actRename);
+    menu.addAction(m_actDelete);
+    menu.addSeparator();
+    menu.addAction(tr("Refresh"), this, &ObjectBrowser::refresh);
+    menu.exec(m_view->viewport()->mapToGlobal(pos));
 }
 
 QString ObjectBrowser::statusText() const

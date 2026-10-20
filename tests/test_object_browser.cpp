@@ -8,7 +8,9 @@
 #include "ui/PathBar.h"
 #include "ui/ThemeManager.h"
 
+#include <QClipboard>
 #include <QDir>
+#include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -17,7 +19,7 @@
 #include <QStackedWidget>
 #include <QTemporaryDir>
 #include <QToolButton>
-#include <QTreeView>
+#include <QTableView>
 #include <QtTest>
 
 using namespace qbucket;
@@ -220,6 +222,39 @@ private slots:
         QTest::keyClick(edit, Qt::Key_Return);
         QCOMPARE(browser.navigation()->current().prefix, QStringLiteral("deep/er/"));
         QTRY_COMPARE_WITH_TIMEOUT(browser.model()->rowCount(), 1, 10000);
+    }
+
+    void keysOnTheList()
+    {
+        m_bucket.add(QStringLiteral("docs/a b.txt"));
+        m_bucket.add(QStringLiteral("docs/c.txt"));
+        m_bucket.add(QStringLiteral("docs/sub/x"));
+        m_bucket.sort();
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.show();
+        browser.navigation()->navigate({m_account, QStringLiteral("bkt"), QStringLiteral("docs/")});
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QTableView* view = browser.view();
+        view->setFocus();
+        view->selectAll();
+        QVERIFY(browser.copyKeyAction()->isEnabled());
+        QVERIFY(!browser.openAction()->isEnabled());   // three rows
+        QVERIFY(!browser.renameAction()->isEnabled());
+        QVERIFY(!browser.deleteAction()->isEnabled());
+
+        QTest::keyClick(view, Qt::Key_C, Qt::ControlModifier);
+        QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("docs/sub/\ndocs/a b.txt\ndocs/c.txt"));
+        QTest::keyClick(view, Qt::Key_C, Qt::ControlModifier | Qt::ShiftModifier);
+        QVERIFY(QGuiApplication::clipboard()->text().startsWith(QLatin1String("s3://bkt/docs/sub/\n")));
+
+        view->setCurrentIndex(browser.model()->index(0, 0));   // the folder alone
+        QVERIFY(browser.openAction()->isEnabled());
+        browser.openAction()->trigger();
+        QCOMPARE(browser.navigation()->current().prefix, QStringLiteral("docs/sub/"));
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QVERIFY(view->hasFocus());   // back on the list after "Loading…"
+        QTest::keyClick(view, Qt::Key_Backspace);
+        QCOMPARE(browser.navigation()->current().prefix, QStringLiteral("docs/"));
     }
 
     // QBUCKET_SCREENSHOT_DIR set: saves browser-dark.png (devlog).

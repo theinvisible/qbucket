@@ -95,12 +95,8 @@ AccountSidebar::AccountSidebar(AccountStore* accounts, SecretStore* secrets, Acc
             askForSecret_(id);
     });
 
-    auto* refresh = new QAction(tr("Refresh"), m_tree);
-    refresh->setShortcut(QKeySequence::Refresh);
-    refresh->setShortcutContext(Qt::WidgetShortcut);
-    connect(refresh, &QAction::triggered, this, &AccountSidebar::refreshCurrent);
-    m_tree->addAction(refresh);
-
+    // F5 is the main window's View → Refresh, which asks the focused side:
+    // a second F5 shortcut here would make both ambiguous.
     updateEmptyState_();
 }
 

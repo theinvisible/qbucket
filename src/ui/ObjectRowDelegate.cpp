@@ -24,6 +24,8 @@ QString extensionOf(const QString& name)
 void ObjectRowDelegate::initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const
 {
     QStyledItemDelegate::initStyleOption(option, index);
+    // Rows are selected as a whole: no focus frame around a single cell.
+    option->state &= ~QStyle::State_HasFocus;
     const Palette& p = Theme::current();
     switch (index.column()) {
     case ObjectTableModel::NameColumn: {

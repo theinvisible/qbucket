@@ -38,6 +38,7 @@
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTableView>
 #include <QTreeView>
 #include <QVBoxLayout>
 
@@ -148,19 +149,23 @@ void MainWindow::connectBrowser_()
     connect(m_actBack, &QAction::triggered, nav, &BrowseController::back);
     connect(m_actForward, &QAction::triggered, nav, &BrowseController::forward);
     connect(m_actUp, &QAction::triggered, nav, &BrowseController::up);
-    connect(m_actRefresh, &QAction::triggered, m_browser, &ObjectBrowser::refresh);
+    // F5 refreshes the side that has the focus.
+    connect(m_actRefresh, &QAction::triggered, this, [this] {
+        if (m_sidebar->view()->hasFocus())
+            m_sidebar->refreshCurrent();
+        else
+            m_browser->refresh();
+    });
+    for (QAction* a : {m_browser->openAction(), m_browser->copyKeyAction(), m_browser->copyUriAction()})
+        m_editMenu->addAction(a);
+    m_editMenu->addSeparator();
+    m_editMenu->addAction(m_browser->renameAction());
+    m_editMenu->addAction(m_browser->deleteAction());
     connect(m_actEditPath, &QAction::triggered, m_browser, &ObjectBrowser::editPath);
     connect(m_backBtn, &QToolButton::clicked, m_actBack, &QAction::trigger);
     connect(m_forwardBtn, &QToolButton::clicked, m_actForward, &QAction::trigger);
     connect(m_upBtn, &QToolButton::clicked, m_actUp, &QAction::trigger);
     connect(m_refreshBtn, &QToolButton::clicked, m_actRefresh, &QAction::trigger);
-
-    // Backspace in the list goes up, like a file manager.
-    auto* upKey = new QAction(m_browser->view());
-    upKey->setShortcut(Qt::Key_Backspace);
-    upKey->setShortcutContext(Qt::WidgetShortcut);
-    connect(upKey, &QAction::triggered, nav, &BrowseController::up);
-    m_browser->view()->addAction(upKey);
 
     connect(m_filterField, &QLineEdit::textChanged, this, [this](const QString& text) {
         m_browser->setFilterText(text);
@@ -195,7 +200,7 @@ void MainWindow::updateNavigation_()
     m_actBack->setEnabled(nav->canGoBack());
     m_actForward->setEnabled(nav->canGoForward());
     m_actUp->setEnabled(nav->canGoUp());
-    m_actRefresh->setEnabled(here);
+    m_actRefresh->setEnabled(here || m_sessions);
     m_actEditPath->setEnabled(nav->current().isValid());
     m_backBtn->setEnabled(nav->canGoBack());
     m_forwardBtn->setEnabled(nav->canGoForward());
@@ -249,6 +254,9 @@ void MainWindow::buildMenuBar_()
     file->addSeparator();
     m_actQuit = file->addAction(tr("&Quit"), qApp, &QApplication::quit);
     setStandardShortcut(m_actQuit, QKeySequence::Quit);
+
+    m_editMenu = mb->addMenu(tr("&Edit"));   // filled from the object browser
+    m_editMenu->setToolTipsVisible(true);
 
     auto* view = mb->addMenu(tr("&View"));
     m_viewMenu = view;
