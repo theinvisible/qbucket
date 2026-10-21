@@ -78,6 +78,8 @@ add_library(qbucket_controllers STATIC
     controllers/ObjectPropertyJob.cpp
     controllers/PresignService.h
     controllers/PresignService.cpp
+    controllers/FolderSizeTask.h
+    controllers/FolderSizeTask.cpp
     controllers/CreateFolderJob.h
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h

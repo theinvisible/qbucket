@@ -4,6 +4,7 @@
 #include "controllers/AccountSessions.h"
 #include "controllers/CapabilityController.h"
 #include "controllers/ConnectionTester.h"
+#include "controllers/FolderSizeTask.h"
 #include "controllers/ObjectPropertyJob.h"
 #include "controllers/OperationController.h"
 #include "models/ObjectTableModel.h"
@@ -119,6 +120,8 @@ DetailPane::DetailPane(AccountSessions* sessions, QWidget* parent)
     m_headDelay.setInterval(kHeadDelayMs);
     connect(&m_headDelay, &QTimer::timeout, this, &DetailPane::requestHead_);
 }
+
+DetailPane::~DetailPane() = default;
 
 void DetailPane::setControllers(OperationController* operations, CapabilityController* capabilities)
 {
@@ -408,6 +411,7 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
     m_run.reset();   // an answer for the previous selection is dropped
     m_tagsRun.reset();
     m_accessRun.reset();
+    m_sizeTask.reset();   // a count of the previous selection stops
     m_tagsFor.clear();
     m_accessFor.clear();
     m_account = account;
@@ -446,8 +450,15 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
         }
         addField_(tr("Selection"), tr("%n item(s)", nullptr, int(unique.size())), false);
         addField_(tr("Size of the objects"), exactSize(bytes));
-        if (folders > 0)
-            addField_(tr("Folders"), tr("%n folder(s), their contents not counted", nullptr, folders), false);
+        if (folders > 0) {
+            addField_(tr("Folders"), tr("%n folder(s), their contents not counted yet", nullptr, folders), false);
+            QStringList prefixes;
+            for (const QModelIndex& i : unique) {
+                if (i.data(ObjectTableModel::IsFolderRole).toBool())
+                    prefixes.append(i.data(ObjectTableModel::KeyRole).toString());
+            }
+            addSizeRow_(prefixes);
+        }
         m_metaHint->setText(tr("Select a single object to see its headers and metadata."));
         m_metaStack->setCurrentIndex(0);
         return;
@@ -459,6 +470,7 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
     addField_(tr("Location"), QStringLiteral("s3://%1/%2").arg(bucket, key));
     if (row.data(ObjectTableModel::IsFolderRole).toBool()) {
         addField_(tr("Kind"), tr("Folder (a common key prefix)"), false);
+        addSizeRow_({key});
         m_metaHint->setText(tr("Folders have no headers or metadata of their own."));
         m_metaStack->setCurrentIndex(0);
         return;
@@ -543,8 +555,70 @@ void DetailPane::showHint_(const QString& text)
 
 void DetailPane::resetFields_()
 {
+    m_sizeButton = nullptr;
+    m_sizeLabel = nullptr;
     while (m_form->rowCount() > 0)
         m_form->removeRow(0);
+}
+
+void DetailPane::addSizeRow_(const QStringList& prefixes)
+{
+    auto* name = new QLabel(tr("Contents"));
+    name->setObjectName(QStringLiteral("fieldLabel"));
+    auto* row = new QWidget;
+    auto* lay = new QHBoxLayout(row);
+    lay->setContentsMargins(0, 0, 0, 0);
+    m_sizeLabel = new QLabel(tr("not counted"));
+    m_sizeLabel->setWordWrap(true);
+    m_sizeLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    m_sizeButton = new QPushButton(tr("Calculate Size"));
+    m_sizeButton->setObjectName(QStringLiteral("calculateSize"));
+    m_sizeButton->setEnabled(m_sessions != nullptr);
+    connect(m_sizeButton, &QPushButton::clicked, this, [this, prefixes] {
+        if (m_sizeTask && m_sizeTask->isRunning())
+            m_sizeTask->cancel();
+        else
+            startSize_(prefixes);
+    });
+    lay->addWidget(m_sizeLabel, 1);
+    lay->addWidget(m_sizeButton);
+    m_form->addRow(name, row);
+}
+
+void DetailPane::startSize_(const QStringList& prefixes)
+{
+    const s3::Result<s3::Session*> session = m_sessions->session(m_account);
+    if (!session) {
+        m_sizeLabel->setText(ConnectionTester::describe(session.error()));
+        return;
+    }
+    m_sizeTask = std::make_unique<FolderSizeTask>(*session, m_bucket, prefixes);
+    FolderSizeTask* task = m_sizeTask.get();
+    const QLocale locale;
+    connect(task, &FolderSizeTask::progress, this, [this, task, locale] {
+        m_sizeLabel->setText(tr("counting… %n object(s), %1 so far", nullptr, int(task->totals().objects))
+                                 .arg(locale.formattedDataSize(task->totals().bytes)));
+    });
+    connect(task, &FolderSizeTask::finished, this, [this, task, locale] {
+        m_sizeButton->setText(tr("Calculate Size"));
+        if (!task->isComplete()) {
+            m_sizeLabel->setText(tr("not counted: %1").arg(task->errorText()));
+            return;
+        }
+        const FolderSizeTask::Totals& t = task->totals();
+        QString text = tr("%n object(s), %1", nullptr, int(t.objects)).arg(exactSize(t.bytes));
+        if (t.byClass.size() > 1) {
+            QStringList classes;
+            for (auto it = t.byClass.cbegin(); it != t.byClass.cend(); ++it)
+                classes.append(QStringLiteral("%1: %2").arg(it.key(), locale.formattedDataSize(it.value().second)));
+            text += u'\n' + classes.join(QStringLiteral(", "));
+        }
+        m_sizeLabel->setText(text);
+        m_sizeLabel->setToolTip(text);
+    });
+    m_sizeButton->setText(tr("Cancel"));
+    m_sizeLabel->setText(tr("counting…"));
+    task->start();
 }
 
 void DetailPane::addField_(const QString& label, const QString& value, bool selectable)

@@ -235,6 +235,12 @@ qbucket_add_test(test_presign
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_folder_size_task
+    test_folder_size_task.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

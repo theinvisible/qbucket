@@ -97,7 +97,7 @@
 <context>
     <name>qbucket::DetailPane</name>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="447"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="451"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -105,11 +105,27 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="450"/>
-        <source>%n folder(s), their contents not counted</source>
+        <location filename="../../src/ui/DetailPane.cpp" line="454"/>
+        <source>%n folder(s), their contents not counted yet</source>
         <translation>
-            <numerusform>%n folder, their contents not counted</numerusform>
-            <numerusform>%n folders, their contents not counted</numerusform>
+            <numerusform>%n folder, its contents not counted yet</numerusform>
+            <numerusform>%n folders, their contents not counted yet</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/DetailPane.cpp" line="599"/>
+        <source>counting… %n object(s), %1 so far</source>
+        <translation>
+            <numerusform>counting… %n object, %1 so far</numerusform>
+            <numerusform>counting… %n objects, %1 so far</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/DetailPane.cpp" line="609"/>
+        <source>%n object(s), %1</source>
+        <translation>
+            <numerusform>%n object, %1</numerusform>
+            <numerusform>%n objects, %1</numerusform>
         </translation>
     </message>
 </context>

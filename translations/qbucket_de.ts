@@ -1283,71 +1283,71 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::DetailPane</name>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="46"/>
+        <location filename="../src/ui/DetailPane.cpp" line="47"/>
         <source>%1 (%2 bytes)</source>
         <translation>%1 (%2 Bytes)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="61"/>
-        <location filename="../src/ui/DetailPane.cpp" line="468"/>
+        <location filename="../src/ui/DetailPane.cpp" line="62"/>
+        <location filename="../src/ui/DetailPane.cpp" line="480"/>
         <source>Details</source>
         <translation>Details</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="71"/>
-        <location filename="../src/ui/DetailPane.cpp" line="402"/>
-        <location filename="../src/ui/DetailPane.cpp" line="432"/>
+        <location filename="../src/ui/DetailPane.cpp" line="72"/>
+        <location filename="../src/ui/DetailPane.cpp" line="405"/>
+        <location filename="../src/ui/DetailPane.cpp" line="436"/>
         <source>Select an object to see its details.</source>
         <translation>Wähle ein Objekt, um seine Details zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="83"/>
+        <location filename="../src/ui/DetailPane.cpp" line="84"/>
         <source>Properties</source>
         <translation>Eigenschaften</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="87"/>
+        <location filename="../src/ui/DetailPane.cpp" line="88"/>
         <source>Select an object to see its headers and metadata.</source>
         <translation>Wähle ein Objekt, um seine Header und Metadaten zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="92"/>
+        <location filename="../src/ui/DetailPane.cpp" line="93"/>
         <source>Header</source>
         <translation>Header</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="92"/>
-        <location filename="../src/ui/DetailPane.cpp" line="144"/>
+        <location filename="../src/ui/DetailPane.cpp" line="93"/>
+        <location filename="../src/ui/DetailPane.cpp" line="147"/>
         <source>Value</source>
         <translation>Wert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="110"/>
+        <location filename="../src/ui/DetailPane.cpp" line="111"/>
         <source>Metadata</source>
         <translation>Metadaten</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="174"/>
+        <location filename="../src/ui/DetailPane.cpp" line="177"/>
         <source>Tags</source>
         <translation>Tags</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="113"/>
+        <location filename="../src/ui/DetailPane.cpp" line="114"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="212"/>
+        <location filename="../src/ui/DetailPane.cpp" line="215"/>
         <source>Access</source>
         <translation>Zugriff</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="447"/>
+        <location filename="../src/ui/DetailPane.cpp" line="451"/>
         <source>Selection</source>
         <translation>Auswahl</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="447"/>
+        <location filename="../src/ui/DetailPane.cpp" line="451"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n Eintrag</numerusform>
@@ -1355,223 +1355,270 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="448"/>
+        <location filename="../src/ui/DetailPane.cpp" line="452"/>
         <source>Size of the objects</source>
         <translation>Größe der Objekte</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="450"/>
+        <location filename="../src/ui/DetailPane.cpp" line="454"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
-    <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="450"/>
-        <source>%n folder(s), their contents not counted</source>
-        <translation>
-            <numerusform>%n Ordner, Inhalt nicht mitgezählt</numerusform>
-            <numerusform>%n Ordner, Inhalt nicht mitgezählt</numerusform>
-        </translation>
-    </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="451"/>
+        <location filename="../src/ui/DetailPane.cpp" line="462"/>
         <source>Select a single object to see its headers and metadata.</source>
         <translation>Wähle ein einzelnes Objekt, um seine Header und Metadaten zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="458"/>
-        <location filename="../src/ui/DetailPane.cpp" line="508"/>
+        <location filename="../src/ui/DetailPane.cpp" line="469"/>
+        <location filename="../src/ui/DetailPane.cpp" line="520"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="459"/>
-        <location filename="../src/ui/DetailPane.cpp" line="494"/>
-        <location filename="../src/ui/DetailPane.cpp" line="509"/>
+        <location filename="../src/ui/DetailPane.cpp" line="470"/>
+        <location filename="../src/ui/DetailPane.cpp" line="506"/>
+        <location filename="../src/ui/DetailPane.cpp" line="521"/>
         <source>Location</source>
         <translation>Ort</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="461"/>
+        <location filename="../src/ui/DetailPane.cpp" line="472"/>
         <source>Kind</source>
         <translation>Art</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="461"/>
+        <location filename="../src/ui/DetailPane.cpp" line="472"/>
         <source>Folder (a common key prefix)</source>
         <translation>Ordner (ein gemeinsames Schlüsselpräfix)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="462"/>
+        <location filename="../src/ui/DetailPane.cpp" line="474"/>
         <source>Folders have no headers or metadata of their own.</source>
         <translation>Ordner haben keine eigenen Header oder Metadaten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="467"/>
-        <location filename="../src/ui/DetailPane.cpp" line="511"/>
+        <location filename="../src/ui/DetailPane.cpp" line="479"/>
+        <location filename="../src/ui/DetailPane.cpp" line="523"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="249"/>
-        <location filename="../src/ui/DetailPane.cpp" line="289"/>
-        <location filename="../src/ui/DetailPane.cpp" line="468"/>
-        <location filename="../src/ui/DetailPane.cpp" line="469"/>
+        <location filename="../src/ui/DetailPane.cpp" line="252"/>
+        <location filename="../src/ui/DetailPane.cpp" line="292"/>
+        <location filename="../src/ui/DetailPane.cpp" line="480"/>
+        <location filename="../src/ui/DetailPane.cpp" line="481"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="101"/>
+        <location filename="../src/ui/DetailPane.cpp" line="102"/>
         <source>Edit…</source>
         <translation>Bearbeiten…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="113"/>
+        <location filename="../src/ui/DetailPane.cpp" line="114"/>
         <source>Versions arrive with a later version.</source>
         <translation>Versionen kommen mit einer späteren Version.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="137"/>
+        <location filename="../src/ui/DetailPane.cpp" line="140"/>
         <source>Select an object to see its tags.</source>
         <translation>Wähle ein Objekt, um seine Tags zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="144"/>
+        <location filename="../src/ui/DetailPane.cpp" line="147"/>
         <source>Key</source>
         <translation>Schlüssel</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="151"/>
+        <location filename="../src/ui/DetailPane.cpp" line="154"/>
         <source>Add</source>
         <translation>Hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="156"/>
+        <location filename="../src/ui/DetailPane.cpp" line="159"/>
         <source>Remove</source>
         <translation>Entfernen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="161"/>
-        <location filename="../src/ui/DetailPane.cpp" line="202"/>
+        <location filename="../src/ui/DetailPane.cpp" line="164"/>
+        <location filename="../src/ui/DetailPane.cpp" line="205"/>
         <source>Apply…</source>
         <translation>Übernehmen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="180"/>
+        <location filename="../src/ui/DetailPane.cpp" line="183"/>
         <source>Select an object to see who may access it.</source>
         <translation>Wähle ein Objekt, um zu sehen, wer darauf zugreifen darf.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="192"/>
+        <location filename="../src/ui/DetailPane.cpp" line="195"/>
         <source>Grantee</source>
         <translation>Berechtigter</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="192"/>
+        <location filename="../src/ui/DetailPane.cpp" line="195"/>
         <source>Permission</source>
         <translation>Berechtigung</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="198"/>
+        <location filename="../src/ui/DetailPane.cpp" line="201"/>
         <source>Access:</source>
         <translation>Zugriff:</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="252"/>
-        <location filename="../src/ui/DetailPane.cpp" line="292"/>
+        <location filename="../src/ui/DetailPane.cpp" line="255"/>
+        <location filename="../src/ui/DetailPane.cpp" line="295"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="263"/>
+        <location filename="../src/ui/DetailPane.cpp" line="266"/>
         <source>This server has no object tags.</source>
         <translation>Dieser Server hat keine Objekt-Tags.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="272"/>
-        <location filename="../src/ui/DetailPane.cpp" line="342"/>
+        <location filename="../src/ui/DetailPane.cpp" line="275"/>
+        <location filename="../src/ui/DetailPane.cpp" line="345"/>
         <source>Read-only here.</source>
         <translation>Hier nur lesend.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="303"/>
+        <location filename="../src/ui/DetailPane.cpp" line="306"/>
         <source>This server has no object permissions (ACLs).</source>
         <translation>Dieser Server hat keine Objekt-Berechtigungen (ACLs).</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="309"/>
+        <location filename="../src/ui/DetailPane.cpp" line="312"/>
         <source>Owner: %1</source>
         <translation>Owner: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="321"/>
+        <location filename="../src/ui/DetailPane.cpp" line="324"/>
         <source>Owner</source>
         <translation>Owner</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="339"/>
+        <location filename="../src/ui/DetailPane.cpp" line="342"/>
         <source>custom (grants above)</source>
         <translation>benutzerdefiniert (Grants oben)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="386"/>
+        <location filename="../src/ui/DetailPane.cpp" line="389"/>
         <source>custom</source>
         <translation>benutzerdefiniert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="418"/>
+        <location filename="../src/ui/DetailPane.cpp" line="422"/>
         <source>Select a single object to see its tags.</source>
         <translation>Wähle ein einzelnes Objekt, um seine Tags zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="420"/>
+        <location filename="../src/ui/DetailPane.cpp" line="424"/>
         <source>Select a single object to see who may access it.</source>
         <translation>Wähle ein einzelnes Objekt, um zu sehen, wer darauf zugreifen darf.</translation>
     </message>
+    <message numerus="yes">
+        <location filename="../src/ui/DetailPane.cpp" line="454"/>
+        <source>%n folder(s), their contents not counted yet</source>
+        <translation>
+            <numerusform>%n Ordner, sein Inhalt noch nicht gezählt</numerusform>
+            <numerusform>%n Ordner, ihr Inhalt noch nicht gezählt</numerusform>
+        </translation>
+    </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="495"/>
+        <location filename="../src/ui/DetailPane.cpp" line="507"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="513"/>
+        <location filename="../src/ui/DetailPane.cpp" line="525"/>
         <source>Modified</source>
         <translation>Geändert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="514"/>
+        <location filename="../src/ui/DetailPane.cpp" line="526"/>
         <source>Storage class</source>
         <translation>Speicherklasse</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="515"/>
+        <location filename="../src/ui/DetailPane.cpp" line="527"/>
         <source>Content type</source>
         <translation>Inhaltstyp</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="515"/>
-        <location filename="../src/ui/DetailPane.cpp" line="531"/>
+        <location filename="../src/ui/DetailPane.cpp" line="527"/>
+        <location filename="../src/ui/DetailPane.cpp" line="543"/>
         <source>(none)</source>
         <translation>(keine)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="516"/>
+        <location filename="../src/ui/DetailPane.cpp" line="528"/>
         <source>ETag</source>
         <translation>ETag</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="518"/>
+        <location filename="../src/ui/DetailPane.cpp" line="530"/>
         <source>Version ID</source>
         <translation>Versions-ID</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="521"/>
+        <location filename="../src/ui/DetailPane.cpp" line="533"/>
         <source>Headers</source>
         <translation>Header</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="522"/>
+        <location filename="../src/ui/DetailPane.cpp" line="534"/>
         <source>User metadata</source>
         <translation>Benutzer-Metadaten</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="566"/>
+        <source>Contents</source>
+        <translation>Inhalt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="571"/>
+        <source>not counted</source>
+        <translation>nicht gezählt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="574"/>
+        <location filename="../src/ui/DetailPane.cpp" line="603"/>
+        <source>Calculate Size</source>
+        <translation>Größe berechnen</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/DetailPane.cpp" line="599"/>
+        <source>counting… %n object(s), %1 so far</source>
+        <translation>
+            <numerusform>zähle… bisher %n Objekt, %1</numerusform>
+            <numerusform>zähle… bisher %n Objekte, %1</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="605"/>
+        <source>not counted: %1</source>
+        <translation>nicht gezählt: %1</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/DetailPane.cpp" line="609"/>
+        <source>%n object(s), %1</source>
+        <translation>
+            <numerusform>%n Objekt, %1</numerusform>
+            <numerusform>%n Objekte, %1</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="619"/>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="620"/>
+        <source>counting…</source>
+        <translation>zähle…</translation>
     </message>
 </context>
 <context>
@@ -2121,6 +2168,14 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/controllers/EditObjectsJob.cpp" line="724"/>
         <source>every changed object checked (headers, class, tags, permissions)</source>
         <translation>jedes geänderte Objekt geprüft (Header, Class, Tags, Berechtigungen)</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::FolderSizeTask</name>
+    <message>
+        <location filename="../src/controllers/FolderSizeTask.cpp" line="38"/>
+        <source>cancelled</source>
+        <translation>abgebrochen</translation>
     </message>
 </context>
 <context>

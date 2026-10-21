@@ -22,6 +22,7 @@ namespace qbucket {
 
 class AccountSessions;
 class CapabilityController;
+class FolderSizeTask;
 class OperationController;
 
 // The right column (PLAN.md §4): Properties of the selected object
@@ -39,6 +40,7 @@ public:
     static constexpr int kHeadDelayMs = 150;
 
     explicit DetailPane(AccountSessions* sessions, QWidget* parent = nullptr);
+    ~DetailPane() override;
     // Without them the tags and the access are shown read-only.
     void setControllers(OperationController* operations, CapabilityController* capabilities);
 
@@ -49,6 +51,9 @@ public:
     [[nodiscard]] QComboBox* cannedAclBox() const { return m_canned; }
     [[nodiscard]] QPushButton* applyAccessButton() const { return m_applyAccess; }
     [[nodiscard]] QTreeWidget* grantList() const { return m_grants; }
+    // A folder (or several rows with folders): what they hold, on request.
+    [[nodiscard]] QPushButton* sizeButton() const { return m_sizeButton; }
+    [[nodiscard]] QLabel* sizeLabel() const { return m_sizeLabel; }
 
     // Rows of an ObjectTableModel (any column; one per row counts).
     void setSelection(const QUuid& account, const QString& bucket, const QModelIndexList& rows);
@@ -80,6 +85,8 @@ private:
     void applyTags_();
     void applyAccess_();
     void addTagRow_(const QString& key, const QString& value);
+    void addSizeRow_(const QStringList& prefixes);
+    void startSize_(const QStringList& prefixes);
 
     AccountSessions* m_sessions;
     QUuid m_account;
@@ -117,6 +124,9 @@ private:
     QComboBox* m_canned = nullptr;
     QPushButton* m_applyAccess = nullptr;
     QLabel* m_accessReason = nullptr;
+    std::unique_ptr<FolderSizeTask> m_sizeTask;
+    QPushButton* m_sizeButton = nullptr;   // in the form; gone with its rows
+    QLabel* m_sizeLabel = nullptr;
 };
 
 } // namespace qbucket
