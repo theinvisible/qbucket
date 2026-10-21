@@ -182,6 +182,10 @@ version bump may break the API.
   5 GiB, also onto itself), `serverSideEncryption`, `cannedAcl`; IT
   `multipartCopyInPlaceWithReplace`.
 
+- `PresignRequest::responseContentDisposition` ("download as", GET only);
+  `Session::presign` refuses when `Feature::Presign` is Unsupported. ITs
+  `presignedPut` and a named `presignedGet`.
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced

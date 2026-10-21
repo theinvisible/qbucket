@@ -276,15 +276,8 @@ std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
     }
     if (needed.isEmpty())
         return std::nullopt;
-    const CapabilitySet profile = config().profile->capabilities();
-    const auto bucketIt = m_bucketCapabilities.constFind(spec.bucket);
     for (const Feature f : needed) {
-        CapabilityEntry e = bucketIt != m_bucketCapabilities.constEnd()
-            ? capabilities::effective(f, *bucketIt, m_serverCapabilities)
-            : m_serverCapabilities.entry(f);
-        if (e.state == CapabilityState::Unknown)
-            e = profile.entry(f);
-        if (e.state == CapabilityState::Unsupported) {
+        if (effectiveEntry(f, spec.bucket).state == CapabilityState::Unsupported) {
             Error err = Error::make(ErrorCategory::Unsupported,
                                     QStringLiteral("the server does not support %1").arg(featureId(f)));
             err.resource = spec.bucket;
@@ -293,6 +286,17 @@ std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
         }
     }
     return std::nullopt;
+}
+
+CapabilityEntry S3Client::effectiveEntry(Feature feature, const QString& bucket) const
+{
+    const auto bucketIt = m_bucketCapabilities.constFind(bucket);
+    CapabilityEntry e = bucketIt != m_bucketCapabilities.constEnd()
+        ? capabilities::effective(feature, *bucketIt, m_serverCapabilities)
+        : m_serverCapabilities.entry(feature);
+    if (e.state == CapabilityState::Unknown)
+        e = config().profile->capabilities().entry(feature);
+    return e;
 }
 
 void S3Client::learnFrom(const RequestSpec& spec, const Error& error)
@@ -1119,6 +1123,12 @@ quint64 S3Client::deleteObjects(const QString& bucket, const QList<ObjectIdentif
 
 quint64 S3Client::presign(const PresignRequest& request, Done<QUrl> done)
 {
+    if (effectiveEntry(Feature::Presign, request.bucket).state == CapabilityState::Unsupported) {
+        Error err = Error::make(ErrorCategory::Unsupported, QStringLiteral("the server does not support object.presign"));
+        err.resource = request.bucket;
+        err.code = QStringLiteral("CapabilityUnsupported");
+        return failLater(std::move(done), err);
+    }
     const ProviderProfile& profile = *config().profile;
     if (request.expiresSeconds > profile.maxPresignExpirySeconds()) {
         return failLater(std::move(done),

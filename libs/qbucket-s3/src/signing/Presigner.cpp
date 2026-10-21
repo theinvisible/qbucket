@@ -21,6 +21,12 @@ Result<QUrl> Presigner::presign(const Endpoint& endpoint, AddressingStyle style,
     QueryParams query;
     if (!request.versionId.isEmpty())
         query.append({"versionId", request.versionId.toUtf8(), false});
+    if (!request.responseContentDisposition.isEmpty()) {
+        if (request.method != "GET")
+            return Error::make(ErrorCategory::InvalidRequest,
+                               QStringLiteral("response-content-disposition applies to GET only"));
+        query.append({"response-content-disposition", request.responseContentDisposition.toUtf8(), false});
+    }
 
     const Result<S3Uri> uri = S3Uri::build(endpoint, style, request.bucket, request.key, query);
     if (!uri)

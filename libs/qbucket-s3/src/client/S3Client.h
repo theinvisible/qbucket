@@ -150,6 +150,8 @@ private:
     quint64 single(RequestSpec&& spec, Done<T> done, Parse parse);
 
     std::optional<Error> shortCircuit(const RequestSpec& spec) const;
+    // Bucket over server over profile.
+    CapabilityEntry effectiveEntry(Feature feature, const QString& bucket) const;
     void learnFrom(const RequestSpec& spec, const Error& error);
     struct ProbeRun;
     void runProbes(const std::shared_ptr<ProbeRun>& run);

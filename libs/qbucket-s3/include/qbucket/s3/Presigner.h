@@ -18,6 +18,9 @@ struct PresignRequest {
     QString key;
     QString versionId;       // empty: current version
     int expiresSeconds = 3600;
+    // GET only: response-content-disposition, e.g. `attachment; filename="a.pdf"`
+    // — the browser saves instead of showing. Empty: the object's own.
+    QString responseContentDisposition;
 };
 
 // Presigned URLs without a network round-trip (SigV4 query signing,

@@ -1047,6 +1047,38 @@ private Q_SLOTS:
         QVERIFY(done.wait(30000));
         QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
         QCOMPARE(reply->readAll(), QByteArray("shared"));
+
+        // "Download as": the server answers with the requested disposition.
+        req.responseContentDisposition = QStringLiteral("attachment; filename=\"shared.txt\"");
+        const Result<QUrl> named = await<QUrl>([&](auto cb) { m_session->presign(req, &m_ctx, std::move(cb)); });
+        VERIFY_OK(named);
+        std::unique_ptr<QNetworkReply> second(nam.get(QNetworkRequest(named.value())));
+        QSignalSpy secondDone(second.get(), &QNetworkReply::finished);
+        QVERIFY(secondDone.wait(30000));
+        QCOMPARE(second->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
+        qInfo() << "Content-Disposition of a named link:" << second->rawHeader("Content-Disposition");
+        QCOMPARE(second->rawHeader("Content-Disposition"), QByteArray("attachment; filename=\"shared.txt\""));
+    }
+
+    // A presigned PUT uploads without credentials; the object reads back.
+    void presignedPut()
+    {
+        const QString k = key(QStringLiteral("presigned upload.txt"));
+        PresignRequest req;
+        req.method = "PUT";
+        req.bucket = m_bucket;
+        req.key = k;
+        req.expiresSeconds = 300;
+        const Result<QUrl> url = await<QUrl>([&](auto cb) { m_session->presign(req, &m_ctx, std::move(cb)); });
+        VERIFY_OK(url);
+        QNetworkAccessManager nam;
+        std::unique_ptr<QNetworkReply> reply(nam.put(QNetworkRequest(url.value()), QByteArray("uploaded via link")));
+        QSignalSpy done(reply.get(), &QNetworkReply::finished);
+        QVERIFY(done.wait(30000));
+        QCOMPARE(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(), 200);
+        const Result<ObjectData> back = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(back);
+        QCOMPARE(back->data, QByteArray("uploaded via link"));
     }
 
     void wrongSecretIsAuthenticationError()

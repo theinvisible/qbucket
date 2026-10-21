@@ -759,6 +759,21 @@ private Q_SLOTS:
         }));
     }
 
+    void presignHonoursTheCapability()
+    {
+        PresignRequest req;
+        req.bucket = kBucket;
+        req.key = QStringLiteral("k");
+        req.expiresSeconds = 60;
+        REQUIRE_OK(await<QUrl>([&](auto cb) { m_session->presign(req, &m_context, cb); }));
+        CapabilitySet set;
+        set.scope = CapabilityScope::Server;
+        set.set(Feature::Presign, {CapabilityState::Unsupported, CapabilitySource::Probed, {}, 0, {}, false, 0});
+        m_session->setCapabilities(set);
+        QCOMPARE(await<QUrl>([&](auto cb) { m_session->presign(req, &m_context, cb); }).error().category,
+                 ErrorCategory::Unsupported);
+    }
+
     void objectStoreListsLikeS3()
     {
         // FakeObjectStore's ListObjectsV2, which later tests rely on.

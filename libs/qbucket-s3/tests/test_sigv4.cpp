@@ -296,6 +296,17 @@ private Q_SLOTS:
         QVERIFY(enc.contains("&X-Amz-Security-Token=tok%2Fen%2B&"));
         QVERIFY(enc.contains("&versionId=v1"));
 
+        // "Download as": signed with the URL; GET only.
+        req.responseContentDisposition = QStringLiteral("attachment; filename=\"a b.txt\"");
+        const Result<QUrl> named = Presigner::presign(awsEndpoint(), AddressingStyle::Path, c, req, now);
+        QVERIFY(named);
+        QVERIFY(named->toEncoded().contains("response-content-disposition=attachment%3B%20filename%3D%22a%20b.txt%22"));
+        req.method = "PUT";
+        QCOMPARE(Presigner::presign(awsEndpoint(), AddressingStyle::Path, c, req, now).error().category,
+                 ErrorCategory::InvalidRequest);
+        req.method = "GET";
+        req.responseContentDisposition.clear();
+
         req.expiresSeconds = Presigner::kMaxExpirySeconds + 1;
         QCOMPARE(Presigner::presign(awsEndpoint(), AddressingStyle::Path, c, req, now).error().category,
                  ErrorCategory::InvalidRequest);
