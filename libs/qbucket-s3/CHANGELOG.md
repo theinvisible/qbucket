@@ -164,6 +164,8 @@ version bump may break the API.
 - `CopyObjectParams::tags` (tagging directive REPLACE); otherwise the copy
   sends the directive COPY explicitly.
 - `ProviderProfile::cannedObjectAcls()` (Hetzner: private, public-read).
+- `HetznerProfile`: `ObjectTaggingWrite` and `ObjectAclWrite` Supported —
+  confirmed by writing on two buckets (canary + victim ITs).
 - XML: `parseTagging`, `buildTagging`, `parseAccessControlPolicy`.
 - `FakeObjectStore`: tags and canned ACLs (GET/PUT `?tagging` / `?acl`,
   `x-amz-tagging`, tagging directive, `x-amz-tagging-count`); any other object

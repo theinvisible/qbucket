@@ -22,6 +22,9 @@ private Q_SLOTS:
                  (QStringList{QStringLiteral("fsn1"), QStringLiteral("nbg1"), QStringLiteral("hel1")}));
         QCOMPARE(p->storageClasses(), QStringList{QStringLiteral("STANDARD")});
         QCOMPARE(p->cannedObjectAcls(), (QStringList{QStringLiteral("private"), QStringLiteral("public-read")}));
+        // Confirmed by writing (canary + victim ITs, 2026-10-21).
+        QCOMPARE(p->capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::ObjectAclWrite), CapabilityState::Supported);
         // Hetzner is the first, preselected preset.
         QCOMPARE(ProviderRegistry::builtin().profiles().first()->id(), QStringLiteral("hetzner"));
     }

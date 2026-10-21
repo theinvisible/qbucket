@@ -69,6 +69,25 @@ InvalidRequest, as on AWS). **Storage classes:** only STANDARD —
 `STANDARD_IA` is refused with 400 InvalidArgument (the profile lists
 STANDARD only).
 
+Object tags and ACLs (`it_s3_backend`, both buckets, 2026-10-21):
+
+- **The subresource survives the proxy** (it was worth checking first, see
+  "Writes to unsupported subresources" below): `PUT ?tagging` and
+  `PUT ?acl` on a missing key answer 404 NoSuchKey and create nothing (the
+  canary); on an existing object they leave content, ETag and size alone and
+  read back (the victim). The profile marks `ObjectTaggingWrite` and
+  `ObjectAclWrite` Supported. `DELETE ?tagging` is never sent (an empty
+  tag set removes the tags).
+- Canned ACLs `public-read` and `private` work on objects; a copy never
+  carries the ACL (private unless `x-amz-acl` is sent).
+- **Tags and copies:** a copy to another key keeps them; a copy onto itself
+  with `REPLACE` **drops** them (also with an explicit
+  `x-amz-tagging-directive: COPY`, as on Ceph); tags sent along with
+  `x-amz-tagging` (directive REPLACE) end up unreadable — `GET ?tagging`
+  answers 200 with an empty body, HEAD reports none. Writing them with
+  `PutObjectTagging` after the copy restores them; that's what metadata
+  edits do.
+
 Multipart uploads (`it_s3_backend`, nbg1, 2026-10-20):
 
 - Create / UploadPart / ListParts / Complete / Abort / ListMultipartUploads

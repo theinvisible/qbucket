@@ -84,6 +84,15 @@ CapabilitySet HetznerProfile::capabilities() const
     // on the key of an existing object left it intact
     // (multipartRequestsLeaveAnExistingObjectAlone).
     known(Feature::ConditionalWrites, CapabilityState::Unsupported);
+    // Object tag and ACL writes keep their subresource through the proxy:
+    // PUT ?tagging / ?acl on a missing key answer 404 and create nothing, on
+    // an existing object they leave content, ETag and size alone and read
+    // back (qbucket-it-test and qbucket-it-lock, nbg1, 2026-10-21;
+    // it_s3_backend subresourceWritesOnMissingKeyCreateNothing,
+    // objectSubresourceWritesLeaveDataAlone). Not DELETE ?tagging — the
+    // library never sends it.
+    known(Feature::ObjectTaggingWrite, CapabilityState::Supported);
+    known(Feature::ObjectAclWrite, CapabilityState::Supported);
     return set;
 }
 
