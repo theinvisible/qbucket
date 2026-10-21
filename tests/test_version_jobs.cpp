@@ -182,7 +182,9 @@ private slots:
         const Job::Preview& p = m_previews.first();
         QCOMPARE(p.typeToConfirm, QStringLiteral("old"));
         QVERIFY(p.warnings.join(u' ').contains(QLatin1String("disappear completely")));
-        QVERIFY(p.details.join(u' ').contains(QLatin1String("3 version(s) and 1 delete marker(s)")));
+        QVERIFY(p.amount.startsWith(QLatin1String("3 version")));   // "(s)" without the plurals file
+        QVERIFY(p.amount.contains(QLatin1String("1 delete marker")));
+        QVERIFY(p.permanentText.contains(QLatin1String("gone for good")));
     }
 
     void undeleteBringsTheNewestVersionBack()

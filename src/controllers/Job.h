@@ -46,6 +46,8 @@ public:
         QStringList details;     // further lines (target name, …)
         QStringList warnings;
         bool permanent = false;  // nothing to recover afterwards (unversioned bucket)
+        QString permanentText;   // why it is permanent, if not that (e.g. versions deleted)
+        QString amount;          // instead of "%n object(s)" (e.g. versions)
         QString typeToConfirm;   // non-empty: has to be typed to confirm
         // Transfers: targets that exist already, and a few of them
         // ("name — here 12 MB, 2026-10-20; there 10 MB, 2026-09-01").

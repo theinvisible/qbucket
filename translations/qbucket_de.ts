@@ -1497,7 +1497,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message>
         <location filename="../src/controllers/DeleteVersionsJob.cpp" line="168"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="372"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="376"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
@@ -1580,21 +1580,42 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <source>Delete Permanently</source>
         <translation>Endgültig löschen</translation>
     </message>
-    <message numerus="yes">
+    <message>
         <location filename="../src/controllers/DeleteVersionsJob.cpp" line="340"/>
-        <source>%1 version(s) and %2 delete marker(s) of %n object(s).</source>
+        <source>This cannot be undone: deleted versions are gone for good, also on a versioned bucket.</source>
+        <translation>Das lässt sich nicht rückgängig machen: Gelöschte Versionen sind endgültig weg, auch in einem versionierten Bucket.</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="342"/>
+        <source>%n version(s)</source>
         <translation>
-            <numerusform>%1 Version(en) und %2 Löschmarker eines Objekts.</numerusform>
-            <numerusform>%1 Version(en) und %2 Löschmarker von %n Objekten.</numerusform>
+            <numerusform>%n Version</numerusform>
+            <numerusform>%n Versionen</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="344"/>
+        <source>%1, %n delete marker(s)</source>
+        <translation>
+            <numerusform>%1, %n Löschmarker</numerusform>
+            <numerusform>%1, %n Löschmarker</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="345"/>
+        <source>Of %n object(s).</source>
+        <translation>
+            <numerusform>Von einem Objekt.</numerusform>
+            <numerusform>Von %n Objekten.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="343"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="347"/>
         <source>Every version goes: the objects disappear completely, nothing is left to restore.</source>
         <translation>Alle Versionen werden gelöscht: Die Objekte verschwinden ganz, es bleibt nichts zum Wiederherstellen.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="346"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="350"/>
         <source>%n current version(s) are among them: the previous version becomes current, or the object disappears when none is left.</source>
         <translation>
             <numerusform>Eine aktuelle Version ist dabei: Die vorige Version wird aktuell, oder das Objekt verschwindet, wenn keine bleibt.</numerusform>
@@ -1602,45 +1623,45 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="350"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="354"/>
         <source>Object lock is enabled: versions under retention or a legal hold can&apos;t be deleted and are reported, never bypassed.</source>
         <translation>Object Lock ist aktiv: Versionen unter Aufbewahrung oder Legal Hold lassen sich nicht löschen und werden gemeldet, nie umgangen.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="422"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="478"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="426"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="482"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="447"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="496"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="451"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="500"/>
         <source>protected by object lock, or not permitted (%1)</source>
         <translation>durch Object Lock geschützt oder nicht erlaubt (%1)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="459"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="463"/>
         <source>the answer was lost — they may or may not be deleted</source>
         <translation>die Antwort ging verloren — sie sind vielleicht gelöscht, vielleicht nicht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="531"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="535"/>
         <source>cancelled — what was sent is in the journal</source>
         <translation>abgebrochen — was gesendet wurde, steht im Journal</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="576"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="615"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="580"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="619"/>
         <source>not checked (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="601"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="605"/>
         <source>not checked: %1</source>
         <translation>nicht geprüft: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="649"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="653"/>
         <source>%n object(s) looked up: they are back</source>
         <translation>
             <numerusform>%n Objekt nachgeschlagen: es ist wieder da</numerusform>
@@ -1648,7 +1669,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="650"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="654"/>
         <source>%n object(s) are still not back: %1</source>
         <translation>
             <numerusform>%n Objekt ist noch nicht wieder da: %1</numerusform>
@@ -1656,12 +1677,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="653"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="657"/>
         <source>listed again: nothing of it is left</source>
         <translation>erneut gelistet: nichts davon ist übrig</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="654"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="658"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n Version wird noch gelistet: %1</numerusform>
@@ -3938,52 +3959,52 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::ObjectTableModel</name>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="859"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="873"/>
         <source>delete marker</source>
         <translation>Löschmarker</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="860"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="874"/>
         <source>null (unversioned)</source>
         <translation>null (unversioniert)</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="870"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="884"/>
         <source>%1 — deleted here (a delete marker hides the versions below)</source>
         <translation>%1 — hier gelöscht (ein Löschmarker verdeckt die Versionen darunter)</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="871"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="885"/>
         <source>%1 — an earlier version</source>
         <translation>%1 — eine frühere Version</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="904"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="918"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="906"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="920"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="908"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="922"/>
         <source>Modified</source>
         <translation>Geändert</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="910"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="924"/>
         <source>Class</source>
         <translation>Klasse</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="912"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="926"/>
         <source>Version</source>
         <translation>Version</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/models/ObjectTableModel.cpp" line="918"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="932"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sortiert innerhalb der %n bisher geladenen Zeile; weitere Seiten werden beim Eintreffen einsortiert.</numerusform>
@@ -4121,12 +4142,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Das lässt sich nicht rückgängig machen: Der Bucket behält keine früheren Versionen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="125"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="128"/>
         <source>This is a production account — I have checked the scope above.</source>
         <translation>Das ist ein Produktivkonto — ich habe den Umfang oben geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="130"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="133"/>
         <source>Type “%1” to confirm:</source>
         <translation>Zur Bestätigung „%1“ eintippen:</translation>
     </message>

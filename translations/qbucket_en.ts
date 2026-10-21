@@ -145,15 +145,31 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="340"/>
-        <source>%1 version(s) and %2 delete marker(s) of %n object(s).</source>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="342"/>
+        <source>%n version(s)</source>
         <translation>
-            <numerusform>%1 version(s) and %2 delete marker(s) of %n object.</numerusform>
-            <numerusform>%1 version(s) and %2 delete marker(s) of %n objects.</numerusform>
+            <numerusform>%n version</numerusform>
+            <numerusform>%n versions</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="346"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="344"/>
+        <source>%1, %n delete marker(s)</source>
+        <translation>
+            <numerusform>%1, %n delete marker</numerusform>
+            <numerusform>%1, %n delete markers</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="345"/>
+        <source>Of %n object(s).</source>
+        <translation>
+            <numerusform>Of one object.</numerusform>
+            <numerusform>Of %n objects.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="350"/>
         <source>%n current version(s) are among them: the previous version becomes current, or the object disappears when none is left.</source>
         <translation>
             <numerusform>A current version is among them: the previous version becomes current, or the object disappears when none is left.</numerusform>
@@ -161,7 +177,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="649"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="653"/>
         <source>%n object(s) looked up: they are back</source>
         <translation>
             <numerusform>%n object looked up: it is back</numerusform>
@@ -169,7 +185,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="650"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="654"/>
         <source>%n object(s) are still not back: %1</source>
         <translation>
             <numerusform>%n object is still not back: %1</numerusform>
@@ -177,7 +193,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="654"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="658"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n version is still listed: %1</numerusform>
@@ -405,7 +421,7 @@
 <context>
     <name>qbucket::ObjectTableModel</name>
     <message numerus="yes">
-        <location filename="../../src/models/ObjectTableModel.cpp" line="918"/>
+        <location filename="../../src/models/ObjectTableModel.cpp" line="932"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sorted among the %n row loaded so far; pages still to come are sorted in as they arrive.</numerusform>

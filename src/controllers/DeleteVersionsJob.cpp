@@ -337,8 +337,12 @@ void DeleteVersionsJob::planDone_()
             p.action = tr("Delete Permanently");
             p.bytes = m_bytes;
             p.permanent = true;
-            p.details.append(tr("%1 version(s) and %2 delete marker(s) of %n object(s).", nullptr, int(m_keys))
-                                 .arg(locale.toString(m_versionCount), locale.toString(m_markerCount)));
+            p.permanentText = tr("This cannot be undone: deleted versions are gone for good, also on a versioned "
+                                 "bucket.");
+            p.amount = tr("%n version(s)", nullptr, int(m_versionCount));
+            if (m_markerCount > 0)
+                p.amount = tr("%1, %n delete marker(s)", nullptr, int(m_markerCount)).arg(p.amount);
+            p.details.append(tr("Of %n object(s).", nullptr, int(m_keys)));
             if (m_kind == Kind::Everything) {
                 p.warnings.append(tr("Every version goes: the objects disappear completely, nothing is left to "
                                      "restore."));

@@ -53,7 +53,7 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
     // How much.
     const QLocale locale;
     if (p.objects >= 0) {   // -1: a setting, no objects
-        QString amount = tr("%n object(s)", nullptr, int(p.objects));
+        QString amount = p.amount.isEmpty() ? tr("%n object(s)", nullptr, int(p.objects)) : p.amount;
         if (p.bytes >= 0)
             amount = tr("%1, %2").arg(amount, locale.formattedDataSize(p.bytes));
         lay->addWidget(new QLabel(amount));
@@ -117,8 +117,11 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
     };
     for (const QString& w : p.warnings)
         warn(w, Theme::warningColor());
-    if (p.permanent)
-        warn(tr("This cannot be undone: the bucket keeps no earlier versions."), Theme::dangerColor());
+    if (p.permanent) {
+        warn(p.permanentText.isEmpty() ? tr("This cannot be undone: the bucket keeps no earlier versions.")
+                                       : p.permanentText,
+             Theme::dangerColor());
+    }
 
     // Extra steps.
     if (account.environment == Environment::Production) {
