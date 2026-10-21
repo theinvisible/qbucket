@@ -285,6 +285,19 @@ qbucket_add_test(test_drag_staging
     qbucket_platform
     qbucket::s3_testsupport
 )
+qbucket_add_test(test_virtual_file_reader
+    test_virtual_file_reader.cpp
+    qbucket_platform
+    qbucket::s3_testsupport
+)
+if(WIN32)
+    # The COM side of dragging out (Explorer itself: by hand, devlog 010).
+    qbucket_add_test(test_virtual_file_drag
+        test_virtual_file_drag.cpp
+        qbucket_platform
+        qbucket::s3_testsupport
+    )
+endif()
 
 qbucket_add_test(test_edit_metadata_dialog
     test_edit_metadata_dialog.cpp

@@ -1583,6 +1583,7 @@ void MainWindow::connectOpenFiles_()
     m_openFiles->setOpener([](const QUrl& url) { return QDesktopServices::openUrl(url); });
     m_browser->setExternalDrag(m_externalDrag, m_staging);
     connect(m_staging, &DragStaging::message, this, [this](const QString& text) { statusBar()->showMessage(text, 8000); });
+    connect(m_externalDrag, &ExternalDrag::message, this, [this](const QString& text) { statusBar()->showMessage(text, 8000); });
     const auto applyLimit = [this] {
         const qint64 limit = qint64(m_settings->fetchConfirmMiB()) * 1024 * 1024;
         m_openFiles->setConfirmAboveBytes(limit);

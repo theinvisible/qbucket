@@ -184,8 +184,8 @@ target_link_libraries(qbucket_ui_foundation
 # A library rather than part of the executable so the window smoke test can
 # build the real MainWindow.
 # --- Platform: what differs between Windows and Linux (drag out) -------------
-# The only place with platform #ifdefs for features; Windows sources are
-# added below (A5: virtual-file drag).
+# The only place with platform #ifdefs for features; the Windows sources
+# (virtual-file drag) are added below.
 add_library(qbucket_platform STATIC
     platform/ExternalDrag.h
     platform/ExternalDrag.cpp
@@ -193,7 +193,25 @@ add_library(qbucket_platform STATIC
     platform/StagedDrag.cpp
     platform/StagingMimeData.h
     platform/StagingMimeData.cpp
+    platform/VirtualFileReader.h
+    platform/VirtualFileReader.cpp
+    platform/VirtualFileSource.h
 )
+if(WIN32)
+    # Explorer's virtual files: CFSTR_FILEDESCRIPTORW / CFSTR_FILECONTENTS.
+    target_sources(qbucket_platform PRIVATE
+        platform/win/DropSource.h
+        platform/win/DropSource.cpp
+        platform/win/RangeReaderStream.h
+        platform/win/RangeReaderStream.cpp
+        platform/win/VirtualFileDataObject.h
+        platform/win/VirtualFileDataObject.cpp
+        platform/win/VirtualFileDrag.h
+        platform/win/VirtualFileDrag.cpp
+    )
+    target_compile_definitions(qbucket_platform PUBLIC NOMINMAX UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
+    target_link_libraries(qbucket_platform PUBLIC ole32 shell32 uuid)
+endif()
 target_include_directories(qbucket_platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_platform
     PUBLIC  qbucket_controllers Qt6::Gui

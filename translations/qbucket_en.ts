@@ -388,6 +388,17 @@
     </message>
 </context>
 <context>
+    <name>qbucket::ExternalDrag</name>
+    <message numerus="yes">
+        <location filename="../../src/platform/ExternalDrag.cpp" line="35"/>
+        <source>%n file(s) dragged out, %1 checked against their MD5.</source>
+        <translation>
+            <numerusform>%n file dragged out, %1 checked against its MD5.</numerusform>
+            <numerusform>%n files dragged out, %1 checked against their MD5.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ImportAccountsDialog</name>
     <message numerus="yes">
         <location filename="../../src/ui/ImportAccountsDialog.cpp" line="260"/>
@@ -444,7 +455,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1629"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1630"/>
         <source>(%n more changed file(s))</source>
         <translation>
             <numerusform>(%n more changed file)</numerusform>
@@ -452,7 +463,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1663"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1664"/>
         <source>%n file(s) opened from QBucket were changed and not uploaded.</source>
         <translation>
             <numerusform>%n file opened from QBucket was changed and not uploaded.</numerusform>
@@ -460,7 +471,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1827"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1828"/>
         <source>%n account(s) imported — their secrets are kept for this session only.</source>
         <translation>
             <numerusform>%n account imported — its secret is kept for this session only.</numerusform>
@@ -468,7 +479,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1829"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1830"/>
         <source>%n account(s) imported.</source>
         <translation>
             <numerusform>%n account imported.</numerusform>

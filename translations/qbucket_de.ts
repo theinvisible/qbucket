@@ -2,6 +2,48 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="de_DE">
 <context>
+    <name>VirtualFileReader</name>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="122"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="308"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="352"/>
+        <source>Not connected.</source>
+        <translation>Nicht verbunden.</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="131"/>
+        <source>“%1” could not be read: %2</source>
+        <translation>„%1“ konnte nicht gelesen werden: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="167"/>
+        <source>The folder could not be listed: %1</source>
+        <translation>Der Ordner ließ sich nicht auflisten: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="182"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="241"/>
+        <source>More than %1 objects: too many to drag. Download them instead.</source>
+        <translation>Mehr als %1 Objekte: zu viele zum Ziehen. Lade sie stattdessen herunter.</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="216"/>
+        <source>“%1” can&apos;t be saved on Windows: %2</source>
+        <translation>„%1“ lässt sich unter Windows nicht speichern: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="232"/>
+        <source>“%1” differs from another name only in case: Windows can&apos;t hold both.</source>
+        <translation>„%1“ unterscheidet sich von einem anderen Namen nur in der Groß-/Kleinschreibung: Windows kann nicht beide halten.</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="323"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="368"/>
+        <source>changed on the server since the drag started</source>
+        <translation>auf dem Server geändert, seit das Ziehen begann</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::AbortUploadsJob</name>
     <message numerus="yes">
         <location filename="../src/controllers/AbortUploadsJob.cpp" line="23"/>
@@ -3744,6 +3786,42 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::ExternalDrag</name>
+    <message>
+        <location filename="../src/platform/ExternalDrag.cpp" line="16"/>
+        <source>not connected</source>
+        <translation>nicht verbunden</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/ExternalDrag.cpp" line="17"/>
+        <source>the drag data could not be created</source>
+        <translation>die Daten zum Ziehen ließen sich nicht anlegen</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/ExternalDrag.cpp" line="18"/>
+        <source>the copy was not completed</source>
+        <translation>die Kopie wurde nicht fertig</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/ExternalDrag.cpp" line="25"/>
+        <source>Dragging out is not available: %1</source>
+        <translation>Hinausziehen ist nicht möglich: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/platform/ExternalDrag.cpp" line="30"/>
+        <source>Dragging out failed: %1</source>
+        <translation>Hinausziehen fehlgeschlagen: %1</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/platform/ExternalDrag.cpp" line="35"/>
+        <source>%n file(s) dragged out, %1 checked against their MD5.</source>
+        <translation>
+            <numerusform>%n Datei hinausgezogen, %1 gegen ihre MD5 geprüft.</numerusform>
+            <numerusform>%n Dateien hinausgezogen, %1 gegen ihre MD5 geprüft.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::FolderSizeTask</name>
     <message>
         <location filename="../src/controllers/FolderSizeTask.cpp" line="38"/>
@@ -4842,17 +4920,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Geöffnete Dateien…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1625"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1626"/>
         <source>“%1” was changed in another application.</source>
         <translation>„%1“ wurde in einer anderen Anwendung geändert.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1627"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1628"/>
         <source>Not uploaded: %1</source>
         <translation>Nicht hochgeladen: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="1629"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1630"/>
         <source>(%n more changed file(s))</source>
         <translation>
             <numerusform>(%n weitere geänderte Datei)</numerusform>
@@ -4860,12 +4938,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1662"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1663"/>
         <source>Changed Files</source>
         <translation>Geänderte Dateien</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="1663"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1664"/>
         <source>%n file(s) opened from QBucket were changed and not uploaded.</source>
         <translation>
             <numerusform>%n aus QBucket geöffnete Datei wurde geändert und nicht hochgeladen.</numerusform>
@@ -4873,51 +4951,51 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1666"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1667"/>
         <source>Keep them to upload in the next session, or discard the changes.</source>
         <translation>Behalte sie, um sie in der nächsten Sitzung hochzuladen, oder verwirf die Änderungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1668"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1669"/>
         <source>Keep for Later</source>
         <translation>Für später behalten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1669"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1670"/>
         <source>Discard Changes</source>
         <translation>Änderungen verwerfen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1702"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1712"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1719"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1703"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1713"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1720"/>
         <source>Transfers</source>
         <translation>Übertragungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1719"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1720"/>
         <source>No transfers.</source>
         <translation>Keine Übertragungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1721"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1722"/>
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1728"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1729"/>
         <source>&amp;Transfers Panel</source>
         <translation>&amp;Übertragungsbereich</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="1219"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1740"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1741"/>
         <source>Not connected</source>
         <translation>Nicht verbunden</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="1221"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1754"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1755"/>
         <source>Offline</source>
         <translation>Offline</translation>
     </message>
@@ -4942,12 +5020,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1748"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1749"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="1827"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1828"/>
         <source>%n account(s) imported — their secrets are kept for this session only.</source>
         <translation>
             <numerusform>%n Konto importiert — sein Secret bleibt nur für diese Sitzung.</numerusform>
@@ -4955,7 +5033,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="1829"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1830"/>
         <source>%n account(s) imported.</source>
         <translation>
             <numerusform>%n Konto importiert.</numerusform>
@@ -4963,22 +5041,22 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1843"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1844"/>
         <source>Account “%1” saved — its secret is kept for this session only.</source>
         <translation>Konto „%1“ gespeichert — sein geheimer Schlüssel wird nur für diese Sitzung gehalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1844"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1845"/>
         <source>Account “%1” saved.</source>
         <translation>Konto „%1“ gespeichert.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1851"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1852"/>
         <source>About QBucket</source>
         <translation>Über QBucket</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1852"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1853"/>
         <source>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;A native browser for S3 and S3-compatible object storage.&lt;/p&gt;&lt;p&gt;Built with Qt %2 Widgets. Licensed under the MIT license.&lt;/p&gt;</source>
         <translation>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;Ein nativer Browser für S3 und S3-kompatiblen Object Storage.&lt;/p&gt;&lt;p&gt;Erstellt mit Qt %2 Widgets. Lizenziert unter der MIT-Lizenz.&lt;/p&gt;</translation>
     </message>

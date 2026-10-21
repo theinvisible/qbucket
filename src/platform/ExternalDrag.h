@@ -40,6 +40,19 @@ public:
     // The platform's way: VirtualFileDrag on Windows, StagedDrag elsewhere.
     static std::unique_ptr<ExternalDrag> create(DragStaging* staging, OperationController* operations,
                                                 QObject* parent = nullptr);
+
+signals:
+    // How a drag went, for the status bar (translated).
+    void message(const QString& text);
+
+protected:
+    // The texts of every platform's drag live here, where lupdate sees them
+    // on each build system.
+    enum class Text { NotConnected, NoDragData, CopyNotCompleted };
+    [[nodiscard]] static QString text(Text which);
+    [[nodiscard]] static QString unavailable(const QString& why);
+    [[nodiscard]] static QString failed(const QString& why);
+    [[nodiscard]] static QString done(int files, int verified);
 };
 
 } // namespace qbucket
