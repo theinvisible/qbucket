@@ -61,6 +61,7 @@ public:
     [[nodiscard]] QAction* renameAction() const { return m_actRename; }
     [[nodiscard]] QAction* editMetadataAction() const { return m_actEditMetadata; }
     [[nodiscard]] QAction* changeClassAction() const { return m_actChangeClass; }
+    [[nodiscard]] QAction* presignAction() const { return m_actPresign; }
     [[nodiscard]] QAction* deleteAction() const { return m_actDelete; }
     [[nodiscard]] QAction* downloadAction() const { return m_actDownload; }
     [[nodiscard]] QAction* downloadToAction() const { return m_actDownloadTo; }
@@ -149,6 +150,7 @@ private:
     QAction* m_actRename = nullptr;
     QAction* m_actEditMetadata = nullptr;
     QAction* m_actChangeClass = nullptr;
+    QAction* m_actPresign = nullptr;
     bool m_classesAllowed = false;
     QString m_classesReason;
     QAction* m_actDelete = nullptr;

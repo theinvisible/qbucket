@@ -516,6 +516,7 @@ void ObjectBrowser::buildActions_()
     m_actRename = make(tr("&Rename…"), QKeySequence(Qt::Key_F2));
     m_actEditMetadata = make(tr("Edit &Metadata…"), QKeySequence());
     m_actChangeClass = make(tr("Change Storage Cl&ass…"), QKeySequence());
+    m_actPresign = make(tr("Pre&signed Link…"), QKeySequence());
     m_actDelete = make(tr("&Delete…"), QKeySequence::Delete);
     m_actDownload = make(tr("Do&wnload"), QKeySequence(Qt::CTRL | Qt::Key_D));
     m_actDownloadTo = make(tr("Download &To…"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
@@ -553,6 +554,12 @@ void ObjectBrowser::updateActions_()
     m_actChangeClass->setToolTip(!m_mutationsAllowed ? m_mutationsReason
                                  : !m_classesAllowed ? m_classesReason
                                                      : tr("Move the selection to another storage class"));
+    bool anyObject = false;
+    for (const QModelIndex& r : rows)
+        anyObject = anyObject || !r.data(ObjectTableModel::IsFolderRole).toBool();
+    m_actPresign->setEnabled(anyObject && m_downloadsAllowed);
+    m_actPresign->setToolTip(m_downloadsAllowed ? tr("Links to the selected objects that work without credentials")
+                                                : m_downloadsReason);
     for (QAction* a : {m_actDownload, m_actDownloadTo}) {
         a->setEnabled(!rows.isEmpty() && m_downloadsAllowed);
         a->setToolTip(m_downloadsAllowed ? tr("Download the selection") : m_downloadsReason);
@@ -680,6 +687,7 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
     menu.addSeparator();
     menu.addAction(m_actDownload);
     menu.addAction(m_actDownloadTo);
+    menu.addAction(m_actPresign);
     menu.addSeparator();
     menu.addAction(m_actRename);
     menu.addAction(m_actEditMetadata);

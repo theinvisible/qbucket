@@ -15,6 +15,7 @@
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/PresignService.h"
 #include "controllers/DiscardTransfersJob.h"
 #include "controllers/DownloadJob.h"
 #include "controllers/TransferService.h"
@@ -25,6 +26,7 @@
 #include "ui/IncompleteUploadsDialog.h"
 #include "ui/LogPanel.h"
 #include "ui/OperationPreviewDialog.h"
+#include "ui/PresignDialog.h"
 #include "ui/DetailPane.h"
 #include "controllers/BrowseController.h"
 #include "ui/ObjectBrowser.h"
@@ -145,6 +147,7 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_operations = new OperationController(m_accounts, m_sessions, m_capabilities, m_journal, m_activity, this);
         m_transfers = new TransferService(this);
         m_operations->setTransfers(m_transfers);
+        m_presign = new PresignService(m_operations, this);
         const auto applyTransferSettings = [this] {
             m_sessions->setTransferLanes(m_settings->transferThreads());
             m_transfers->setMaxParallelParts(m_settings->transferParallelParts());
@@ -393,6 +396,26 @@ void MainWindow::editMetadata_()
         connect(dlg, &QDialog::accepted, this, [dlg, start] { start(dlg->change()); });
         dlg->open();
     });
+}
+
+void MainWindow::presign_()
+{
+    const Location here = m_browser->navigation()->current();
+    if (!m_presign || !here.hasBucket())
+        return;
+    QStringList keys;
+    int folders = 0;
+    for (const QModelIndex& r : m_browser->selectedRows()) {
+        if (r.data(ObjectTableModel::IsFolderRole).toBool())
+            ++folders;
+        else
+            keys.append(r.data(ObjectTableModel::KeyRole).toString());
+    }
+    if (keys.isEmpty())
+        return;
+    auto* dlg = new PresignDialog(m_presign, here.account, here.bucket, keys, folders, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
 }
 
 void MainWindow::changeStorageClass_()
@@ -683,6 +706,7 @@ void MainWindow::connectBrowser_()
     connect(m_browser->renameAction(), &QAction::triggered, this, &MainWindow::renameSelection_);
     connect(m_browser->editMetadataAction(), &QAction::triggered, this, &MainWindow::editMetadata_);
     connect(m_browser->changeClassAction(), &QAction::triggered, this, &MainWindow::changeStorageClass_);
+    connect(m_browser->presignAction(), &QAction::triggered, this, &MainWindow::presign_);
     connect(m_deleteBtn, &QToolButton::clicked, m_browser->deleteAction(), &QAction::trigger);
     connect(m_browser->deleteAction(), &QAction::changed, this, [this] {
         m_deleteBtn->setEnabled(m_browser->deleteAction()->isEnabled());
@@ -695,6 +719,7 @@ void MainWindow::connectBrowser_()
     m_editMenu->addSeparator();
     m_editMenu->addAction(m_browser->downloadAction());
     m_editMenu->addAction(m_browser->downloadToAction());
+    m_editMenu->addAction(m_browser->presignAction());
     connect(m_browser->downloadAction(), &QAction::triggered, this, [this] { downloadSelection_(QString()); });
     connect(m_browser->downloadToAction(), &QAction::triggered, this, [this] {
         auto* dlg = new QFileDialog(this, tr("Download To"), m_settings->downloadDirectory());

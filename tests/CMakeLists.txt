@@ -229,6 +229,12 @@ qbucket_add_test(test_object_properties
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_presign
+    test_presign.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

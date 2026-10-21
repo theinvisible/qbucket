@@ -216,7 +216,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="223"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="226"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -224,7 +224,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="586"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="609"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -235,7 +235,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="698"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="706"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -247,7 +247,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="700"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="708"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -255,7 +255,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="706"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="714"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>
@@ -326,6 +326,41 @@
         <translation>
             <numerusform>%n of them exists already:</numerusform>
             <numerusform>%n of them exist already:</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::PresignDialog</name>
+    <message numerus="yes">
+        <location filename="../../src/ui/PresignDialog.cpp" line="42"/>
+        <source>Links to %n object(s) in s3://%1 that work without credentials until they expire.</source>
+        <translation>
+            <numerusform>A link to %n object in s3://%1 that works without credentials until it expires.</numerusform>
+            <numerusform>Links to %n objects in s3://%1 that work without credentials until they expire.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/PresignDialog.cpp" line="47"/>
+        <source>%n selected folder(s) left out: links are for objects.</source>
+        <translation>
+            <numerusform>%n selected folder left out: links are for objects.</numerusform>
+            <numerusform>%n selected folders left out: links are for objects.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/PresignDialog.cpp" line="69"/>
+        <source>%n day(s)</source>
+        <translation>
+            <numerusform>%n day</numerusform>
+            <numerusform>%n days</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/PresignDialog.cpp" line="70"/>
+        <source>%n hour(s)</source>
+        <translation>
+            <numerusform>%n hour</numerusform>
+            <numerusform>%n hours</numerusform>
         </translation>
     </message>
 </context>

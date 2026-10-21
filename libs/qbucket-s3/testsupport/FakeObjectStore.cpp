@@ -232,8 +232,15 @@ struct FakeObjectStore::Impl {
             return QStringLiteral("CompleteMultipartUpload");
         if (m == "PUT" && req.hasQueryItem("uploadId"))
             return req.header("x-amz-copy-source").isNull() ? QStringLiteral("UploadPart") : QStringLiteral("UploadPartCopy");
-        // Never let an unknown subresource fall through to an upload.
-        const bool plain = req.query.isEmpty() || (dropObjectSubresources && (req.hasQueryItem("tagging") || req.hasQueryItem("acl")));
+        // Never let an unknown subresource fall through to an upload. A
+        // presigned request's X-Amz-* and response-* parameters are no
+        // subresource.
+        bool onlySigning = true;
+        for (const QByteArray& item : req.query.split('&')) {
+            if (!item.isEmpty() && !item.startsWith("X-Amz-") && !item.startsWith("response-"))
+                onlySigning = false;
+        }
+        const bool plain = onlySigning || (dropObjectSubresources && (req.hasQueryItem("tagging") || req.hasQueryItem("acl")));
         if (m == "PUT" && plain)
             return req.header("x-amz-copy-source").isNull() ? QStringLiteral("PutObject") : QStringLiteral("CopyObject");
         if (m == "PUT")
@@ -555,6 +562,8 @@ struct FakeObjectStore::Impl {
         }
         r.withHeader("ETag", o->etag.toLatin1());
         r.withHeader("Last-Modified", formatHttpDate(o->lastModified));
+        if (req.hasQueryItem("response-content-disposition"))
+            r.withHeader("Content-Disposition", QUrl::fromPercentEncoding(req.queryItem("response-content-disposition")).toUtf8());
         r.withHeader("Content-Type", o->contentType.isEmpty() ? QByteArray("binary/octet-stream") : o->contentType.toUtf8());
         if (!o->storageClass.isEmpty())
             r.withHeader("x-amz-storage-class", o->storageClass.toLatin1());

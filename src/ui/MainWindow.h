@@ -26,6 +26,7 @@ class CapabilityStore;
 class Job;
 class Journal;
 class OperationController;
+class PresignService;
 class TransferService;
 class TransferModel;
 class AccountSidebar;
@@ -88,6 +89,7 @@ private:
     // first), and its storage class.
     void editMetadata_();
     void changeStorageClass_();
+    void presign_();
     // Copy / move objects of the account within it (paste, drops). Between
     // accounts: later (refused with the reason).
     void startCopy_(const ObjectSelection& selection, const QUuid& account, const QString& bucket,
@@ -112,6 +114,7 @@ private:
     CapabilityController* m_capabilities = nullptr;
     Journal*            m_journal = nullptr;
     OperationController* m_operations = nullptr;
+    PresignService* m_presign = nullptr;
     TransferService* m_transfers = nullptr;
     TransferModel* m_transferModel = nullptr;
     QTabWidget* m_dockTabs = nullptr;

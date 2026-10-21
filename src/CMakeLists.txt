@@ -76,6 +76,8 @@ add_library(qbucket_controllers STATIC
     controllers/EditObjectsJob.cpp
     controllers/ObjectPropertyJob.h
     controllers/ObjectPropertyJob.cpp
+    controllers/PresignService.h
+    controllers/PresignService.cpp
     controllers/CreateFolderJob.h
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h
@@ -161,6 +163,8 @@ add_library(qbucket_app_ui STATIC
     ui/ObjectBrowser.cpp
     ui/EditMetadataDialog.h
     ui/EditMetadataDialog.cpp
+    ui/PresignDialog.h
+    ui/PresignDialog.cpp
     ui/OperationPreviewDialog.h
     ui/OperationPreviewDialog.cpp
     ui/ObjectRowDelegate.h

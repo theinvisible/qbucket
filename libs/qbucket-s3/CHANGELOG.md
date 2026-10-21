@@ -189,7 +189,8 @@ version bump may break the API.
 - `FakeObjectStore`: `setDropTagsOnReplace()` (RGW's behaviour),
   `setObjectHeader()`, `setObjectAcl()`, `setObjectTags()`,
   `setObjectStorageClass()` to seed test objects; the encryption and object
-  lock headers are kept with an object.
+  lock headers are kept with an object. Presigned GETs (only X-Amz-* and
+  response-* parameters) are served, with response-content-disposition.
 
 ### Changed
 
