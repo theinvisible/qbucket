@@ -34,5 +34,10 @@
     "objectTaggingWrite": true,
     "objectAclWrite": true,
     "copyKeepsTags": false,
-    "copyReplacesTags": false
+    "copyReplacesTags": false,
+    "_headReportsDeleteMarker": "Like Ceph (RGW): HEAD / GET on a deleted key answer a bare 404 without x-amz-delete-marker; CopyObject from a version sends neither x-amz-copy-source-version-id nor x-amz-version-id. Verified 2026-10-21.",
+    "headReportsDeleteMarker": false,
+    "headOnMarkerVersionReportsDeleteMarker": false,
+    "copyReportsVersionIds": false,
+    "bucketVersioningWrite": true
 }

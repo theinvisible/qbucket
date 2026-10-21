@@ -25,8 +25,7 @@ private Q_SLOTS:
         // Confirmed by writing (canary + victim ITs, 2026-10-21).
         QCOMPARE(p->capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::ObjectAclWrite), CapabilityState::Supported);
-        // Not confirmed by a write test yet (devlog 008).
-        QCOMPARE(p->capabilities().state(Feature::BucketVersioningWrite), CapabilityState::Unknown);
+        QCOMPARE(p->capabilities().state(Feature::BucketVersioningWrite), CapabilityState::Supported);
         // Hetzner is the first, preselected preset.
         QCOMPARE(ProviderRegistry::builtin().profiles().first()->id(), QStringLiteral("hetzner"));
     }

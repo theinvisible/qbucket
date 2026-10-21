@@ -14,8 +14,9 @@ follow Hetzner's documentation and have not been probed. Test buckets:
 |---|---|---|
 | `qbucket-it-test` | console; versioning enabled later (`rclone backend versioning … Enabled`) | `hetzner.json` |
 | `qbucket-it-lock` | `rclone mkdir --s3-bucket-object-lock-enabled` (object lock ⇒ versioning) | `hetzner-lock.json` |
+| `qbucket-it-versioning` | CreateBucket (2026-10-21), versioning switched by `toggleVersioning` — the scratch bucket for bucket-setting writes | — |
 
-Both hold `guard/DO-NOT-DELETE.txt` (see "Writes to unsupported
+All three hold `guard/DO-NOT-DELETE.txt` (see "Writes to unsupported
 subresources" below). Versioning and object lock work as documented;
 object lock can only be enabled at creation.
 
@@ -121,6 +122,26 @@ recursively with DeleteObjects batches (versioned bucket: delete markers),
 renaming an object and a folder (CopyObject with
 `x-amz-copy-source-if-match`, HEAD, DeleteObject). A stale if-match ETag is
 answered with 412 PreconditionFailed, as on AWS.
+
+Versions (M5, both buckets, 2026-10-21, `it_s3_backend`): listing in pages
+of two with the marker pair, delete markers, reading a version by id,
+copying an old version over the current one, deleting single versions and
+in batches — all as on AWS, with two RGW gaps shared with Ceph:
+
+- **HEAD / GET on a deleted key answer a bare 404** — no
+  `x-amz-delete-marker`, also not for the marker's own version id. A
+  delete marker is only certain from ListObjectVersions.
+- **CopyObject from a version sends no version ids** (neither
+  `x-amz-copy-source-version-id` nor the new `x-amz-version-id`). Look the
+  copy up instead.
+
+**PUT `?versioning` reaches RGW** (unlike `?encryption`): on a missing
+bucket it answers 404 NoSuchBucket and creates nothing (the canary
+`bucketVersioningWriteOnMissingBucketCreatesNothing`); on
+`qbucket-it-versioning` Enabled → Suspended → Enabled read back at once and
+the guard object stayed (`toggleVersioning` with
+`QBUCKET_IT_VERSIONING_BUCKET`). The profile knows `BucketVersioningWrite`
+as Supported.
 
 ## Quirks
 

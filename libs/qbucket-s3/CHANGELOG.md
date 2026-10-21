@@ -218,7 +218,8 @@ version bump may break the API.
   ("bucket.versioning-write"), never set by a read probe;
   `featuresFor(PutBucketVersioning)` = {BucketVersioningWrite,
   BucketVersioning}. Profiles: AWS Supported, Garage Unsupported, generic
-  and Hetzner Unknown. An answer that looks like CreateBucket (Location
+  Unknown; Hetzner Supported after the canary and a toggle on a guarded
+  scratch bucket (nbg1, 2026-10-21). An answer that looks like CreateBucket (Location
   header, 409 BucketAlreadyOwnedByYou / BucketAlreadyExists) is a Protocol
   error: a proxy dropped ?versioning.
 - `BucketState::mfaDelete`, read by the versioning probe (now through

@@ -93,6 +93,12 @@ CapabilitySet HetznerProfile::capabilities() const
     // library never sends it.
     known(Feature::ObjectTaggingWrite, CapabilityState::Supported);
     known(Feature::ObjectAclWrite, CapabilityState::Supported);
+    // PUT ?versioning keeps its subresource too: on a missing bucket it
+    // answers 404 NoSuchBucket and creates nothing; on the scratch bucket
+    // qbucket-it-versioning (guard object) Enabled → Suspended → Enabled
+    // read back at once, the guard intact (nbg1, 2026-10-21; it_s3_backend
+    // bucketVersioningWriteOnMissingBucketCreatesNothing, toggleVersioning).
+    known(Feature::BucketVersioningWrite, CapabilityState::Supported);
     return set;
 }
 
