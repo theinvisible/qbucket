@@ -502,6 +502,8 @@ QString CapabilityController::featureName(s3::Feature f)
     case F::BatchDelete: return tr("Deleting many objects at once");
     case F::Presign: return tr("Presigned links");
     case F::MultipartUpload: return tr("Multipart uploads");
+    case F::ObjectTaggingWrite: return tr("Writing object tags");
+    case F::ObjectAclWrite: return tr("Changing object ACLs");
     }
     return s3::featureId(f);
 }

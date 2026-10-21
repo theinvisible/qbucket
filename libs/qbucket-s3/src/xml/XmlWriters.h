@@ -19,6 +19,10 @@ QBUCKET_S3_EXPORT Result<QByteArray> buildDeleteRequest(const QList<ObjectIdenti
 // <CompleteMultipartUpload> with the parts in the given order.
 QBUCKET_S3_EXPORT QByteArray buildCompleteMultipartUpload(const QList<CompletedPart>& parts);
 
+// <Tagging> body for PutObjectTagging. InvalidRequest for keys / values XML
+// 1.0 cannot carry.
+QBUCKET_S3_EXPORT Result<QByteArray> buildTagging(const TagSet& tags);
+
 // <CreateBucketConfiguration> with a LocationConstraint.
 QBUCKET_S3_EXPORT QByteArray buildCreateBucketConfiguration(const QString& locationConstraint);
 

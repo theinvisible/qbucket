@@ -695,72 +695,82 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Multipart-Uploads</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="512"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="505"/>
+        <source>Writing object tags</source>
+        <translation>Objekt-Tags schreiben</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="506"/>
+        <source>Changing object ACLs</source>
+        <translation>Objekt-ACLs ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
         <source>Supported</source>
         <translation>Unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="513"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
         <source>Not supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="516"/>
         <source>Not permitted</source>
         <translation>Nicht erlaubt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="517"/>
         <source>Unknown</source>
         <translation>Unbekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="523"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="525"/>
         <source>Checked</source>
         <translation>Geprüft</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="524"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="526"/>
         <source>Learned from a request</source>
         <translation>Aus einer Anfrage gelernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="525"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="527"/>
         <source>Provider profile</source>
         <translation>Anbieterprofil</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="535"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="537"/>
         <source>known from the provider profile</source>
         <translation>aus dem Anbieterprofil bekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="540"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="542"/>
         <source>HTTP %1 %2, %3</source>
         <translation>HTTP %1 %2, %3</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="548"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="550"/>
         <source>%1 is switched off for this provider: its proxy mishandles these requests.</source>
         <translation>%1 ist für diesen Anbieter abgeschaltet: Sein Proxy behandelt diese Anfragen falsch.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="549"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
         <source>The server does not support %1 (%2).</source>
         <translation>Der Server unterstützt %1 nicht (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="553"/>
         <source>These credentials may not use %1 (%2).</source>
         <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="553"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="555"/>
         <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="555"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="557"/>
         <source>%1 is not verified on this server.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
     </message>
@@ -2755,37 +2765,37 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Zustand</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="243"/>
+        <location filename="../src/models/TransferModel.cpp" line="250"/>
         <source>done</source>
         <translation>fertig</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="243"/>
+        <location filename="../src/models/TransferModel.cpp" line="250"/>
         <source>done — %1</source>
         <translation>fertig — %1</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="246"/>
+        <location filename="../src/models/TransferModel.cpp" line="253"/>
         <source>%1 failed, %2 done</source>
         <translation>%1 fehlgeschlagen, %2 erledigt</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="249"/>
+        <location filename="../src/models/TransferModel.cpp" line="256"/>
         <source>failed: %1</source>
         <translation>fehlgeschlagen: %1</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="252"/>
+        <location filename="../src/models/TransferModel.cpp" line="259"/>
         <source>stopped — continues next time</source>
         <translation>angehalten — geht beim nächsten Start weiter</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="252"/>
+        <location filename="../src/models/TransferModel.cpp" line="259"/>
         <source>cancelled</source>
         <translation>abgebrochen</translation>
     </message>
     <message>
-        <location filename="../src/models/TransferModel.cpp" line="255"/>
+        <location filename="../src/models/TransferModel.cpp" line="262"/>
         <source>refused: %1</source>
         <translation>abgelehnt: %1</translation>
     </message>

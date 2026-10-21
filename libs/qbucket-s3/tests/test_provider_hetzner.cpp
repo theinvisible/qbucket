@@ -21,6 +21,7 @@ private Q_SLOTS:
         QCOMPARE(p->regions(),
                  (QStringList{QStringLiteral("fsn1"), QStringLiteral("nbg1"), QStringLiteral("hel1")}));
         QCOMPARE(p->storageClasses(), QStringList{QStringLiteral("STANDARD")});
+        QCOMPARE(p->cannedObjectAcls(), (QStringList{QStringLiteral("private"), QStringLiteral("public-read")}));
         // Hetzner is the first, preselected preset.
         QCOMPARE(ProviderRegistry::builtin().profiles().first()->id(), QStringLiteral("hetzner"));
     }

@@ -217,6 +217,13 @@ struct DeleteObjectResult {
     QString requestId;                    // x-amz-request-id, for the journal
 };
 
+struct Tag {
+    QString key;
+    QString value;
+    bool operator==(const Tag&) const = default;
+};
+using TagSet = QList<Tag>;
+
 // Where a copy's metadata and headers come from.
 enum class MetadataDirective : quint8 {
     Copy,      // from the source (content type, headers, user metadata)
@@ -243,6 +250,13 @@ struct CopyObjectParams {
     ObjectHeaders headers;                // with Replace only
     QString serverSideEncryption;         // x-amz-server-side-encryption ("AES256"); empty: server default
     QString cannedAcl;                    // x-amz-acl; empty: none
+    // Set: the copy gets exactly these tags (x-amz-tagging-directive
+    // REPLACE; Feature::ObjectTaggingWrite). Unset: the source's tags
+    // (directive COPY). Not reliable beyond AWS: RGW drops an object's tags
+    // on a REPLACE copy onto itself whatever the directive, and Hetzner's
+    // leaves tags sent this way unreadable — write them with
+    // PutObjectTagging after the copy instead (it_s3_backend copyKeepsTags).
+    std::optional<TagSet> tags;
 };
 
 struct CopyObjectResult {
@@ -252,6 +266,108 @@ struct CopyObjectResult {
     QString sourceVersionId;
     QString requestId;                    // x-amz-request-id, for the journal
 };
+
+// --- Tags and ACLs ------------------------------------------------------------
+
+// S3's rules for an object's tags: at most 10, keys of 1–128 and values of up
+// to 256 characters, keys unique and not starting with "aws:". Empty when
+// the set is valid, otherwise what is wrong (English).
+inline QString tagSetProblem(const TagSet& tags)
+{
+    if (tags.size() > 10)
+        return QStringLiteral("an object has at most 10 tags");
+    QStringList seen;
+    for (const Tag& t : tags) {
+        if (t.key.isEmpty() || t.key.size() > 128)
+            return QStringLiteral("tag keys have 1 to 128 characters");
+        if (t.value.size() > 256)
+            return QStringLiteral("tag values have at most 256 characters");
+        if (t.key.startsWith(QLatin1String("aws:"), Qt::CaseInsensitive))
+            return QStringLiteral("tag keys must not start with \"aws:\"");
+        if (seen.contains(t.key))
+            return QStringLiteral("tag key \"%1\" appears twice").arg(t.key);
+        seen.append(t.key);
+    }
+    return {};
+}
+
+struct ObjectTagging {
+    TagSet tags;
+    QString versionId;                    // the version the tags belong to (versioned buckets)
+};
+
+struct PutObjectTaggingParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version
+    TagSet tags;                          // the complete new set; empty removes all tags
+};
+
+struct PutObjectAclParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version
+    QString cannedAcl;                    // x-amz-acl, e.g. "private", "public-read"
+};
+
+// Answer of PutObjectTagging / PutObjectAcl.
+struct SubresourceWriteResult {
+    QString versionId;
+    QString requestId;
+};
+
+struct Grant {
+    enum class Grantee : quint8 { CanonicalUser, Group, Email };
+    Grantee grantee = Grantee::CanonicalUser;
+    QString id;                           // CanonicalUser
+    QString displayName;
+    QString uri;                          // Group, e.g. http://acs.amazonaws.com/groups/global/AllUsers
+    QString email;                        // Email (AmazonCustomerByEmail)
+    QString permission;                   // FULL_CONTROL, READ, WRITE, READ_ACP, WRITE_ACP
+};
+
+struct AccessControlPolicy {
+    QString ownerId;
+    QString ownerName;
+    QList<Grant> grants;
+};
+
+// The canned ACL a policy amounts to: "private", "public-read",
+// "public-read-write" or "authenticated-read" (the owner with FULL_CONTROL
+// plus exactly the canned groups). nullopt for anything else — grants a
+// canned ACL can't express, which rewriting the ACL would lose.
+inline std::optional<QString> cannedAclOf(const AccessControlPolicy& acl)
+{
+    static const QString allUsers = QStringLiteral("http://acs.amazonaws.com/groups/global/AllUsers");
+    static const QString authUsers = QStringLiteral("http://acs.amazonaws.com/groups/global/AuthenticatedUsers");
+    bool ownerFull = false;
+    QStringList others;   // "<group>:<permission>"
+    for (const Grant& g : acl.grants) {
+        if (g.grantee == Grant::Grantee::CanonicalUser && g.id == acl.ownerId && !acl.ownerId.isEmpty()) {
+            if (g.permission == QLatin1String("FULL_CONTROL"))
+                ownerFull = true;
+            else
+                return std::nullopt;
+        } else if (g.grantee == Grant::Grantee::Group && (g.uri == allUsers || g.uri == authUsers)) {
+            others.append((g.uri == allUsers ? QStringLiteral("all:") : QStringLiteral("auth:")) + g.permission);
+        } else {
+            return std::nullopt;
+        }
+    }
+    if (!ownerFull)
+        return std::nullopt;
+    others.sort();
+    others.removeDuplicates();
+    if (others.isEmpty())
+        return QStringLiteral("private");
+    if (others == QStringList{QStringLiteral("all:READ")})
+        return QStringLiteral("public-read");
+    if (others == (QStringList{QStringLiteral("all:READ"), QStringLiteral("all:WRITE")}))
+        return QStringLiteral("public-read-write");
+    if (others == QStringList{QStringLiteral("auth:READ")})
+        return QStringLiteral("authenticated-read");
+    return std::nullopt;
+}
 
 // HeadObject with options.
 struct HeadObjectParams {

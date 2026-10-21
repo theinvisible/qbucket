@@ -71,6 +71,13 @@ QBUCKET_S3_EXPORT Result<ListMultipartUploadsPage> parseListMultipartUploads(con
 // <CopyPartResult> of UploadPartCopy (ETag, LastModified).
 QBUCKET_S3_EXPORT Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body);
 
+// <Tagging> of GetObjectTagging.
+QBUCKET_S3_EXPORT Result<TagSet> parseTagging(const QByteArray& body);
+
+// <AccessControlPolicy> of GetObjectAcl (owner, grants with their grantee
+// type from xsi:type).
+QBUCKET_S3_EXPORT Result<AccessControlPolicy> parseAccessControlPolicy(const QByteArray& body);
+
 // Raw LocationConstraint value ("" for us-east-1, legacy "EU", …). Mapping
 // to a signing region is the provider profile's job.
 QBUCKET_S3_EXPORT Result<QString> parseLocationConstraint(const QByteArray& body);

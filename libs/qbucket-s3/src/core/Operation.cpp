@@ -27,6 +27,10 @@ QString operationName(Operation op)
     case Operation::ListParts:               return QStringLiteral("ListParts");
     case Operation::ListMultipartUploads:    return QStringLiteral("ListMultipartUploads");
     case Operation::UploadPartCopy:          return QStringLiteral("UploadPartCopy");
+    case Operation::GetObjectTagging:        return QStringLiteral("GetObjectTagging");
+    case Operation::PutObjectTagging:        return QStringLiteral("PutObjectTagging");
+    case Operation::GetObjectAcl:            return QStringLiteral("GetObjectAcl");
+    case Operation::PutObjectAcl:            return QStringLiteral("PutObjectAcl");
     }
     return QStringLiteral("Unknown");
 }
@@ -45,6 +49,8 @@ bool isMutating(Operation op)
     case Operation::CompleteMultipartUpload:
     case Operation::AbortMultipartUpload:
     case Operation::UploadPartCopy:
+    case Operation::PutObjectTagging:
+    case Operation::PutObjectAcl:
         return true;
     default:
         return false;

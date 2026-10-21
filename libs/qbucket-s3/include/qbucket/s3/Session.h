@@ -95,6 +95,11 @@ public:
     RequestId headObject(const HeadObjectParams& params, QObject* context, Callback<ObjectMeta> callback);
     RequestId getObject(const QString& bucket, const QString& key, const QString& versionId,
                         QObject* context, Callback<ObjectData> callback);
+    // Tags (Feature::ObjectTagging) and ACL (Feature::ObjectAcl) of an object.
+    RequestId getObjectTagging(const QString& bucket, const QString& key, const QString& versionId,
+                               QObject* context, Callback<ObjectTagging> callback);
+    RequestId getObjectAcl(const QString& bucket, const QString& key, const QString& versionId,
+                           QObject* context, Callback<AccessControlPolicy> callback);
     // Streams the object (or a range / part of it) into a local file on a
     // transfer lane; see GetObjectToFileParams and DownloadResult.
     RequestId getObjectToFile(const GetObjectToFileParams& params, QObject* context,
@@ -114,6 +119,14 @@ public:
     // One batch of at most ProviderProfile::maxDeleteBatch() objects.
     RequestId deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
                             QObject* context, Callback<DeleteObjectsResult> callback);
+    // Replace an object's tags (Feature::ObjectTaggingWrite) / set a canned
+    // ACL (Feature::ObjectAclWrite) — write-only features: never trust a
+    // read probe for them. An answer that looks like an object upload is a
+    // Protocol error (the server may have stored the request as the object).
+    RequestId putObjectTagging(const PutObjectTaggingParams& params, QObject* context,
+                               Callback<SubresourceWriteResult> callback);
+    RequestId putObjectAcl(const PutObjectAclParams& params, QObject* context,
+                           Callback<SubresourceWriteResult> callback);
     // Server-side copy (≤ 5 GiB). A lost answer is reported with
     // Error::outcomeUnknown and not retried: look the target up.
     RequestId copyObject(const CopyObjectParams& params, QObject* context, Callback<CopyObjectResult> callback);

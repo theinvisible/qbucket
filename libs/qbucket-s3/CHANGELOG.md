@@ -146,6 +146,36 @@ version bump may break the API.
   metadata directive, refuses an unchanged copy onto itself like AWS;
   `setIgnoreMetadataReplace()`.
 
+- Object tags and ACLs: `Session::getObjectTagging` / `putObjectTagging`
+  (`TagSet`, `tagSetProblem()`; an empty set removes all tags — there is no
+  DeleteObjectTagging) and `getObjectAcl` / `putObjectAcl` (canned ACL;
+  `AccessControlPolicy`, `Grant`, `cannedAclOf()`); `Operation` values
+  `GetObjectTagging`, `PutObjectTagging`, `GetObjectAcl`, `PutObjectAcl`.
+- Write-only features `Feature::ObjectTaggingWrite` ("object.tagging-write")
+  and `Feature::ObjectAclWrite` ("object.acl-write"): never set by a read
+  probe. Required by the tag / ACL writes and by `x-amz-tagging` /
+  `x-amz-acl` on object writes (local short-circuit when Unsupported).
+  Profiles: AWS Supported, Garage Unsupported, generic Unknown.
+- `featuresFor()` lists the operation's own feature first; a 501 teaches
+  only that one (a refused PutObjectTagging no longer hides reading tags).
+- A PutObjectTagging / PutObjectAcl answered with an ETag (an object
+  upload — what a proxy dropping the subresource would do) is a Protocol
+  error, never a success.
+- `CopyObjectParams::tags` (tagging directive REPLACE); otherwise the copy
+  sends the directive COPY explicitly.
+- `ProviderProfile::cannedObjectAcls()` (Hetzner: private, public-read).
+- XML: `parseTagging`, `buildTagging`, `parseAccessControlPolicy`.
+- `FakeObjectStore`: tags and canned ACLs (GET/PUT `?tagging` / `?acl`,
+  `x-amz-tagging`, tagging directive, `x-amz-tagging-count`); any other object
+  subresource on PUT / POST / DELETE answers 501 instead of falling through
+  to an upload or a delete; `setDropObjectSubresources()` simulates a proxy
+  that drops them.
+- `it_s3_backend`: canary and victim tests for tag / ACL writes
+  (`subresourceWritesOnMissingKeyCreateNothing`,
+  `objectSubresourceWritesLeaveDataAlone`), `copyKeepsTags`,
+  `copyResetsAclUnlessCanned`; `QBUCKET_IT_TRACE_BODIES=1` prints response
+  bodies.
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced

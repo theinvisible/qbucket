@@ -32,7 +32,7 @@ private Q_SLOTS:
             ids.insert(id);
             QCOMPARE(featureFromId(id), std::optional(f));
         }
-        QCOMPARE(ids.size(), int(Feature::MultipartUpload) + 1);
+        QCOMPARE(ids.size(), int(Feature::ObjectAclWrite) + 1);
         // Persisted ids must never change.
         QCOMPARE(featureId(Feature::BucketVersioning), QStringLiteral("bucket.versioning"));
         QCOMPARE(featureId(Feature::CrossBucketCopy), QStringLiteral("object.cross-bucket-copy"));
@@ -41,6 +41,16 @@ private Q_SLOTS:
         QCOMPARE(featureId(Feature::MultipartUpload), QStringLiteral("object.multipart-upload"));
         QCOMPARE(featuresFor(Operation::UploadPart), QList<Feature>{Feature::MultipartUpload});
         QCOMPARE(featuresFor(Operation::ListMultipartUploads), QList<Feature>{Feature::MultipartListing});
+        // Writes need their own write feature first (what a 501 teaches),
+        // then the read feature.
+        QCOMPARE(featureId(Feature::ObjectTaggingWrite), QStringLiteral("object.tagging-write"));
+        QCOMPARE(featureId(Feature::ObjectAclWrite), QStringLiteral("object.acl-write"));
+        QCOMPARE(featuresFor(Operation::GetObjectTagging), QList<Feature>{Feature::ObjectTagging});
+        QCOMPARE(featuresFor(Operation::PutObjectTagging),
+                 (QList<Feature>{Feature::ObjectTaggingWrite, Feature::ObjectTagging}));
+        QCOMPARE(featuresFor(Operation::PutObjectAcl), (QList<Feature>{Feature::ObjectAclWrite, Feature::ObjectAcl}));
+        QVERIFY(isMutating(Operation::PutObjectTagging));
+        QVERIFY(!isMutating(Operation::GetObjectAcl));
     }
 
     void probeWinsOverProfile()

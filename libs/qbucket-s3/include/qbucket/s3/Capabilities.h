@@ -50,6 +50,13 @@ enum class Feature : quint16 {
     Presign,
     MultipartUpload,       // Create/UploadPart/Complete/Abort/ListParts, UploadPartCopy
                            // (write-only: profile knowledge, never probed)
+    // Writing an object's tags / ACL (PutObjectTagging, PutObjectAcl, the
+    // x-amz-tagging / x-amz-acl headers). Write-only and never probed: a
+    // server answering GET ?tagging may still mishandle PUT ?tagging (a
+    // proxy that drops the query turns it into a PutObject). Profile
+    // knowledge or a deep probe on a scratch bucket only.
+    ObjectTaggingWrite,
+    ObjectAclWrite,
 };
 
 QBUCKET_S3_EXPORT QString featureId(Feature feature);   // e.g. "bucket.versioning"
@@ -57,7 +64,9 @@ QBUCKET_S3_EXPORT std::optional<Feature> featureFromId(const QString& id);
 QBUCKET_S3_EXPORT QList<Feature> allFeatures();
 
 // Features an operation needs. Used for the library short-circuit and for
-// learning from real calls.
+// learning from real calls. The first one is the feature the operation
+// stands for (the one a 501 teaches), the others are prerequisites:
+// PutObjectTagging → {ObjectTaggingWrite, ObjectTagging}.
 QBUCKET_S3_EXPORT QList<Feature> featuresFor(Operation op);
 
 enum class CapabilityState : quint8 {

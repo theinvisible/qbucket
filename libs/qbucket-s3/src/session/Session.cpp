@@ -422,6 +422,42 @@ RequestId Session::headObject(const QString& bucket, const QString& key, const Q
                                  });
 }
 
+RequestId Session::getObjectTagging(const QString& bucket, const QString& key, const QString& versionId,
+                                    QObject* context, Callback<ObjectTagging> callback)
+{
+    return d->submit<ObjectTagging>(context, std::move(callback),
+                                    [bucket, key, versionId](S3Client* c, auto done, auto /*progress*/) {
+                                        return c->getObjectTagging(bucket, key, versionId, std::move(done));
+                                    });
+}
+
+RequestId Session::getObjectAcl(const QString& bucket, const QString& key, const QString& versionId,
+                                QObject* context, Callback<AccessControlPolicy> callback)
+{
+    return d->submit<AccessControlPolicy>(context, std::move(callback),
+                                          [bucket, key, versionId](S3Client* c, auto done, auto /*progress*/) {
+                                              return c->getObjectAcl(bucket, key, versionId, std::move(done));
+                                          });
+}
+
+RequestId Session::putObjectTagging(const PutObjectTaggingParams& params, QObject* context,
+                                    Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback),
+                                             [params](S3Client* c, auto done, auto /*progress*/) {
+                                                 return c->putObjectTagging(params, std::move(done));
+                                             });
+}
+
+RequestId Session::putObjectAcl(const PutObjectAclParams& params, QObject* context,
+                                Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback),
+                                             [params](S3Client* c, auto done, auto /*progress*/) {
+                                                 return c->putObjectAcl(params, std::move(done));
+                                             });
+}
+
 RequestId Session::headObject(const HeadObjectParams& params, QObject* context, Callback<ObjectMeta> callback)
 {
     return d->submit<ObjectMeta>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {

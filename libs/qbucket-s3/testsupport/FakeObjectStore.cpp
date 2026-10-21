@@ -2,6 +2,7 @@
 
 #include "core/HttpDate.h"
 #include "http/UriEncoding.h"
+#include "xml/XmlParsers.h"
 
 #include <QCryptographicHash>
 #include <QHash>
@@ -114,6 +115,7 @@ struct Upload {
     QMap<QString, QString> metadata;
     QMap<QString, QString> headers;
     QString acl;
+    TagSet tags;
     std::map<int, Part> parts;
 };
 
@@ -144,6 +146,23 @@ QMap<QString, QString> storedHeaders(const RecordedRequest& req)
     return out;
 }
 
+// x-amz-tagging: "k1=v1&k2=v2", URL-encoded.
+TagSet taggingHeader(const RecordedRequest& req)
+{
+    TagSet out;
+    const QByteArray raw = req.header("x-amz-tagging");
+    if (raw.isEmpty())
+        return out;
+    for (const QByteArray& pair : raw.split('&')) {
+        const qsizetype eq = pair.indexOf('=');
+        const QByteArray k = eq < 0 ? pair : pair.left(eq);
+        const QByteArray v = eq < 0 ? QByteArray() : pair.mid(eq + 1);
+        out.append({QUrl::fromPercentEncoding(QByteArray(k).replace('+', ' ')),
+                    QUrl::fromPercentEncoding(QByteArray(v).replace('+', ' '))});
+    }
+    return out;
+}
+
 QString cannedAcl(const RecordedRequest& req)
 {
     const QByteArray acl = req.header("x-amz-acl");
@@ -167,6 +186,7 @@ struct FakeObjectStore::Impl {
     bool honourIfNoneMatch = true;
     bool ignoreRanges = false;
     bool ignoreMetadataReplace = false;
+    bool dropObjectSubresources = false;
 
     Object* find(const QString& bucket, const QString& key)
     {
@@ -177,7 +197,7 @@ struct FakeObjectStore::Impl {
         return o == b->second.end() ? nullptr : &o->second;
     }
 
-    static QString operationOf(const RecordedRequest& req, const QString& key)
+    QString operationOf(const RecordedRequest& req, const QString& key) const
     {
         const QByteArray& m = req.method;
         if (req.path == "/")
@@ -195,17 +215,27 @@ struct FakeObjectStore::Impl {
                 return QStringLiteral("GetBucketSubresource");
             return QStringLiteral("Unsupported");
         }
+        if (!dropObjectSubresources) {
+            if (req.hasQueryItem("tagging") && (m == "GET" || m == "PUT"))
+                return m == "GET" ? QStringLiteral("GetObjectTagging") : QStringLiteral("PutObjectTagging");
+            if (req.hasQueryItem("acl") && (m == "GET" || m == "PUT"))
+                return m == "GET" ? QStringLiteral("GetObjectAcl") : QStringLiteral("PutObjectAcl");
+        }
         if (m == "POST" && req.hasQueryItem("uploads"))
             return QStringLiteral("CreateMultipartUpload");
         if (m == "POST" && req.hasQueryItem("uploadId"))
             return QStringLiteral("CompleteMultipartUpload");
         if (m == "PUT" && req.hasQueryItem("uploadId"))
             return req.header("x-amz-copy-source").isNull() ? QStringLiteral("UploadPart") : QStringLiteral("UploadPartCopy");
-        if (m == "PUT")
+        // Never let an unknown subresource fall through to an upload.
+        const bool plain = req.query.isEmpty() || (dropObjectSubresources && (req.hasQueryItem("tagging") || req.hasQueryItem("acl")));
+        if (m == "PUT" && plain)
             return req.header("x-amz-copy-source").isNull() ? QStringLiteral("PutObject") : QStringLiteral("CopyObject");
+        if (m == "PUT")
+            return QStringLiteral("Unsupported");
         if (m == "GET" && req.hasQueryItem("uploadId"))
             return QStringLiteral("ListParts");
-        if (m == "GET" && (req.query.isEmpty() || req.hasQueryItem("partNumber") || req.hasQueryItem("versionId")))
+        if (m == "GET" && (plain || req.hasQueryItem("partNumber") || req.hasQueryItem("versionId")))
             return QStringLiteral("GetObject");
         if (m == "GET")
             return QStringLiteral("GetObjectSubresource");
@@ -213,7 +243,7 @@ struct FakeObjectStore::Impl {
             return QStringLiteral("HeadObject");
         if (m == "DELETE" && req.hasQueryItem("uploadId"))
             return QStringLiteral("AbortMultipartUpload");
-        if (m == "DELETE")
+        if (m == "DELETE" && (req.query.isEmpty() || req.hasQueryItem("versionId")))
             return QStringLiteral("DeleteObject");
         return QStringLiteral("Unsupported");
     }
@@ -306,7 +336,57 @@ struct FakeObjectStore::Impl {
         }
         if (op == QLatin1String("ListParts"))
             return listParts(req, bucket, key);
+        if (op == QLatin1String("GetObjectTagging") || op == QLatin1String("PutObjectTagging")
+            || op == QLatin1String("GetObjectAcl") || op == QLatin1String("PutObjectAcl"))
+            return subresource(op, req, bucket, key);
         return error(501, "NotImplemented", "not implemented by FakeObjectStore");
+    }
+
+    FakeResponse subresource(const QString& op, const RecordedRequest& req, const QString& bucket, const QString& key)
+    {
+        Object* o = find(bucket, key);
+        if (!o)
+            return error(404, "NoSuchKey", "The specified key does not exist.");
+        if (op == QLatin1String("GetObjectTagging")) {
+            QByteArray body = "<Tagging><TagSet>";
+            for (const Tag& t : o->tags)
+                body += "<Tag><Key>" + xmlEscape(t.key) + "</Key><Value>" + xmlEscape(t.value) + "</Value></Tag>";
+            return xmlResponse(body + "</TagSet></Tagging>");
+        }
+        if (op == QLatin1String("PutObjectTagging")) {
+            if (std::optional<FakeResponse> bad = checkMd5(req))
+                return *bad;
+            Result<TagSet> tags = xml::parseTagging(req.body);
+            if (!tags)
+                return error(400, "MalformedXML", "The XML you provided was not well-formed");
+            o->tags = *tags;
+            return FakeResponse::ok();
+        }
+        if (op == QLatin1String("GetObjectAcl")) {
+            QByteArray body = "<AccessControlPolicy><Owner><ID>fake-owner</ID><DisplayName>owner</DisplayName></Owner>"
+                              "<AccessControlList>"
+                              "<Grant><Grantee xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                              "xsi:type=\"CanonicalUser\"><ID>fake-owner</ID></Grantee>"
+                              "<Permission>FULL_CONTROL</Permission></Grant>";
+            const auto group = [&body](const char* name, const char* permission) {
+                body += QByteArray("<Grant><Grantee xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                                   "xsi:type=\"Group\"><URI>http://acs.amazonaws.com/groups/global/")
+                      + name + "</URI></Grantee><Permission>" + permission + "</Permission></Grant>";
+            };
+            if (o->acl == QLatin1String("public-read") || o->acl == QLatin1String("public-read-write"))
+                group("AllUsers", "READ");
+            if (o->acl == QLatin1String("public-read-write"))
+                group("AllUsers", "WRITE");
+            if (o->acl == QLatin1String("authenticated-read"))
+                group("AuthenticatedUsers", "READ");
+            return xmlResponse(body + "</AccessControlList></AccessControlPolicy>");
+        }
+        // PutObjectAcl (canned only)
+        const QByteArray acl = req.header("x-amz-acl");
+        if (acl.isEmpty())
+            return error(400, "MissingSecurityHeader", "x-amz-acl is required by FakeObjectStore");
+        o->acl = QString::fromLatin1(acl);
+        return FakeResponse::ok();
     }
 
     FakeResponse listBuckets()
@@ -358,6 +438,7 @@ struct FakeObjectStore::Impl {
         o.metadata = userMetadata(req);
         o.headers = storedHeaders(req);
         o.acl = cannedAcl(req);
+        o.tags = taggingHeader(req);
         buckets[bucket][key.toUtf8()] = o;
         return stored(o);
     }
@@ -412,6 +493,8 @@ struct FakeObjectStore::Impl {
             copy.headers.insert(QStringLiteral("x-amz-server-side-encryption"), QString::fromLatin1(sse));
         }
         copy.acl = cannedAcl(req);   // never copied
+        if (req.header("x-amz-tagging-directive").compare("REPLACE", Qt::CaseInsensitive) == 0)
+            copy.tags = taggingHeader(req);
         buckets[bucket][key.toUtf8()] = copy;
         return xmlResponse("<CopyObjectResult><LastModified>" + iso(copy.lastModified) + "</LastModified><ETag>"
                            + xmlEscape(copy.etag) + "</ETag></CopyObjectResult>");
@@ -472,6 +555,8 @@ struct FakeObjectStore::Impl {
             r.withHeader("x-amz-meta-" + it.key().toLatin1(), it.value().toUtf8());
         for (auto it = o->headers.cbegin(); it != o->headers.cend(); ++it)
             r.withHeader(it.key().toLatin1(), it.value().toUtf8());
+        if (!o->tags.isEmpty())
+            r.withHeader("x-amz-tagging-count", QByteArray::number(o->tags.size()));
         const qint64 length = end - start + 1;
         if (head)
             r.declaredContentLength = std::max<qint64>(0, length);
@@ -492,6 +577,7 @@ struct FakeObjectStore::Impl {
         u.metadata = userMetadata(req);
         u.headers = storedHeaders(req);
         u.acl = cannedAcl(req);
+        u.tags = taggingHeader(req);
         uploads.emplace(u.id, u);
         return xmlResponse("<InitiateMultipartUploadResult><Bucket>" + xmlEscape(bucket) + "</Bucket><Key>"
                            + xmlEscape(key) + "</Key><UploadId>" + u.id.toLatin1()
@@ -617,6 +703,7 @@ struct FakeObjectStore::Impl {
         o.metadata = u->metadata;
         o.headers = u->headers;
         o.acl = u->acl;
+        o.tags = u->tags;
         o.partSizes = sizes;
         buckets[bucket][key.toUtf8()] = o;
         uploads.erase(u->id);
@@ -859,6 +946,11 @@ void FakeObjectStore::setIgnoreRanges(bool ignore)
 void FakeObjectStore::setIgnoreMetadataReplace(bool ignore)
 {
     d->ignoreMetadataReplace = ignore;
+}
+
+void FakeObjectStore::setDropObjectSubresources(bool drop)
+{
+    d->dropObjectSubresources = drop;
 }
 
 void FakeObjectStore::addFault(const Fault& fault)

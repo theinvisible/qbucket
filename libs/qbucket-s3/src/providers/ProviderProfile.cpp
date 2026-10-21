@@ -38,6 +38,13 @@ CapabilitySet ProviderProfile::capabilities() const
 
 void ProviderProfile::reviewProbe(Feature /*feature*/, CapabilityEntry& /*entry*/) const {}
 
+QStringList ProviderProfile::cannedObjectAcls() const
+{
+    return {QStringLiteral("private"), QStringLiteral("public-read"), QStringLiteral("public-read-write"),
+            QStringLiteral("authenticated-read"), QStringLiteral("bucket-owner-read"),
+            QStringLiteral("bucket-owner-full-control")};
+}
+
 bool ProviderProfile::isArchiveStorageClass(const QString& storageClass) const
 {
     return storageClass.compare(QLatin1String("GLACIER"), Qt::CaseInsensitive) == 0

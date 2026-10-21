@@ -25,6 +25,9 @@ private Q_SLOTS:
         QCOMPARE(p.capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
         QCOMPARE(p.capabilities().state(Feature::ConditionalWrites), CapabilityState::Unknown);
         QVERIFY(p.storageClasses().isEmpty());   // unknown: whatever the server accepts
+        // A read probe never unlocks these: unknown until a profile says so.
+        QCOMPARE(p.capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Unknown);
+        QCOMPARE(p.capabilities().state(Feature::ObjectAclWrite), CapabilityState::Unknown);
         QVERIFY(p.isArchiveStorageClass(QStringLiteral("GLACIER")));
     }
 

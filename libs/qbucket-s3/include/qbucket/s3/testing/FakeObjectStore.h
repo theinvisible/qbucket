@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qbucket/s3/Types.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 
 #include <QByteArray>
@@ -20,8 +21,10 @@
 // (create, parts, complete, abort, list), byte ranges and part numbers on
 // GET/HEAD, If-Match / If-None-Match, CopyObject and UploadPartCopy,
 // ListObjectsV2, DeleteObject(s), Content-MD5 checks (BadDigest) and
-// composite multipart ETags. Faults are scripted per operation, before or
-// after the store executed the request.
+// composite multipart ETags, object tags (?tagging) and canned ACLs (?acl).
+// Any other object subresource on PUT / POST / DELETE answers 501 — never
+// an upload or a delete. Faults are scripted per operation, before or after
+// the store executed the request.
 //
 // It installs itself as the server's fallback handler: explicit routes on
 // the server still win. Create it after the server and destroy it first.
@@ -46,6 +49,7 @@ public:
         // lower-case names.
         QMap<QString, QString> headers;
         QString acl = QStringLiteral("private");   // canned ACL
+        TagSet tags;
         QList<qint64> partSizes;      // multipart objects: the part layout
     };
 
@@ -84,6 +88,9 @@ public:
     // x-amz-metadata-directive: REPLACE is treated as COPY — a server that
     // keeps the old metadata.
     void setIgnoreMetadataReplace(bool ignore);
+    // A proxy that drops object subresources: PUT ?tagging / ?acl are
+    // executed as PutObject (the body becomes the object), GET as GetObject.
+    void setDropObjectSubresources(bool drop);
 
     void addFault(const Fault& fault);
     void clearFaults();

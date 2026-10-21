@@ -53,6 +53,12 @@ QStringList HetznerProfile::storageClasses() const
     return {QStringLiteral("STANDARD")};
 }
 
+// Hetzner's documentation names only these (for buckets); objects the same.
+QStringList HetznerProfile::cannedObjectAcls() const
+{
+    return {QStringLiteral("private"), QStringLiteral("public-read")};
+}
+
 CapabilitySet HetznerProfile::capabilities() const
 {
     // Write-only features the probes can't see. Source: Hetzner's

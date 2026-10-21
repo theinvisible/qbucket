@@ -24,6 +24,8 @@ private Q_SLOTS:
         QCOMPARE(p->capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::BucketVersioning), CapabilityState::Unsupported);
         QCOMPARE(p->storageClasses(), QStringList{QStringLiteral("STANDARD")});
+        QCOMPARE(p->capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Unsupported);
+        QCOMPARE(p->capabilities().state(Feature::ObjectAclWrite), CapabilityState::Unsupported);
     }
 
     void invalidSignatureIsAuthentication()

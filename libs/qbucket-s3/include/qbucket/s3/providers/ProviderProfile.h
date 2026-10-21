@@ -87,6 +87,10 @@ public:
     // DEEP_ARCHIVE); a copy of such an object fails with InvalidObjectState.
     [[nodiscard]] virtual bool isArchiveStorageClass(const QString& storageClass) const;
 
+    // --- ACLs ---
+    // Canned ACLs an object can be given (x-amz-acl). Default: the six of S3.
+    [[nodiscard]] virtual QStringList cannedObjectAcls() const;
+
     // --- protocol choices & quirks ---
     [[nodiscard]] virtual ListApi listApi() const { return ListApi::V2; }
     // Some servers form-encode spaces as '+' in encoding-type=url listings.

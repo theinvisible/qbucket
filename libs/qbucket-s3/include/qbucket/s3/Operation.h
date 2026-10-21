@@ -34,6 +34,10 @@ enum class Operation : quint16 {
     ListParts,
     ListMultipartUploads,
     UploadPartCopy,
+    GetObjectTagging,
+    PutObjectTagging,       // no DeleteObjectTagging: an empty tag set is written instead
+    GetObjectAcl,
+    PutObjectAcl,
 };
 
 // Stable English name, e.g. "ListObjectsV2".

@@ -330,6 +330,64 @@ private Q_SLOTS:
         QVERIFY(body.contains("<PartNumber>2</PartNumber><ETag>&quot;b&amp;c&quot;</ETag>"));
         QVERIFY(body.startsWith("<?xml"));
     }
+
+    void tagging()
+    {
+        const Result<TagSet> tags = xml::parseTagging(fixture("get-object-tagging.xml"));
+        QVERIFY(tags);
+        QCOMPARE(tags->size(), 2);
+        QCOMPARE(tags->at(0), (Tag{QStringLiteral("project"), QStringLiteral("qbucket & co")}));
+        QCOMPARE(tags->at(1), (Tag{QStringLiteral("stage"), QString()}));
+        QVERIFY(!xml::parseTagging(fixture("copy-part-result.xml")));   // wrong root: never "no tags"
+
+        // Written and read back.
+        const TagSet set{{QStringLiteral("a<b"), QStringLiteral("x\ny")}, {QStringLiteral("ü"), QStringLiteral("é")}};
+        const Result<QByteArray> body = xml::buildTagging(set);
+        QVERIFY(body);
+        QCOMPARE(*xml::parseTagging(*body), set);
+        QVERIFY(xml::buildTagging({}));   // an empty set removes all tags
+        QCOMPARE(xml::buildTagging({{QStringLiteral("k\x01"), QString()}}).error().category, ErrorCategory::InvalidRequest);
+
+        QVERIFY(tagSetProblem(set).isEmpty());
+        QVERIFY(!tagSetProblem({{QStringLiteral("aws:created"), QString()}}).isEmpty());
+        QVERIFY(!tagSetProblem({{QString(), QStringLiteral("v")}}).isEmpty());
+        QVERIFY(!tagSetProblem({{QStringLiteral("k"), QString()}, {QStringLiteral("k"), QString()}}).isEmpty());
+        TagSet eleven;
+        for (int i = 0; i < 11; ++i)
+            eleven.append({QString::number(i), QString()});
+        QVERIFY(!tagSetProblem(eleven).isEmpty());
+    }
+
+    void accessControlPolicy()
+    {
+        const Result<AccessControlPolicy> acl = xml::parseAccessControlPolicy(fixture("get-object-acl-public-read.xml"));
+        QVERIFY(acl);
+        QCOMPARE(acl->ownerName, QStringLiteral("owner"));
+        QCOMPARE(acl->grants.size(), 2);
+        QCOMPARE(acl->grants[0].grantee, Grant::Grantee::CanonicalUser);
+        QCOMPARE(acl->grants[0].id, acl->ownerId);
+        QCOMPARE(acl->grants[1].grantee, Grant::Grantee::Group);
+        QCOMPARE(acl->grants[1].permission, QStringLiteral("READ"));
+        QCOMPARE(cannedAclOf(*acl), std::optional<QString>(QStringLiteral("public-read")));
+        QVERIFY(!xml::parseAccessControlPolicy(fixture("get-object-tagging.xml")));
+
+        AccessControlPolicy p = *acl;
+        p.grants.removeLast();
+        QCOMPARE(cannedAclOf(p), std::optional<QString>(QStringLiteral("private")));
+        Grant write = acl->grants[1];
+        write.permission = QStringLiteral("WRITE");
+        p.grants = {acl->grants[0], acl->grants[1], write};
+        QCOMPARE(cannedAclOf(p), std::optional<QString>(QStringLiteral("public-read-write")));
+        // Another account's grant can't be expressed as a canned ACL.
+        Grant other = acl->grants[0];
+        other.id = QStringLiteral("someone-else");
+        other.permission = QStringLiteral("READ");
+        p.grants = {acl->grants[0], other};
+        QVERIFY(!cannedAclOf(p));
+        // Without the owner's FULL_CONTROL it isn't canned either.
+        p.grants = {acl->grants[1]};
+        QVERIFY(!cannedAclOf(p));
+    }
 };
 
 QTEST_GUILESS_MAIN(TestXmlParsers)

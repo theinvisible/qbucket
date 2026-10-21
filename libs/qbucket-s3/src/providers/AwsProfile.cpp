@@ -52,6 +52,8 @@ CapabilitySet AwsProfile::capabilities() const
     const CapabilityEntry yes{CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0};
     set.set(Feature::BatchDelete, yes);
     set.set(Feature::CrossBucketCopy, yes);
+    set.set(Feature::ObjectTaggingWrite, yes);
+    set.set(Feature::ObjectAclWrite, yes);
     return set;
 }
 

@@ -11,7 +11,7 @@ namespace qbucket::s3 {
 namespace {
 
 // Stable ids — never change one, only append.
-constexpr std::array<std::pair<Feature, const char*>, 27> kIds = {{
+constexpr std::array<std::pair<Feature, const char*>, 29> kIds = {{
     {Feature::BucketVersioning, "bucket.versioning"},
     {Feature::ObjectLock, "bucket.object-lock"},
     {Feature::LegalHold, "object.legal-hold"},
@@ -39,6 +39,8 @@ constexpr std::array<std::pair<Feature, const char*>, 27> kIds = {{
     {Feature::BatchDelete, "bucket.batch-delete"},
     {Feature::Presign, "object.presign"},
     {Feature::MultipartUpload, "object.multipart-upload"},
+    {Feature::ObjectTaggingWrite, "object.tagging-write"},
+    {Feature::ObjectAclWrite, "object.acl-write"},
 }};
 
 bool isDefinitive(CapabilityState s)
@@ -127,6 +129,14 @@ QList<Feature> featuresFor(Operation op)
         return {Feature::MultipartUpload};
     case Operation::ListMultipartUploads:
         return {Feature::MultipartListing};
+    case Operation::GetObjectTagging:
+        return {Feature::ObjectTagging};
+    case Operation::PutObjectTagging:
+        return {Feature::ObjectTaggingWrite, Feature::ObjectTagging};
+    case Operation::GetObjectAcl:
+        return {Feature::ObjectAcl};
+    case Operation::PutObjectAcl:
+        return {Feature::ObjectAclWrite, Feature::ObjectAcl};
     default:
         return {};
     }

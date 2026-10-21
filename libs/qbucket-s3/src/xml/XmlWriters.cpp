@@ -71,6 +71,21 @@ QByteArray buildCompleteMultipartUpload(const QList<CompletedPart>& parts)
     return out;
 }
 
+Result<QByteArray> buildTagging(const TagSet& tags)
+{
+    QByteArray out = R"(<?xml version="1.0" encoding="UTF-8"?>)"
+                     R"(<Tagging xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><TagSet>)";
+    for (const Tag& t : tags) {
+        if (!representableInXml(t.key) || !representableInXml(t.value)) {
+            return Error::make(ErrorCategory::InvalidRequest,
+                               QStringLiteral("tag contains characters that cannot be sent: ") + t.key);
+        }
+        out += "<Tag><Key>" + escapeText(t.key) + "</Key><Value>" + escapeText(t.value) + "</Value></Tag>";
+    }
+    out += "</TagSet></Tagging>";
+    return out;
+}
+
 QByteArray buildCreateBucketConfiguration(const QString& locationConstraint)
 {
     return R"(<?xml version="1.0" encoding="UTF-8"?>)"

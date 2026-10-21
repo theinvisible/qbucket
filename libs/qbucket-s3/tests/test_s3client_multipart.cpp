@@ -9,6 +9,7 @@
 #include <QCryptographicHash>
 #include <QFile>
 #include <QTemporaryDir>
+#include <QSignalSpy>
 #include <QtTest>
 
 #include <functional>
@@ -642,6 +643,120 @@ private Q_SLOTS:
         REQUIRE_OK(await<CopyObjectResult>([&](auto cb) { m_session->copyObject(edit, &m_context, cb); }));
         QCOMPARE(m_store->object(kBucket, QStringLiteral("dst"))->headers.value(QStringLiteral("cache-control")),
                  QStringLiteral("max-age=5"));
+    }
+
+    void tagsAndAclsRoundTrip()
+    {
+        m_store->putObject(kBucket, QStringLiteral("obj"), "data");
+        PutObjectTaggingParams tags;
+        tags.bucket = kBucket;
+        tags.key = QStringLiteral("obj");
+        tags.tags = {{QStringLiteral("project"), QStringLiteral("qbucket")}, {QStringLiteral("tier"), QStringLiteral("hot")}};
+        REQUIRE_OK(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectTagging(tags, &m_context, cb); }));
+        auto read = await<ObjectTagging>([&](auto cb) {
+            m_session->getObjectTagging(kBucket, QStringLiteral("obj"), {}, &m_context, cb);
+        });
+        REQUIRE_OK(read);
+        QCOMPARE(read->tags, tags.tags);
+        const auto meta = await<ObjectMeta>([&](auto cb) {
+            m_session->headObject(kBucket, QStringLiteral("obj"), {}, &m_context, cb);
+        });
+        REQUIRE_OK(meta);
+        QCOMPARE(meta->tagCount, 2);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("obj"))->data, QByteArray("data"));   // content untouched
+
+        // An empty set removes them (no DeleteObjectTagging).
+        tags.tags.clear();
+        REQUIRE_OK(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectTagging(tags, &m_context, cb); }));
+        read = await<ObjectTagging>([&](auto cb) { m_session->getObjectTagging(kBucket, QStringLiteral("obj"), {}, &m_context, cb); });
+        QVERIFY(read->tags.isEmpty());
+
+        auto acl = await<AccessControlPolicy>([&](auto cb) {
+            m_session->getObjectAcl(kBucket, QStringLiteral("obj"), {}, &m_context, cb);
+        });
+        REQUIRE_OK(acl);
+        QCOMPARE(cannedAclOf(*acl), std::optional<QString>(QStringLiteral("private")));
+        PutObjectAclParams pub;
+        pub.bucket = kBucket;
+        pub.key = QStringLiteral("obj");
+        pub.cannedAcl = QStringLiteral("public-read");
+        REQUIRE_OK(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectAcl(pub, &m_context, cb); }));
+        acl = await<AccessControlPolicy>([&](auto cb) { m_session->getObjectAcl(kBucket, QStringLiteral("obj"), {}, &m_context, cb); });
+        QCOMPARE(cannedAclOf(*acl), std::optional<QString>(QStringLiteral("public-read")));
+
+        // Invalid tag sets never leave the client.
+        tags.tags = {{QStringLiteral("aws:x"), QString()}};
+        const int before = m_server->requestCount();
+        QCOMPARE(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectTagging(tags, &m_context, cb); })
+                     .error().category, ErrorCategory::InvalidRequest);
+        QCOMPARE(m_server->requestCount(), before);
+    }
+
+    // A proxy that drops the subresource stores the request as the object.
+    // The answer carries an ETag then — reported, never a success.
+    void subresourceWriteAnsweredLikeAnUploadIsAnError()
+    {
+        m_store->putObject(kBucket, QStringLiteral("victim"), "precious");
+        m_store->setDropObjectSubresources(true);
+        PutObjectTaggingParams tags;
+        tags.bucket = kBucket;
+        tags.key = QStringLiteral("victim");
+        tags.tags = {{QStringLiteral("k"), QStringLiteral("v")}};
+        const auto r = await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectTagging(tags, &m_context, cb); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::Protocol);
+        QVERIFY(r.error().message.contains(QLatin1String("versions")));
+        QVERIFY(m_store->object(kBucket, QStringLiteral("victim"))->data.startsWith("<?xml"));   // why it matters
+        PutObjectAclParams acl;
+        acl.bucket = kBucket;
+        acl.key = QStringLiteral("victim");
+        acl.cannedAcl = QStringLiteral("private");
+        QCOMPARE(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectAcl(acl, &m_context, cb); })
+                     .error().category, ErrorCategory::Protocol);
+        // And a GET of the subresource that comes back as the object is no tag set.
+        const auto read = await<ObjectTagging>([&](auto cb) {
+            m_session->getObjectTagging(kBucket, QStringLiteral("victim"), {}, &m_context, cb);
+        });
+        QVERIFY(!read);
+    }
+
+    void writeFeaturesAreCheckedAndLearnedSeparately()
+    {
+        m_store->putObject(kBucket, QStringLiteral("obj"), "data");
+        // Write support Unsupported: refused locally — also as a header of a copy.
+        CapabilitySet set;
+        set.scope = CapabilityScope::Server;
+        set.set(Feature::ObjectAclWrite, {CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0});
+        m_session->setCapabilities(set);
+        CopyObjectParams copy;
+        copy.sourceBucket = copy.bucket = kBucket;
+        copy.sourceKey = QStringLiteral("obj");
+        copy.key = QStringLiteral("copy");
+        copy.cannedAcl = QStringLiteral("public-read");
+        const int before = m_server->requestCount();
+        auto r = await<CopyObjectResult>([&](auto cb) { m_session->copyObject(copy, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::Unsupported);
+        QCOMPARE(m_server->requestCount(), before);
+        copy.cannedAcl.clear();
+        REQUIRE_OK(await<CopyObjectResult>([&](auto cb) { m_session->copyObject(copy, &m_context, cb); }));
+        // Reading the ACL is a different feature and still works.
+        REQUIRE_OK(await<AccessControlPolicy>([&](auto cb) {
+            m_session->getObjectAcl(kBucket, QStringLiteral("obj"), {}, &m_context, cb);
+        }));
+
+        // A 501 on PutObjectTagging teaches the write feature only.
+        m_server->addRoute({"PUT", {}, {"tagging"}, {}}, {FakeResponse::s3Error(501, "NotImplemented")}, 1);
+        QSignalSpy learned(m_session.get(), &Session::capabilityLearned);
+        PutObjectTaggingParams tags;
+        tags.bucket = kBucket;
+        tags.key = QStringLiteral("obj");
+        QCOMPARE(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectTagging(tags, &m_context, cb); })
+                     .error().category, ErrorCategory::Unsupported);
+        QTRY_COMPARE(learned.size(), 1);
+        QCOMPARE(learned.first().at(1).toString(), QStringLiteral("object.tagging-write"));
+        REQUIRE_OK(await<ObjectTagging>([&](auto cb) {
+            m_session->getObjectTagging(kBucket, QStringLiteral("obj"), {}, &m_context, cb);
+        }));
     }
 
     void objectStoreListsLikeS3()

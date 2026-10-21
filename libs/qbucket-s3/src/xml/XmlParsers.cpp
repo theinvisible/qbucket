@@ -490,6 +490,109 @@ Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body)
     return out;
 }
 
+Result<TagSet> parseTagging(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("Tagging")))
+        return *err;
+    TagSet out;
+    while (r.readNextStartElement()) {
+        if (r.name() != QLatin1String("TagSet")) {
+            r.skipCurrentElement();
+            continue;
+        }
+        while (r.readNextStartElement()) {
+            if (r.name() != QLatin1String("Tag")) {
+                r.skipCurrentElement();
+                continue;
+            }
+            Tag t;
+            while (r.readNextStartElement()) {
+                if (r.name() == QLatin1String("Key"))
+                    t.key = r.readElementText();
+                else if (r.name() == QLatin1String("Value"))
+                    t.value = r.readElementText();
+                else
+                    r.skipCurrentElement();
+            }
+            if (t.key.isEmpty())
+                return protocolError(QStringLiteral("Tag without a Key"));
+            out.append(t);
+        }
+    }
+    if (auto err = finish(r))
+        return *err;
+    return out;
+}
+
+Result<AccessControlPolicy> parseAccessControlPolicy(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("AccessControlPolicy")))
+        return *err;
+    AccessControlPolicy out;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Owner")) {
+            while (r.readNextStartElement()) {
+                if (r.name() == QLatin1String("ID"))
+                    out.ownerId = r.readElementText();
+                else if (r.name() == QLatin1String("DisplayName"))
+                    out.ownerName = r.readElementText();
+                else
+                    r.skipCurrentElement();
+            }
+        } else if (n == QLatin1String("AccessControlList")) {
+            while (r.readNextStartElement()) {
+                if (r.name() != QLatin1String("Grant")) {
+                    r.skipCurrentElement();
+                    continue;
+                }
+                Grant g;
+                while (r.readNextStartElement()) {
+                    if (r.name() == QLatin1String("Permission")) {
+                        g.permission = r.readElementText();
+                    } else if (r.name() == QLatin1String("Grantee")) {
+                        // xsi:type="CanonicalUser" | "Group" | "AmazonCustomerByEmail"
+                        QString type;
+                        for (const QXmlStreamAttribute& a : r.attributes()) {
+                            if (a.name() == QLatin1String("type"))
+                                type = a.value().toString();
+                        }
+                        while (r.readNextStartElement()) {
+                            const auto gn = r.name();
+                            if (gn == QLatin1String("ID"))
+                                g.id = r.readElementText();
+                            else if (gn == QLatin1String("DisplayName"))
+                                g.displayName = r.readElementText();
+                            else if (gn == QLatin1String("URI"))
+                                g.uri = r.readElementText();
+                            else if (gn == QLatin1String("EmailAddress"))
+                                g.email = r.readElementText();
+                            else
+                                r.skipCurrentElement();
+                        }
+                        if (type.endsWith(QLatin1String("Group")) || (type.isEmpty() && !g.uri.isEmpty()))
+                            g.grantee = Grant::Grantee::Group;
+                        else if (type.endsWith(QLatin1String("AmazonCustomerByEmail")) || (type.isEmpty() && !g.email.isEmpty()))
+                            g.grantee = Grant::Grantee::Email;
+                        else
+                            g.grantee = Grant::Grantee::CanonicalUser;
+                    } else {
+                        r.skipCurrentElement();
+                    }
+                }
+                out.grants.append(g);
+            }
+        } else {
+            r.skipCurrentElement();
+        }
+    }
+    if (auto err = finish(r))
+        return *err;
+    return out;
+}
+
 Result<CopyObjectResult> parseCopyObjectResult(const QByteArray& body)
 {
     QXmlStreamReader r(body);

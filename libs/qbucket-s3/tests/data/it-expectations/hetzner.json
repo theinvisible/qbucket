@@ -29,5 +29,10 @@
         "object.tagging": "Supported"
     },
     "conditionalWrites": false,
-    "partNumberReads": true
+    "partNumberReads": true,
+    "_objectWrites": "Verified 2026-10-21 (nbg1): tag and ACL writes leave the object intact (canary + victim ITs). A copy to another key keeps the tags; a copy onto itself with REPLACE drops them; sending them along with x-amz-tagging (directive REPLACE) leaves them unreadable (GET ?tagging answers 200 with an empty body, HEAD reports 0) — PutObjectTagging afterwards restores them.",
+    "objectTaggingWrite": true,
+    "objectAclWrite": true,
+    "copyKeepsTags": false,
+    "copyReplacesTags": false
 }

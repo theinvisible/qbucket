@@ -31,6 +31,8 @@
 #include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <qbucket/s3/RequestObserver.h>
+
 #include <QtTest>
 
 #include <optional>
@@ -233,6 +235,18 @@ private Q_SLOTS:
             : AddressingStyle::Path;
         m_options.profile = ProviderRegistry::builtin().findOrGeneric(env("QBUCKET_IT_PROVIDER"));
         m_options.transferTimeoutMs = 30000;
+        // QBUCKET_IT_TRACE_BODIES=1: print every response body (diagnosing a
+        // backend's odd answer; signatures are redacted in the URL).
+        if (qEnvironmentVariableIntValue("QBUCKET_IT_TRACE_BODIES") == 1) {
+            struct Trace final : RequestObserver {
+                void onRequestFinished(const RequestRecord& r) override
+                {
+                    qInfo().noquote() << r.operation << r.httpStatus << r.url << "\n   " << QString::fromUtf8(r.responseBody.left(800));
+                }
+            };
+            m_options.observer = std::make_shared<Trace>();
+            m_options.captureResponseBodyBytes = 4096;
+        }
         m_options = optionsWith(env("QBUCKET_IT_ACCESS_KEY"), env("QBUCKET_IT_SECRET_KEY"));
         QVERIFY2(m_options.endpoint.isValid(), qPrintable(m_options.endpoint.validationError()));
         m_session = std::make_unique<Session>(m_options);
@@ -424,6 +438,189 @@ private Q_SLOTS:
                               << "| content-type" << now->meta.contentType;
             QCOMPARE(now->data, QByteArray("class"));
         }
+    }
+
+    // --- tags and ACLs: write support is never assumed from a read probe ---
+
+    Result<SubresourceWriteResult> putTags(const QString& k, const TagSet& tags)
+    {
+        PutObjectTaggingParams p;
+        p.bucket = m_bucket;
+        p.key = k;
+        p.tags = tags;
+        return await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectTagging(p, &m_ctx, std::move(cb)); });
+    }
+
+    Result<SubresourceWriteResult> putAcl(const QString& k, const QString& canned)
+    {
+        PutObjectAclParams p;
+        p.bucket = m_bucket;
+        p.key = k;
+        p.cannedAcl = canned;
+        return await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectAcl(p, &m_ctx, std::move(cb)); });
+    }
+
+    std::optional<QString> cannedAclOfObject(const QString& k)
+    {
+        const Result<AccessControlPolicy> acl =
+            await<AccessControlPolicy>([&](auto cb) { m_session->getObjectAcl(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        if (!acl)
+            return QStringLiteral("<error: %1>").arg(acl.error().toString());
+        return cannedAclOf(*acl);
+    }
+
+    // The canary — run first: tag / ACL writes on a key that doesn't exist
+    // must fail and create nothing. An object appearing means the server (or
+    // a proxy) dropped the subresource and stored the request as an upload.
+    void subresourceWritesOnMissingKeyCreateNothing()
+    {
+        const QString k = key(QStringLiteral("canary/never-created.txt"));
+        const Result<SubresourceWriteResult> tags = putTags(k, {{QStringLiteral("canary"), QStringLiteral("1")}});
+        const Result<SubresourceWriteResult> acl = putAcl(k, QStringLiteral("private"));
+        qInfo().noquote() << "tag write on a missing key:" << (tags ? QStringLiteral("accepted!") : tags.error().toString());
+        qInfo().noquote() << "ACL write on a missing key:" << (acl ? QStringLiteral("accepted!") : acl.error().toString());
+        const Result<ObjectMeta> head =
+            await<ObjectMeta>([&](auto cb) { m_session->headObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        QVERIFY2(!head, "an object appeared: the server stored a subresource write as an upload");
+        QCOMPARE(head.error().category, ErrorCategory::NotFound);
+        QVERIFY(!tags);
+        QVERIFY(!acl);
+        QVERIFY(tags.error().category != ErrorCategory::Protocol && acl.error().category != ErrorCategory::Protocol);
+    }
+
+    // The victim: an existing object keeps its content, ETag and size through
+    // tag and ACL writes, and the writes read back. it-expectations
+    // "objectTaggingWrite" / "objectAclWrite" say whether they work at all.
+    void objectSubresourceWritesLeaveDataAlone()
+    {
+        const QByteArray data = QByteArray("victim\n").repeated(200);
+        const QString k = key(QStringLiteral("victim/precious.txt"));
+        const Result<PutObjectResult> put = this->put(k, data);
+        VERIFY_OK(put);
+        const auto unchanged = [&](const char* step) {
+            const Result<ObjectData> now = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+            if (!now || now->data != data || now->meta.etag != put->etag) {
+                qWarning() << "after" << step << ": object changed or gone —" << (now ? now->meta.etag : now.error().toString());
+                return false;
+            }
+            return true;
+        };
+
+        const TagSet set{{QStringLiteral("project"), QStringLiteral("qbucket")}, {QStringLiteral("check"), QStringLiteral("victim")}};
+        const Result<SubresourceWriteResult> tagged = putTags(k, set);
+        qInfo().noquote() << "tag write:" << (tagged ? QStringLiteral("ok") : tagged.error().toString());
+        QVERIFY(unchanged("the tag write"));
+        if (tagged) {
+            const Result<ObjectTagging> back =
+                await<ObjectTagging>([&](auto cb) { m_session->getObjectTagging(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+            VERIFY_OK(back);
+            QCOMPARE(back->tags.size(), 2);
+            VERIFY_OK(putTags(k, {}));
+            QVERIFY(unchanged("removing the tags"));
+            const Result<ObjectTagging> none =
+                await<ObjectTagging>([&](auto cb) { m_session->getObjectTagging(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+            VERIFY_OK(none);
+            QVERIFY(none->tags.isEmpty());
+        } else {
+            QVERIFY2(tagged.error().category != ErrorCategory::Protocol, "answered like an upload");
+        }
+
+        const Result<SubresourceWriteResult> pub = putAcl(k, QStringLiteral("public-read"));
+        qInfo().noquote() << "ACL write:" << (pub ? QStringLiteral("ok") : pub.error().toString());
+        QVERIFY(unchanged("the ACL write"));
+        if (pub) {
+            QCOMPARE(cannedAclOfObject(k), std::optional<QString>(QStringLiteral("public-read")));
+            VERIFY_OK(putAcl(k, QStringLiteral("private")));
+            QVERIFY(unchanged("the second ACL write"));
+            QCOMPARE(cannedAclOfObject(k), std::optional<QString>(QStringLiteral("private")));
+        } else {
+            QVERIFY2(pub.error().category != ErrorCategory::Protocol, "answered like an upload");
+        }
+
+        const QJsonValue tagsExpected = m_expect.value(QLatin1String("objectTaggingWrite"));
+        if (tagsExpected.isBool())
+            QCOMPARE(bool(tagged), tagsExpected.toBool());
+        const QJsonValue aclExpected = m_expect.value(QLatin1String("objectAclWrite"));
+        if (aclExpected.isBool())
+            QCOMPARE(bool(pub), aclExpected.toBool());
+    }
+
+    // Tags travel with a COPY (also an in-place REPLACE of the metadata —
+    // the tagging directive stays COPY). it-expectations "copyKeepsTags".
+    void copyKeepsTags()
+    {
+        if (!m_expect.value(QLatin1String("objectTaggingWrite")).toBool(true))
+            QSKIP("no object tags on this backend");
+        const QString src = key(QStringLiteral("tags/src.txt"));
+        VERIFY_OK(put(src, "tagged"));
+        const TagSet set{{QStringLiteral("keep"), QStringLiteral("me")}};
+        VERIFY_OK(putTags(src, set));
+        CopyObjectParams p;
+        p.sourceBucket = p.bucket = m_bucket;
+        p.sourceKey = src;
+        p.key = key(QStringLiteral("tags/dst.txt"));
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); })));
+        const auto tagsOf = [&](const QString& k) {
+            return await<ObjectTagging>([&](auto cb) { m_session->getObjectTagging(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        };
+        const Result<ObjectTagging> copied = tagsOf(p.key);
+        VERIFY_OK(copied);
+        CopyObjectParams edit;
+        edit.sourceBucket = edit.bucket = m_bucket;
+        edit.sourceKey = edit.key = src;
+        edit.metadataDirective = MetadataDirective::Replace;
+        edit.headers.contentType = QStringLiteral("text/x-edited");
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(edit, &m_ctx, std::move(cb)); })));
+        const Result<ObjectTagging> edited = tagsOf(src);
+        VERIFY_OK(edited);
+        // Sending the tags along (tagging directive REPLACE) keeps them everywhere.
+        VERIFY_OK(putTags(src, set));
+        edit.tags = set;
+        edit.headers.contentType = QStringLiteral("text/x-edited-again");
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(edit, &m_ctx, std::move(cb)); })));
+        const Result<ObjectTagging> resent = tagsOf(src);
+        const Result<ObjectMeta> resentHead =
+            await<ObjectMeta>([&](auto cb) { m_session->headObject(m_bucket, src, {}, &m_ctx, std::move(cb)); });
+        qInfo().noquote() << "tags after COPY:" << copied->tags.size() << "| in-place REPLACE (tagging directive COPY):"
+                          << edited->tags.size() << "| with the tags sent along:"
+                          << (resent ? QString::number(resent->tags.size()) : resent.error().toString())
+                          << "| HEAD tag count" << (resentHead ? resentHead->tagCount : -99);
+        const bool replaceWorks = resent && resent->tags == set;
+        // Edit, then write the tags again: what the app does where a copy loses them.
+        VERIFY_OK(putTags(src, set));
+        const Result<ObjectTagging> restored = tagsOf(src);
+        VERIFY_OK(restored);
+        QCOMPARE(restored->tags, set);
+        const bool kept = copied->tags == set && edited->tags == set;
+        QCOMPARE(kept, m_expect.value(QLatin1String("copyKeepsTags")).toBool(true));
+        QCOMPARE(replaceWorks, m_expect.value(QLatin1String("copyReplacesTags")).toBool(true));
+    }
+
+    // A copy never carries the ACL: private unless x-amz-acl is sent.
+    // it-expectations "copyResetsAcl".
+    void copyResetsAclUnlessCanned()
+    {
+        if (!m_expect.value(QLatin1String("objectAclWrite")).toBool(true))
+            QSKIP("no object ACLs on this backend");
+        const QString src = key(QStringLiteral("acl/src.txt"));
+        VERIFY_OK(put(src, "public for a moment"));
+        VERIFY_OK(putAcl(src, QStringLiteral("public-read")));
+        CopyObjectParams p;
+        p.sourceBucket = p.bucket = m_bucket;
+        p.sourceKey = src;
+        p.key = key(QStringLiteral("acl/plain copy.txt"));
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); })));
+        const std::optional<QString> plain = cannedAclOfObject(p.key);
+        p.key = key(QStringLiteral("acl/canned copy.txt"));
+        p.cannedAcl = QStringLiteral("public-read");
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); })));
+        const std::optional<QString> canned = cannedAclOfObject(p.key);
+        VERIFY_OK(putAcl(src, QStringLiteral("private")));
+        qInfo() << "ACL of a plain copy:" << plain.value_or(QStringLiteral("custom")) << "| with x-amz-acl:"
+                << canned.value_or(QStringLiteral("custom"));
+        QCOMPARE(canned, std::optional<QString>(QStringLiteral("public-read")));
+        const bool reset = plain == std::optional<QString>(QStringLiteral("private"));
+        QCOMPARE(reset, m_expect.value(QLatin1String("copyResetsAcl")).toBool(true));
     }
 
     // Two parts (5 MiB + a tail), streamed from a file: ListParts, the

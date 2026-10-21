@@ -22,6 +22,9 @@ private Q_SLOTS:
         QCOMPARE(p->capabilities().state(Feature::BatchDelete), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::CrossBucketCopy), CapabilityState::Supported);
         QVERIFY(p->storageClasses().contains(QStringLiteral("GLACIER_IR")));
+        QCOMPARE(p->capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::ObjectAclWrite), CapabilityState::Supported);
+        QCOMPARE(p->cannedObjectAcls().size(), 6);
         QVERIFY(p->isArchiveStorageClass(QStringLiteral("DEEP_ARCHIVE")));
         QVERIFY(p->isArchiveStorageClass(QStringLiteral("glacier")));
         QVERIFY(!p->isArchiveStorageClass(QStringLiteral("GLACIER_IR")));   // instant retrieval

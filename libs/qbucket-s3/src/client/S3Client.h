@@ -64,9 +64,18 @@ public:
     quint64 putObject(const PutObjectParams& params, Done<PutObjectResult> done, Progress progress = {});
     quint64 deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                          Done<DeleteObjectResult> done);
-    // CopyObject (≤ 5 GiB), directive COPY; 200-with-error aware; never
+    // CopyObject (≤ 5 GiB), directive COPY or REPLACE; 200-with-error aware; never
     // retried after a lost answer (outcomeUnknown).
     quint64 copyObject(const CopyObjectParams& params, Done<CopyObjectResult> done);
+    // Tags and ACL of an object. The writes check that the answer isn't one
+    // of an object upload (an ETag): a proxy that dropped the subresource
+    // would have stored the request as the object.
+    quint64 getObjectTagging(const QString& bucket, const QString& key, const QString& versionId,
+                             Done<ObjectTagging> done);
+    quint64 putObjectTagging(const PutObjectTaggingParams& params, Done<SubresourceWriteResult> done);
+    quint64 getObjectAcl(const QString& bucket, const QString& key, const QString& versionId,
+                         Done<AccessControlPolicy> done);
+    quint64 putObjectAcl(const PutObjectAclParams& params, Done<SubresourceWriteResult> done);
     // One batch (at most ProviderProfile::maxDeleteBatch()), with Content-MD5.
     // Every requested key ends up in deleted or failed — keys the server did
     // not report are listed as failed ("NotReported").

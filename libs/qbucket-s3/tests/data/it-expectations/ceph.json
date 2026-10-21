@@ -24,5 +24,9 @@
         "object.tagging": "Supported"
     },
     "conditionalWrites": true,
-    "partNumberReads": true
+    "partNumberReads": true,
+    "_copyKeepsTags": "A copy onto itself with metadata directive REPLACE drops the object's tags, even with an explicit x-amz-tagging-directive COPY; sending them along (directive REPLACE + x-amz-tagging) keeps them. Verified 2026-10-21.",
+    "objectTaggingWrite": true,
+    "objectAclWrite": true,
+    "copyKeepsTags": false
 }

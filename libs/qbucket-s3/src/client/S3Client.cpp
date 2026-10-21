@@ -9,6 +9,7 @@
 #include <QCryptographicHash>
 #include <QSet>
 #include <QTimer>
+#include <QUrl>
 
 #include <set>
 
@@ -148,6 +149,43 @@ std::optional<QByteArray> copySource(const QString& bucket, const QString& key, 
     return source;
 }
 
+// x-amz-tagging value: "k1=v1&k2=v2", URL-encoded. An empty set is an empty
+// header (the copy gets no tags).
+QByteArray taggingHeader(const TagSet& tags)
+{
+    QByteArrayList pairs;
+    for (const Tag& t : tags)
+        pairs.append(QUrl::toPercentEncoding(t.key) + '=' + QUrl::toPercentEncoding(t.value));
+    return pairs.join('&');
+}
+
+// PutObjectTagging / PutObjectAcl answer without an ETag. One with an ETag
+// was handled as an object upload — a proxy that drops unknown subresources
+// does that (Hetzner's turned DELETE ?encryption into DeleteBucket).
+std::optional<Error> answeredLikeAnUpload(const RawResponse& r, const QString& what)
+{
+    if (r.header("etag").isNull())
+        return std::nullopt;
+    return Error::make(ErrorCategory::Protocol,
+                       QStringLiteral("%1 was answered like an object upload (with an ETag): the server may have "
+                                      "stored the request as the object's content — check its versions")
+                           .arg(what));
+}
+
+RequestSpec subresourceSpec(Operation op, const QByteArray& method, const QString& bucket, const QString& key,
+                            const QByteArray& subresource, const QString& versionId)
+{
+    RequestSpec spec;
+    spec.operation = op;
+    spec.method = method;
+    spec.bucket = bucket;
+    spec.key = key;
+    spec.query.append({subresource, {}, true});
+    if (!versionId.isEmpty())
+        spec.query.append({"versionId", versionId.toUtf8(), false});
+    return spec;
+}
+
 bool validPartNumber(int n)
 {
     return n >= 1 && n <= 10000;
@@ -227,6 +265,15 @@ std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
     }
     if (!spec.sourceBucket.isEmpty() && spec.sourceBucket != spec.bucket)
         needed.append(Feature::CrossBucketCopy);
+    // Object writes that set an ACL or tags (bucket ACLs are other features).
+    if (!spec.key.isEmpty() && spec.method != "GET" && spec.method != "HEAD") {
+        for (const auto& [name, value] : spec.headers) {
+            if (name.compare("x-amz-acl", Qt::CaseInsensitive) == 0)
+                needed.append(Feature::ObjectAclWrite);
+            else if (name.compare("x-amz-tagging", Qt::CaseInsensitive) == 0)
+                needed.append(Feature::ObjectTaggingWrite);
+        }
+    }
     if (needed.isEmpty())
         return std::nullopt;
     const CapabilitySet profile = config().profile->capabilities();
@@ -250,9 +297,13 @@ std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
 
 void S3Client::learnFrom(const RequestSpec& spec, const Error& error)
 {
-    if (error.category != ErrorCategory::Unsupported || spec.bucket.isEmpty())
+    const QList<Feature> features = featuresFor(spec.operation);
+    if (error.category != ErrorCategory::Unsupported || spec.bucket.isEmpty() || features.isEmpty())
         return;
-    for (const Feature f : featuresFor(spec.operation)) {
+    // Only what the operation stands for: a 501 on PutObjectTagging says
+    // nothing about reading tags.
+    {
+        const Feature f = features.front();
         CapabilitySet& set = m_bucketCapabilities[spec.bucket];
         set.scope = CapabilityScope::Bucket;
         set.bucket = spec.bucket;
@@ -669,6 +720,14 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
         spec.headers.append({"x-amz-server-side-encryption", params.serverSideEncryption.toLatin1()});
     if (!params.cannedAcl.isEmpty())
         spec.headers.append({"x-amz-acl", params.cannedAcl.toLatin1()});
+    if (params.tags) {
+        if (const QString problem = tagSetProblem(*params.tags); !problem.isEmpty())
+            return failLater(std::move(done), invalid(problem));
+        spec.headers.append({"x-amz-tagging-directive", QByteArray("REPLACE")});
+        spec.headers.append({"x-amz-tagging", taggingHeader(*params.tags)});
+    } else {
+        spec.headers.append({"x-amz-tagging-directive", QByteArray("COPY")});
+    }
     // A copy can fail after the 200 has been sent: the body says so.
     spec.mayReturn200Error = true;
     spec.serverWork = true;
@@ -681,6 +740,81 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
         parsed->sourceVersionId = QString::fromUtf8(r.header("x-amz-copy-source-version-id"));
         parsed->requestId = QString::fromLatin1(r.header("x-amz-request-id"));
         return parsed;
+    });
+}
+
+// --- Tags and ACLs ----------------------------------------------------------------
+
+quint64 S3Client::getObjectTagging(const QString& bucket, const QString& key, const QString& versionId,
+                                   Done<ObjectTagging> done)
+{
+    if (bucket.isEmpty() || key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    RequestSpec spec = subresourceSpec(Operation::GetObjectTagging, "GET", bucket, key, "tagging", versionId);
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<ObjectTagging> {
+        Result<TagSet> tags = xml::parseTagging(r.body);
+        if (!tags)
+            return tags.error();
+        ObjectTagging out;
+        out.tags = *tags;
+        out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+        return out;
+    });
+}
+
+quint64 S3Client::putObjectTagging(const PutObjectTaggingParams& params, Done<SubresourceWriteResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (const QString problem = tagSetProblem(params.tags); !problem.isEmpty())
+        return failLater(std::move(done), invalid(problem));
+    Result<QByteArray> body = xml::buildTagging(params.tags);
+    if (!body)
+        return failLater(std::move(done), body.error());
+    RequestSpec spec = subresourceSpec(Operation::PutObjectTagging, "PUT", params.bucket, params.key, "tagging",
+                                       params.versionId);
+    spec.body = *body;
+    spec.contentType = "application/xml";
+    spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    spec.idempotent = true;   // the same set again
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<SubresourceWriteResult> {
+        if (std::optional<Error> e = answeredLikeAnUpload(r, QStringLiteral("PutObjectTagging")))
+            return *e;
+        SubresourceWriteResult out;
+        out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+        out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return out;
+    });
+}
+
+quint64 S3Client::getObjectAcl(const QString& bucket, const QString& key, const QString& versionId,
+                               Done<AccessControlPolicy> done)
+{
+    if (bucket.isEmpty() || key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    RequestSpec spec = subresourceSpec(Operation::GetObjectAcl, "GET", bucket, key, "acl", versionId);
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<AccessControlPolicy> {
+        return xml::parseAccessControlPolicy(r.body);
+    });
+}
+
+quint64 S3Client::putObjectAcl(const PutObjectAclParams& params, Done<SubresourceWriteResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (params.cannedAcl.isEmpty() || !isPrintableAscii(params.cannedAcl))
+        return failLater(std::move(done), invalid(QStringLiteral("a canned ACL is required")));
+    RequestSpec spec = subresourceSpec(Operation::PutObjectAcl, "PUT", params.bucket, params.key, "acl",
+                                       params.versionId);
+    spec.headers.append({"x-amz-acl", params.cannedAcl.toLatin1()});
+    spec.idempotent = true;
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<SubresourceWriteResult> {
+        if (std::optional<Error> e = answeredLikeAnUpload(r, QStringLiteral("PutObjectAcl")))
+            return *e;
+        SubresourceWriteResult out;
+        out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+        out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return out;
     });
 }
 

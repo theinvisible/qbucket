@@ -24,5 +24,8 @@
         "object.tagging": "Unsupported"
     },
     "conditionalWrites": false,
-    "partNumberReads": true
+    "partNumberReads": true,
+    "_objectWrites": "No object tags, no object ACLs: GarageProfile refuses the writes locally.",
+    "objectTaggingWrite": false,
+    "objectAclWrite": false
 }
