@@ -304,9 +304,10 @@ Each of these cost time there; don't relearn them.
 - **MSVC C4458: a local `d` in a `Foo::Impl` method hides `Foo::d`** (the
   PIMPL pointer) — GCC and clang say nothing, `/WX` breaks the Windows
   build. Before pushing much new code, check with clang:
-  `clang-tidy -p build -checks='-*,cert-dcl58-cpp,clang-diagnostic-*'
-  --extra-arg=-Wshadow-all --extra-arg=-Wno-error FILE` and look for
-  "shadows a field" (the lambda "uncaptured local" hits are fine on MSVC).
+  `tools/check-msvc-shadow.sh build FILE…` (looks for "shadows a field";
+  the lambda "uncaptured local" hits are fine on MSVC). It fails when
+  clang-tidy didn't run — without a real check enabled, clang-tidy only
+  prints its usage and a hand-rolled grep finds "nothing".
 - **`QAbstractItemModelTester` re-checks the whole model on every change**
   (30 s with thousands of rows) and calls `fetchMore` inside its own reset
   handling — use it on small models; `fetchMore` must not insert rows
