@@ -79,6 +79,14 @@ public:
     [[nodiscard]] virtual int maxDeleteBatch() const { return 1000; }
     [[nodiscard]] virtual int maxKeysPerList() const { return 1000; }
 
+    // --- storage classes ---
+    // The classes an object can be put into; empty: not known (any value
+    // may be tried, the server refuses unknown ones with InvalidStorageClass).
+    [[nodiscard]] virtual QStringList storageClasses() const { return {}; }
+    // Classes whose objects can't be read before a restore (GLACIER,
+    // DEEP_ARCHIVE); a copy of such an object fails with InvalidObjectState.
+    [[nodiscard]] virtual bool isArchiveStorageClass(const QString& storageClass) const;
+
     // --- protocol choices & quirks ---
     [[nodiscard]] virtual ListApi listApi() const { return ListApi::V2; }
     // Some servers form-encode spaces as '+' in encoding-type=url listings.

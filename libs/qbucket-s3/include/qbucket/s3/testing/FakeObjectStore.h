@@ -40,6 +40,12 @@ public:
         QString contentType;
         QString storageClass;
         QMap<QString, QString> metadata;
+        // The other stored headers (cache-control, content-disposition,
+        // content-encoding, content-language, expires,
+        // x-amz-website-redirect-location, x-amz-server-side-encryption),
+        // lower-case names.
+        QMap<QString, QString> headers;
+        QString acl = QStringLiteral("private");   // canned ACL
         QList<qint64> partSizes;      // multipart objects: the part layout
     };
 
@@ -75,6 +81,9 @@ public:
     void setHonourIfNoneMatch(bool honour);
     // Ranges are ignored (200 with the whole object) — a broken server.
     void setIgnoreRanges(bool ignore);
+    // x-amz-metadata-directive: REPLACE is treated as COPY — a server that
+    // keeps the old metadata.
+    void setIgnoreMetadataReplace(bool ignore);
 
     void addFault(const Fault& fault);
     void clearFaults();

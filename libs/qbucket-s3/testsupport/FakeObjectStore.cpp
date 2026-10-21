@@ -112,6 +112,8 @@ struct Upload {
     QString contentType;
     QString storageClass;
     QMap<QString, QString> metadata;
+    QMap<QString, QString> headers;
+    QString acl;
     std::map<int, Part> parts;
 };
 
@@ -124,6 +126,28 @@ QMap<QString, QString> userMetadata(const RecordedRequest& req)
             out.insert(QString::fromLatin1(lower.mid(11)), QString::fromUtf8(value));
     }
     return out;
+}
+
+constexpr const char* kStoredHeaders[] = {"cache-control", "content-disposition", "content-encoding",
+                                          "content-language", "expires", "x-amz-website-redirect-location",
+                                          "x-amz-server-side-encryption"};
+
+// The stored headers a request sets (see Object::headers).
+QMap<QString, QString> storedHeaders(const RecordedRequest& req)
+{
+    QMap<QString, QString> out;
+    for (const char* name : kStoredHeaders) {
+        const QByteArray value = req.header(name);
+        if (!value.isNull())
+            out.insert(QString::fromLatin1(name), QString::fromUtf8(value));
+    }
+    return out;
+}
+
+QString cannedAcl(const RecordedRequest& req)
+{
+    const QByteArray acl = req.header("x-amz-acl");
+    return acl.isNull() ? QStringLiteral("private") : QString::fromLatin1(acl);
 }
 
 } // namespace
@@ -142,6 +166,7 @@ struct FakeObjectStore::Impl {
     qint64 minPartSize = Q_INT64_C(5) * 1024 * 1024;
     bool honourIfNoneMatch = true;
     bool ignoreRanges = false;
+    bool ignoreMetadataReplace = false;
 
     Object* find(const QString& bucket, const QString& key)
     {
@@ -331,6 +356,8 @@ struct FakeObjectStore::Impl {
         o.contentType = QString::fromUtf8(req.header("content-type"));
         o.storageClass = QString::fromLatin1(req.header("x-amz-storage-class"));
         o.metadata = userMetadata(req);
+        o.headers = storedHeaders(req);
+        o.acl = cannedAcl(req);
         buckets[bucket][key.toUtf8()] = o;
         return stored(o);
     }
@@ -362,9 +389,29 @@ struct FakeObjectStore::Impl {
         const QByteArray ifMatch = req.header("x-amz-copy-source-if-match");
         if (!ifMatch.isNull() && unquoted(QString::fromLatin1(ifMatch)) != unquoted(source->second->etag))
             return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
+        const bool replace = req.header("x-amz-metadata-directive").compare("REPLACE", Qt::CaseInsensitive) == 0;
+        const QString storageClass = QString::fromLatin1(req.header("x-amz-storage-class"));
+        // AWS refuses a copy onto itself that changes nothing.
+        if (source->first == bucket && source->second == find(bucket, key) && !replace && storageClass.isEmpty()
+            && req.header("x-amz-server-side-encryption").isNull()) {
+            return error(400, "InvalidRequest",
+                         "This copy request is illegal because it is trying to copy an object to itself without "
+                         "changing the object's metadata, storage class, website redirect location or encryption "
+                         "attributes.");
+        }
         Object copy = *source->second;
         copy.lastModified = QDateTime::currentDateTimeUtc();
-        copy.storageClass = QString::fromLatin1(req.header("x-amz-storage-class"));
+        copy.storageClass = storageClass;
+        // The encryption comes from the request (or the bucket default), not the source.
+        copy.headers.remove(QStringLiteral("x-amz-server-side-encryption"));
+        if (replace && !ignoreMetadataReplace) {
+            copy.contentType = QString::fromUtf8(req.header("content-type"));
+            copy.metadata = userMetadata(req);
+            copy.headers = storedHeaders(req);
+        } else if (const QByteArray sse = req.header("x-amz-server-side-encryption"); !sse.isNull()) {
+            copy.headers.insert(QStringLiteral("x-amz-server-side-encryption"), QString::fromLatin1(sse));
+        }
+        copy.acl = cannedAcl(req);   // never copied
         buckets[bucket][key.toUtf8()] = copy;
         return xmlResponse("<CopyObjectResult><LastModified>" + iso(copy.lastModified) + "</LastModified><ETag>"
                            + xmlEscape(copy.etag) + "</ETag></CopyObjectResult>");
@@ -423,6 +470,8 @@ struct FakeObjectStore::Impl {
             r.withHeader("x-amz-storage-class", o->storageClass.toLatin1());
         for (auto it = o->metadata.cbegin(); it != o->metadata.cend(); ++it)
             r.withHeader("x-amz-meta-" + it.key().toLatin1(), it.value().toUtf8());
+        for (auto it = o->headers.cbegin(); it != o->headers.cend(); ++it)
+            r.withHeader(it.key().toLatin1(), it.value().toUtf8());
         const qint64 length = end - start + 1;
         if (head)
             r.declaredContentLength = std::max<qint64>(0, length);
@@ -441,6 +490,8 @@ struct FakeObjectStore::Impl {
         u.contentType = QString::fromUtf8(req.header("content-type"));
         u.storageClass = QString::fromLatin1(req.header("x-amz-storage-class"));
         u.metadata = userMetadata(req);
+        u.headers = storedHeaders(req);
+        u.acl = cannedAcl(req);
         uploads.emplace(u.id, u);
         return xmlResponse("<InitiateMultipartUploadResult><Bucket>" + xmlEscape(bucket) + "</Bucket><Key>"
                            + xmlEscape(key) + "</Key><UploadId>" + u.id.toLatin1()
@@ -564,6 +615,8 @@ struct FakeObjectStore::Impl {
         o.contentType = u->contentType;
         o.storageClass = u->storageClass;
         o.metadata = u->metadata;
+        o.headers = u->headers;
+        o.acl = u->acl;
         o.partSizes = sizes;
         buckets[bucket][key.toUtf8()] = o;
         uploads.erase(u->id);
@@ -801,6 +854,11 @@ void FakeObjectStore::setHonourIfNoneMatch(bool honour)
 void FakeObjectStore::setIgnoreRanges(bool ignore)
 {
     d->ignoreRanges = ignore;
+}
+
+void FakeObjectStore::setIgnoreMetadataReplace(bool ignore)
+{
+    d->ignoreMetadataReplace = ignore;
 }
 
 void FakeObjectStore::addFault(const Fault& fault)

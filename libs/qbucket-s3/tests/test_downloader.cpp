@@ -234,7 +234,7 @@ private Q_SLOTS:
         f.close();
         QObject ctx;
         std::optional<Result<CreateMultipartUploadResult>> created;
-        m_session->createMultipartUpload({kBucket, QStringLiteral("irr"), {}, {}, {}}, &ctx,
+        m_session->createMultipartUpload({kBucket, QStringLiteral("irr"), {}, {}, {}, {}, {}}, &ctx,
                                          [&](Result<CreateMultipartUploadResult> r) { created.emplace(std::move(r)); });
         QTRY_VERIFY(created.has_value());
         QVERIFY(*created);

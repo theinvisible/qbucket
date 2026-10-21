@@ -46,6 +46,13 @@ QString HetznerProfile::locationConstraintFor(const QString& region) const
     return region;
 }
 
+// Hetzner documents no storage classes; RGW's default placement has only
+// STANDARD (it_s3_backend copyInPlaceClassChange shows what another class does).
+QStringList HetznerProfile::storageClasses() const
+{
+    return {QStringLiteral("STANDARD")};
+}
+
 CapabilitySet HetznerProfile::capabilities() const
 {
     // Write-only features the probes can't see. Source: Hetzner's

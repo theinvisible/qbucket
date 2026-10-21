@@ -135,8 +135,8 @@ struct Copier::Impl {
         CreateMultipartUploadParams p;
         p.bucket = req.bucket;
         p.key = req.key;
-        p.contentType = source.contentType;
-        p.metadata = source.userMetadata;
+        // Everything a client can set travels along (COPY semantics).
+        p.headers = objectHeadersOf(source);
         p.storageClass = req.storageClass.isEmpty() ? source.storageClass : req.storageClass;
         const RequestId id = session->createMultipartUpload(p, q, [this](Result<CreateMultipartUploadResult> r) {
             if (done)

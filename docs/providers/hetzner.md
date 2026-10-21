@@ -61,6 +61,14 @@ with `QBUCKET_IT_SECOND_BUCKET`, expected in `it-expectations/hetzner*.json`
 Supported in the profile; a refused copy would only be an error, never a
 deleted source.
 
+Editing headers (`it_s3_backend copyInPlaceReplacesMetadata`, 2026-10-21): a
+copy onto itself with `x-amz-metadata-directive: REPLACE` sets exactly the
+headers sent and drops the others, keeps the content and its single-part
+ETag; a copy onto itself that changes nothing is refused (400
+InvalidRequest, as on AWS). **Storage classes:** only STANDARD —
+`STANDARD_IA` is refused with 400 InvalidArgument (the profile lists
+STANDARD only).
+
 Multipart uploads (`it_s3_backend`, nbg1, 2026-10-20):
 
 - Create / UploadPart / ListParts / Complete / Abort / ListMultipartUploads

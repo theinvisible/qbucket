@@ -38,6 +38,12 @@ CapabilitySet ProviderProfile::capabilities() const
 
 void ProviderProfile::reviewProbe(Feature /*feature*/, CapabilityEntry& /*entry*/) const {}
 
+bool ProviderProfile::isArchiveStorageClass(const QString& storageClass) const
+{
+    return storageClass.compare(QLatin1String("GLACIER"), Qt::CaseInsensitive) == 0
+        || storageClass.compare(QLatin1String("DEEP_ARCHIVE"), Qt::CaseInsensitive) == 0;
+}
+
 QString ProviderProfile::locationConstraintFor(const QString& region) const
 {
     return region == QLatin1String("us-east-1") ? QString() : region;

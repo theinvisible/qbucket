@@ -16,6 +16,7 @@ public:
     [[nodiscard]] QString displayName() const override;
     [[nodiscard]] QString signingRegion(const QString& region) const override;
     [[nodiscard]] CapabilitySet capabilities() const override;
+    [[nodiscard]] QStringList storageClasses() const override;
     void reviewProbe(Feature feature, CapabilityEntry& entry) const override;
     void mapError(Error& error) const override;
 };

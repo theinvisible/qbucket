@@ -17,6 +17,11 @@ QString GarageProfile::signingRegion(const QString& region) const
     return region.isEmpty() ? QStringLiteral("garage") : region;
 }
 
+QStringList GarageProfile::storageClasses() const
+{
+    return {QStringLiteral("STANDARD")};
+}
+
 CapabilitySet GarageProfile::capabilities() const
 {
     // Write-only features the probes can't see (garagehq.deuxfleurs.fr,

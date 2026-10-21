@@ -28,6 +28,7 @@ public:
     [[nodiscard]] QString regionFromLocationConstraint(const QString& constraint) const override;
     [[nodiscard]] QString locationConstraintFor(const QString& region) const override;
     [[nodiscard]] CapabilitySet capabilities() const override;
+    [[nodiscard]] QStringList storageClasses() const override;
     void reviewProbe(Feature feature, CapabilityEntry& entry) const override;
     void mapError(Error& error) const override;
 };

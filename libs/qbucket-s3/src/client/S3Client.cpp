@@ -52,6 +52,21 @@ ObjectMeta metaFromHeaders(const QString& key, const RawResponse& r)
     m.storageClass = QString::fromLatin1(r.header("x-amz-storage-class"));
     m.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
     m.partsCount = r.header("x-amz-mp-parts-count").trimmed().toInt();
+    m.cacheControl = QString::fromLatin1(r.header("cache-control"));
+    m.contentDisposition = QString::fromUtf8(r.header("content-disposition"));
+    m.contentEncoding = QString::fromLatin1(r.header("content-encoding"));
+    m.contentLanguage = QString::fromLatin1(r.header("content-language"));
+    m.expires = QString::fromLatin1(r.header("expires"));
+    m.websiteRedirectLocation = QString::fromUtf8(r.header("x-amz-website-redirect-location"));
+    m.serverSideEncryption = QString::fromLatin1(r.header("x-amz-server-side-encryption"));
+    m.sseKmsKeyId = QString::fromLatin1(r.header("x-amz-server-side-encryption-aws-kms-key-id"));
+    m.sseCustomerAlgorithm = QString::fromLatin1(r.header("x-amz-server-side-encryption-customer-algorithm"));
+    if (const QByteArray tags = r.header("x-amz-tagging-count"); !tags.isNull())
+        m.tagCount = tags.trimmed().toInt();
+    m.objectLockMode = QString::fromLatin1(r.header("x-amz-object-lock-mode"));
+    m.objectLockRetainUntil = QDateTime::fromString(QString::fromLatin1(r.header("x-amz-object-lock-retain-until-date")),
+                                                    Qt::ISODateWithMs);
+    m.legalHold = r.header("x-amz-object-lock-legal-hold").trimmed().compare("ON", Qt::CaseInsensitive) == 0;
     static constexpr char kMetaPrefix[] = "x-amz-meta-";
     for (const auto& [name, value] : r.headers) {
         m.responseHeaders.append({QString::fromLatin1(name), QString::fromUtf8(value)});
@@ -93,6 +108,30 @@ std::optional<Error> appendMetadata(RequestSpec& spec, const QMap<QString, QStri
         spec.headers.append({"x-amz-meta-" + it.key().toLower().toLatin1(), it.value().toLatin1()});
     }
     return std::nullopt;
+}
+
+// Content-Type, the other settable headers and x-amz-meta-* of an object.
+std::optional<Error> appendObjectHeaders(RequestSpec& spec, const ObjectHeaders& h)
+{
+    const std::pair<const char*, const QString*> fields[] = {
+        {"Content-Type", &h.contentType},
+        {"Cache-Control", &h.cacheControl},
+        {"Content-Disposition", &h.contentDisposition},
+        {"Content-Encoding", &h.contentEncoding},
+        {"Content-Language", &h.contentLanguage},
+        {"Expires", &h.expires},
+        {"x-amz-website-redirect-location", &h.websiteRedirectLocation},
+    };
+    for (const auto& [name, value] : fields) {
+        if (!isPrintableAscii(*value))
+            return invalid(QStringLiteral("%1 must be printable ASCII").arg(QLatin1String(name)));
+    }
+    spec.contentType = h.contentType.isEmpty() ? QByteArray("application/octet-stream") : h.contentType.toLatin1();
+    for (const auto& [name, value] : fields) {
+        if (qstrcmp(name, "Content-Type") != 0 && !value->isEmpty())
+            spec.headers.append({QByteArray(name), value->toLatin1()});
+    }
+    return appendMetadata(spec, h.userMetadata);
 }
 
 // x-amz-copy-source value: /bucket/key[?versionId=…], encoded exactly once.
@@ -597,8 +636,11 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
 {
     if (params.sourceBucket.isEmpty() || params.sourceKey.isEmpty() || params.bucket.isEmpty() || params.key.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("source or destination is missing")));
-    if (params.sourceBucket == params.bucket && params.sourceKey == params.key && params.sourceVersionId.isEmpty())
-        return failLater(std::move(done), invalid(QStringLiteral("an object cannot be copied onto itself")));
+    const bool replace = params.metadataDirective == MetadataDirective::Replace;
+    if (params.sourceBucket == params.bucket && params.sourceKey == params.key && params.sourceVersionId.isEmpty()
+        && !replace && params.storageClass.isEmpty() && params.serverSideEncryption.isEmpty()) {
+        return failLater(std::move(done), invalid(QStringLiteral("an object cannot be copied onto itself unchanged")));
+    }
     const std::optional<QByteArray> source = copySource(params.sourceBucket, params.sourceKey, params.sourceVersionId);
     if (!source)
         return failLater(std::move(done), invalid(QStringLiteral("keys with \".\" or \"..\" segments cannot be copied")));
@@ -614,11 +656,19 @@ quint64 S3Client::copyObject(const CopyObjectParams& params, Done<CopyObjectResu
     // buckets): never retried blindly — the caller checks with HEAD.
     spec.idempotent = false;
     spec.headers.append({"x-amz-copy-source", *source});
-    spec.headers.append({"x-amz-metadata-directive", QByteArray("COPY")});
+    spec.headers.append({"x-amz-metadata-directive", replace ? QByteArray("REPLACE") : QByteArray("COPY")});
+    if (replace) {
+        if (std::optional<Error> e = appendObjectHeaders(spec, params.headers))
+            return failLater(std::move(done), *e);
+    }
     if (!params.ifMatch.isEmpty())
         spec.headers.append({"x-amz-copy-source-if-match", params.ifMatch.toLatin1()});
     if (!params.storageClass.isEmpty())
         spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
+    if (!params.serverSideEncryption.isEmpty())
+        spec.headers.append({"x-amz-server-side-encryption", params.serverSideEncryption.toLatin1()});
+    if (!params.cannedAcl.isEmpty())
+        spec.headers.append({"x-amz-acl", params.cannedAcl.toLatin1()});
     // A copy can fail after the 200 has been sent: the body says so.
     spec.mayReturn200Error = true;
     spec.serverWork = true;
@@ -647,13 +697,17 @@ quint64 S3Client::createMultipartUpload(const CreateMultipartUploadParams& param
     spec.bucket = params.bucket;
     spec.key = params.key;
     spec.query.append({"uploads", {}, true});
-    // The object's content type is fixed here, not by the parts.
-    spec.headers.append({"Content-Type", params.contentType.isEmpty() ? QByteArray("application/octet-stream")
-                                                                      : params.contentType.toUtf8()});
+    // The object's content type and headers are fixed here, not by the parts.
+    if (std::optional<Error> e = appendObjectHeaders(spec, params.headers))
+        return failLater(std::move(done), *e);
     if (!params.storageClass.isEmpty())
         spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
-    if (std::optional<Error> e = appendMetadata(spec, params.metadata))
-        return failLater(std::move(done), *e);
+    if (!params.serverSideEncryption.isEmpty())
+        spec.headers.append({"x-amz-server-side-encryption", params.serverSideEncryption.toLatin1()});
+    if (!params.cannedAcl.isEmpty())
+        spec.headers.append({"x-amz-acl", params.cannedAcl.toLatin1()});
+    if (!params.tagging.isEmpty())
+        spec.headers.append({"x-amz-tagging", params.tagging.toLatin1()});
     // A lost answer leaves an orphaned upload behind at worst, which
     // ListMultipartUploads shows and Abort removes — a retry is acceptable.
     spec.idempotent = true;

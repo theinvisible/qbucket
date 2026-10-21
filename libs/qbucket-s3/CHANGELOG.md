@@ -130,6 +130,29 @@ version bump may break the API.
   works on before it sends a byte. With the 120 s default a 50 GiB Complete
   against VersityGW timed out, the server cancelled the assembly, and the
   upload stayed open.
+- `ObjectHeaders` (content type, Cache-Control, Content-Disposition,
+  Content-Encoding, Content-Language, Expires, website redirect, user
+  metadata) and `objectHeadersOf(ObjectMeta)`; `ObjectMeta` reports those
+  headers, the encryption (`serverSideEncryption`, `sseKmsKeyId`,
+  `sseCustomerAlgorithm`), `tagCount` and the object lock
+  (`objectLockMode`, `objectLockRetainUntil`, `legalHold`).
+- `CopyObjectParams::metadataDirective` (`MetadataDirective::Replace` sends
+  `headers` in full), `serverSideEncryption`, `cannedAcl`. A copy onto
+  itself is allowed when it changes something (Replace, a storage class, an
+  encryption).
+- `ProviderProfile::storageClasses()` (AWS: the seven classes; Hetzner and
+  Garage: STANDARD; generic: unknown) and `isArchiveStorageClass()`.
+- `FakeObjectStore` keeps the stored headers and a canned ACL, honours the
+  metadata directive, refuses an unchanged copy onto itself like AWS;
+  `setIgnoreMetadataReplace()`.
+
+### Changed
+
+- `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced
+  by `headers` (`ObjectHeaders`); new `serverSideEncryption`, `cannedAcl`,
+  `tagging`.
+- `transfer::Copier` carries all of the source's headers (Cache-Control,
+  Content-Disposition, …), not only content type and user metadata.
 
 ### Fixed
 

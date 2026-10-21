@@ -26,5 +26,7 @@
         "object.tagging": "Supported"
     },
     "conditionalWrites": true,
-    "partNumberReads": true
+    "partNumberReads": true,
+    "_replaceDropsUnsentHeaders": "A copy onto itself with x-amz-metadata-directive REPLACE keeps Cache-Control / Content-Disposition / Content-Language that the request leaves out (user metadata is replaced). Verified 2026-10-21, v1.9.0.",
+    "replaceDropsUnsentHeaders": false
 }

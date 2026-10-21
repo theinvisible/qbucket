@@ -380,6 +380,105 @@ private Q_SLOTS:
         QCOMPARE(m_server->requestCount(), 0);
     }
 
+    // An edit of headers / metadata / class is a copy onto itself with
+    // REPLACE: everything the object keeps must be sent — and only that.
+    void copyInPlaceReplacesEverything()
+    {
+        QFile f(QStringLiteral(TEST_DATA_DIR "/generic/copy-object-result.xml"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        m_server->on("PUT", QString(), FakeResponse::ok(f.readAll(), kXml));
+        auto client = makeClient();
+        CopyObjectParams p;
+        p.sourceBucket = p.bucket = QStringLiteral("bkt");
+        p.sourceKey = p.key = QStringLiteral("site/index.html");
+        p.ifMatch = QStringLiteral("\"9b2cf535f27731c974343645a3985328\"");
+        p.metadataDirective = MetadataDirective::Replace;
+        p.headers.contentType = QStringLiteral("text/html; charset=utf-8");
+        p.headers.cacheControl = QStringLiteral("max-age=60");
+        p.headers.contentDisposition = QStringLiteral("attachment; filename=\"index.html\"");
+        p.headers.contentLanguage = QStringLiteral("de");
+        p.headers.expires = QStringLiteral("Wed, 21 Oct 2026 07:28:00 GMT");
+        p.headers.websiteRedirectLocation = QStringLiteral("/other.html");
+        p.headers.userMetadata.insert(QStringLiteral("Origin"), QStringLiteral("edited"));
+        p.serverSideEncryption = QStringLiteral("AES256");
+        p.cannedAcl = QStringLiteral("public-read");
+        Result<CopyObjectResult> r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QVERIFY2(r, qPrintable(r ? QString() : r.error().toString()));
+
+        const RecordedRequest req = m_server->requests().first();
+        QCOMPARE(req.header("x-amz-copy-source"), QByteArray("/bkt/site/index.html"));
+        QCOMPARE(req.header("x-amz-metadata-directive"), QByteArray("REPLACE"));
+        QCOMPARE(req.header("content-type"), QByteArray("text/html; charset=utf-8"));
+        QCOMPARE(req.header("cache-control"), QByteArray("max-age=60"));
+        QCOMPARE(req.header("content-disposition"), QByteArray("attachment; filename=\"index.html\""));
+        QCOMPARE(req.header("content-language"), QByteArray("de"));
+        QCOMPARE(req.header("expires"), QByteArray("Wed, 21 Oct 2026 07:28:00 GMT"));
+        QCOMPARE(req.header("x-amz-website-redirect-location"), QByteArray("/other.html"));
+        QCOMPARE(req.header("x-amz-meta-origin"), QByteArray("edited"));
+        QCOMPARE(req.header("x-amz-server-side-encryption"), QByteArray("AES256"));
+        QCOMPARE(req.header("x-amz-acl"), QByteArray("public-read"));
+        QVERIFY(req.header("content-encoding").isNull());   // not set: not sent, so it's gone
+
+        // Only the class changes: allowed onto itself, the directive stays COPY.
+        m_server->clearRequests();
+        CopyObjectParams cls;
+        cls.sourceBucket = cls.bucket = QStringLiteral("bkt");
+        cls.sourceKey = cls.key = QStringLiteral("a");
+        cls.storageClass = QStringLiteral("STANDARD_IA");
+        r = await<CopyObjectResult>([&](auto cb) { client->copyObject(cls, std::move(cb)); });
+        QVERIFY(r);
+        QCOMPARE(m_server->requests().first().header("x-amz-metadata-directive"), QByteArray("COPY"));
+        QVERIFY(m_server->requests().first().header("cache-control").isNull());
+
+        // A header that can't be sent byte-exact is refused before sending.
+        m_server->clearRequests();
+        p.headers.contentDisposition = QStringLiteral("attachment; filename=\"übersicht.pdf\"");
+        r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        QCOMPARE(m_server->requestCount(), 0);
+    }
+
+    void headReportsWhatACopyMustCarry()
+    {
+        m_server->on("HEAD", QString(), FakeResponse::ok()
+                                             .withHeader("ETag", "\"9b2cf535f27731c974343645a3985328\"")
+                                             .withHeader("Content-Type", "text/plain")
+                                             .withHeader("Cache-Control", "no-cache")
+                                             .withHeader("Content-Disposition", "inline")
+                                             .withHeader("Content-Encoding", "gzip")
+                                             .withHeader("Content-Language", "en")
+                                             .withHeader("Expires", "Thu, 01 Jan 2027 00:00:00 GMT")
+                                             .withHeader("x-amz-website-redirect-location", "/x")
+                                             .withHeader("x-amz-meta-Owner", "ops")
+                                             .withHeader("x-amz-server-side-encryption", "aws:kms")
+                                             .withHeader("x-amz-server-side-encryption-aws-kms-key-id", "key-1")
+                                             .withHeader("x-amz-tagging-count", "3")
+                                             .withHeader("x-amz-object-lock-mode", "GOVERNANCE")
+                                             .withHeader("x-amz-object-lock-retain-until-date", "2027-01-01T00:00:00.000Z")
+                                             .withHeader("x-amz-object-lock-legal-hold", "ON"));
+        auto client = makeClient();
+        const Result<ObjectMeta> m =
+            await<ObjectMeta>([&](auto cb) { client->headObject(QStringLiteral("bkt"), QStringLiteral("k"), {}, std::move(cb)); });
+        QVERIFY2(m, qPrintable(m ? QString() : m.error().toString()));
+        QCOMPARE(m->cacheControl, QStringLiteral("no-cache"));
+        QCOMPARE(m->contentDisposition, QStringLiteral("inline"));
+        QCOMPARE(m->contentEncoding, QStringLiteral("gzip"));
+        QCOMPARE(m->contentLanguage, QStringLiteral("en"));
+        QCOMPARE(m->expires, QStringLiteral("Thu, 01 Jan 2027 00:00:00 GMT"));
+        QCOMPARE(m->websiteRedirectLocation, QStringLiteral("/x"));
+        QCOMPARE(m->serverSideEncryption, QStringLiteral("aws:kms"));
+        QCOMPARE(m->sseKmsKeyId, QStringLiteral("key-1"));
+        QVERIFY(m->sseCustomerAlgorithm.isEmpty());
+        QCOMPARE(m->tagCount, 3);
+        QCOMPARE(m->objectLockMode, QStringLiteral("GOVERNANCE"));
+        QCOMPARE(m->objectLockRetainUntil, QDateTime(QDate(2027, 1, 1), QTime(0, 0), QTimeZone::UTC));
+        QVERIFY(m->legalHold);
+        const ObjectHeaders h = objectHeadersOf(*m);
+        QCOMPARE(h.contentType, QStringLiteral("text/plain"));
+        QCOMPARE(h.userMetadata.value(QStringLiteral("owner")), QStringLiteral("ops"));
+        QCOMPARE(h.contentEncoding, QStringLiteral("gzip"));
+    }
+
     void lostRepliesOfNonIdempotentRequests()
     {
         FakeResponse drop;

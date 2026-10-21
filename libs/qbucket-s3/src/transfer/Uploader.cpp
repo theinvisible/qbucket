@@ -233,8 +233,8 @@ struct Uploader::Impl {
         CreateMultipartUploadParams p;
         p.bucket = req.bucket;
         p.key = req.key;
-        p.contentType = req.contentType;
-        p.metadata = req.metadata;
+        p.headers.contentType = req.contentType;
+        p.headers.userMetadata = req.metadata;
         p.storageClass = req.storageClass;
         const RequestId id = session->createMultipartUpload(p, q, [this](Result<CreateMultipartUploadResult> r) {
             if (done)

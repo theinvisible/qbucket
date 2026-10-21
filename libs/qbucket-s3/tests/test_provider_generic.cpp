@@ -24,6 +24,8 @@ private Q_SLOTS:
         // Multipart is core S3; conditional writes are left to the probes.
         QCOMPARE(p.capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
         QCOMPARE(p.capabilities().state(Feature::ConditionalWrites), CapabilityState::Unknown);
+        QVERIFY(p.storageClasses().isEmpty());   // unknown: whatever the server accepts
+        QVERIFY(p.isArchiveStorageClass(QStringLiteral("GLACIER")));
     }
 
     void normalizesEtags()

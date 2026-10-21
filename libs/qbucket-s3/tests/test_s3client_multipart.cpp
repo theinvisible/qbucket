@@ -111,8 +111,8 @@ private:
         CreateMultipartUploadParams p;
         p.bucket = kBucket;
         p.key = key;
-        p.contentType = QStringLiteral("video/mp2t");
-        p.metadata.insert(QStringLiteral("origin"), QStringLiteral("test"));
+        p.headers.contentType = QStringLiteral("video/mp2t");
+        p.headers.userMetadata.insert(QStringLiteral("origin"), QStringLiteral("test"));
         return await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(p, &m_context, cb); });
     }
 
@@ -597,6 +597,51 @@ private Q_SLOTS:
             QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
         }
         QCOMPARE(m_server->requestCount(), 0);
+    }
+
+    // FakeObjectStore's CopyObject, which the app's copy / edit tests rely on.
+    void objectStoreCopiesLikeS3()
+    {
+        m_store->putObject(kBucket, QStringLiteral("src"), "content", QStringLiteral("text/plain"));
+        CopyObjectParams edit;
+        edit.sourceBucket = edit.bucket = kBucket;
+        edit.sourceKey = edit.key = QStringLiteral("src");
+        edit.metadataDirective = MetadataDirective::Replace;
+        edit.headers.contentType = QStringLiteral("text/markdown");
+        edit.headers.cacheControl = QStringLiteral("max-age=5");
+        edit.headers.userMetadata.insert(QStringLiteral("k"), QStringLiteral("v"));
+        edit.cannedAcl = QStringLiteral("public-read");
+        REQUIRE_OK(await<CopyObjectResult>([&](auto cb) { m_session->copyObject(edit, &m_context, cb); }));
+        auto o = m_store->object(kBucket, QStringLiteral("src"));
+        QCOMPARE(o->data, QByteArray("content"));
+        QCOMPARE(o->contentType, QStringLiteral("text/markdown"));
+        QCOMPARE(o->headers.value(QStringLiteral("cache-control")), QStringLiteral("max-age=5"));
+        QCOMPARE(o->metadata.value(QStringLiteral("k")), QStringLiteral("v"));
+        QCOMPARE(o->acl, QStringLiteral("public-read"));
+
+        // COPY keeps headers and metadata, never the ACL; HEAD reports them.
+        CopyObjectParams copy;
+        copy.sourceBucket = copy.bucket = kBucket;
+        copy.sourceKey = QStringLiteral("src");
+        copy.key = QStringLiteral("dst");
+        REQUIRE_OK(await<CopyObjectResult>([&](auto cb) { m_session->copyObject(copy, &m_context, cb); }));
+        o = m_store->object(kBucket, QStringLiteral("dst"));
+        QCOMPARE(o->acl, QStringLiteral("private"));
+        const auto meta = await<ObjectMeta>([&](auto cb) {
+            m_session->headObject(kBucket, QStringLiteral("dst"), {}, &m_context, cb);
+        });
+        REQUIRE_OK(meta);
+        QCOMPARE(meta->contentType, QStringLiteral("text/markdown"));
+        QCOMPARE(meta->cacheControl, QStringLiteral("max-age=5"));
+        QCOMPARE(meta->userMetadata.value(QStringLiteral("k")), QStringLiteral("v"));
+
+        // A server that ignores REPLACE keeps the old headers.
+        m_store->setIgnoreMetadataReplace(true);
+        edit.sourceKey = edit.key = QStringLiteral("dst");
+        edit.headers.cacheControl = QStringLiteral("no-store");
+        REQUIRE_OK(await<CopyObjectResult>([&](auto cb) { m_session->copyObject(edit, &m_context, cb); }));
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("dst"))->headers.value(QStringLiteral("cache-control")),
+                 QStringLiteral("max-age=5"));
     }
 
     void objectStoreListsLikeS3()

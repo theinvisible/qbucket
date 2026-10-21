@@ -331,6 +331,101 @@ private Q_SLOTS:
         QVERIFY(!none);
     }
 
+    // Editing headers / metadata = a copy onto itself with REPLACE. The
+    // content stays, every header is exactly what was sent (an unsent one is
+    // gone), a COPY to another key carries them, a stale if-match changes
+    // nothing. it-expectations "replaceDropsUnsentHeaders" (default true):
+    // VersityGW keeps standard headers that a REPLACE leaves out.
+    void copyInPlaceReplacesMetadata()
+    {
+        const QByteArray data = QByteArray("edit me\n").repeated(300);
+        const QString k = key(QStringLiteral("edit/notes.md"));
+        const Result<PutObjectResult> put = this->put(k, data);
+        VERIFY_OK(put);
+        const auto head = [&](const QString& which) {
+            return await<ObjectMeta>([&](auto cb) { m_session->headObject(m_bucket, which, {}, &m_ctx, std::move(cb)); });
+        };
+
+        CopyObjectParams p;
+        p.sourceBucket = p.bucket = m_bucket;
+        p.sourceKey = p.key = k;
+        p.ifMatch = put->etag;
+        p.metadataDirective = MetadataDirective::Replace;
+        p.headers.contentType = QStringLiteral("text/markdown");
+        p.headers.cacheControl = QStringLiteral("max-age=60");
+        p.headers.contentDisposition = QStringLiteral("attachment; filename=\"notes.md\"");
+        p.headers.contentLanguage = QStringLiteral("de");
+        p.headers.userMetadata.insert(QStringLiteral("stage"), QStringLiteral("edited"));
+        const Result<CopyObjectResult> edited =
+            await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+        VERIFY_OK(edited);
+        Result<ObjectMeta> m = head(k);
+        VERIFY_OK(m);
+        qInfo().noquote() << "after REPLACE:" << m->contentType << "|" << m->cacheControl << "|" << m->contentDisposition
+                          << "|" << m->contentLanguage << "| meta" << m->userMetadata << "| etag" << m->etag
+                          << "(was" << put->etag << ")";
+        QCOMPARE(m->size, qint64(data.size()));
+        QCOMPARE(objectHeadersOf(*m), p.headers);   // setting works everywhere
+
+        // Removing a header = not sending it.
+        p.ifMatch = m->etag;
+        p.headers.cacheControl.clear();
+        p.headers.userMetadata.clear();
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); })));
+        m = head(k);
+        VERIFY_OK(m);
+        qInfo().noquote() << "after removing:" << m->contentType << "|" << m->cacheControl << "|" << m->contentDisposition
+                          << "|" << m->contentLanguage << "| meta" << m->userMetadata;
+        const bool dropped = objectHeadersOf(*m) == p.headers;
+        QVERIFY(m->userMetadata.isEmpty());   // user metadata is always replaced as a whole
+
+        // COPY to another key carries the headers along.
+        CopyObjectParams copy;
+        copy.sourceBucket = copy.bucket = m_bucket;
+        copy.sourceKey = k;
+        copy.key = key(QStringLiteral("edit/notes copy.md"));
+        VERIFY_OK((await<CopyObjectResult>([&](auto cb) { m_session->copyObject(copy, &m_ctx, std::move(cb)); })));
+        const Result<ObjectMeta> c = head(copy.key);
+        VERIFY_OK(c);
+        QCOMPARE(objectHeadersOf(*c), objectHeadersOf(*m));
+
+        // A stale if-match: refused, nothing changed.
+        p.ifMatch = QStringLiteral("\"00000000000000000000000000000000\"");
+        p.headers.contentType = QStringLiteral("application/x-never");
+        const Result<CopyObjectResult> stale =
+            await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+        QVERIFY(!stale);
+        QCOMPARE(stale.error().category, ErrorCategory::PreconditionFailed);
+        const Result<ObjectData> after = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(after);
+        QCOMPARE(after->data, data);   // the content survived every edit
+        QVERIFY(after->meta.contentType != QStringLiteral("application/x-never"));
+        QCOMPARE(dropped, m_expect.value(QLatin1String("replaceDropsUnsentHeaders")).toBool(true));
+    }
+
+    // For the record: a copy onto itself that only names a storage class
+    // (directive COPY) — allowed on AWS; what does the backend do with its
+    // own class and with STANDARD_IA? Only the content is asserted.
+    void copyInPlaceClassChange()
+    {
+        const QString k = key(QStringLiteral("class/obj.txt"));
+        VERIFY_OK(put(k, "class"));
+        for (const QString& cls : {QStringLiteral("STANDARD"), QStringLiteral("STANDARD_IA")}) {
+            CopyObjectParams p;
+            p.sourceBucket = p.bucket = m_bucket;
+            p.sourceKey = p.key = k;
+            p.storageClass = cls;
+            const Result<CopyObjectResult> r =
+                await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+            const Result<ObjectData> now = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+            VERIFY_OK(now);
+            qInfo().noquote() << "copy in place, COPY directive, class" << cls << ":"
+                              << (r ? QStringLiteral("ok, class now \"%1\"").arg(now->meta.storageClass) : r.error().toString())
+                              << "| content-type" << now->meta.contentType;
+            QCOMPARE(now->data, QByteArray("class"));
+        }
+    }
+
     // Two parts (5 MiB + a tail), streamed from a file: ListParts, the
     // composite ETag, part-number reads where the backend has them, ranged
     // and whole downloads into files.
@@ -346,8 +441,8 @@ private Q_SLOTS:
         CreateMultipartUploadParams cp;
         cp.bucket = m_bucket;
         cp.key = k;
-        cp.contentType = QStringLiteral("application/x-test");
-        cp.metadata.insert(QStringLiteral("origin"), QStringLiteral("it"));
+        cp.headers.contentType = QStringLiteral("application/x-test");
+        cp.headers.userMetadata.insert(QStringLiteral("origin"), QStringLiteral("it"));
         const Result<CreateMultipartUploadResult> created =
             await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(cp, &m_ctx, std::move(cb)); });
         VERIFY_OK(created);

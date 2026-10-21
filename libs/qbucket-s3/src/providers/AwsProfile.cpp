@@ -39,6 +39,13 @@ AddressingStyle AwsProfile::defaultAddressing() const
     return AddressingStyle::VirtualHosted;
 }
 
+QStringList AwsProfile::storageClasses() const
+{
+    return {QStringLiteral("STANDARD"), QStringLiteral("STANDARD_IA"), QStringLiteral("ONEZONE_IA"),
+            QStringLiteral("INTELLIGENT_TIERING"), QStringLiteral("GLACIER_IR"), QStringLiteral("GLACIER"),
+            QStringLiteral("DEEP_ARCHIVE")};
+}
+
 CapabilitySet AwsProfile::capabilities() const
 {
     CapabilitySet set = ProviderProfile::capabilities();

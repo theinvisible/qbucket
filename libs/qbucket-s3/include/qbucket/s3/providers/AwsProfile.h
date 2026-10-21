@@ -17,6 +17,7 @@ public:
     // Write-only features S3 itself defines: DeleteObjects, copies between
     // buckets.
     [[nodiscard]] CapabilitySet capabilities() const override;
+    [[nodiscard]] QStringList storageClasses() const override;
 };
 
 } // namespace qbucket::s3

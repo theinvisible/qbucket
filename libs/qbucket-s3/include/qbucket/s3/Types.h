@@ -72,10 +72,57 @@ struct ObjectMeta {
     // reports it (HEAD/GET with a part number); 0 otherwise.
     int partsCount = 0;
     QMap<QString, QString> userMetadata;  // x-amz-meta-* without the prefix, lower-case names
+    // The other headers stored with the object (raw values; empty: not set).
+    QString cacheControl;
+    QString contentDisposition;
+    QString contentEncoding;
+    QString contentLanguage;
+    QString expires;                      // as sent, not parsed
+    QString websiteRedirectLocation;      // x-amz-website-redirect-location
+    // Encryption: x-amz-server-side-encryption ("AES256", "aws:kms", …), the
+    // KMS key, and SSE-C's algorithm (such objects need the customer's key).
+    QString serverSideEncryption;
+    QString sseKmsKeyId;
+    QString sseCustomerAlgorithm;
+    int tagCount = -1;                    // x-amz-tagging-count; -1: not reported
+    // Object lock on this version (only reported with the permission to read it).
+    QString objectLockMode;               // GOVERNANCE / COMPLIANCE; empty: none
+    QDateTime objectLockRetainUntil;      // UTC
+    bool legalHold = false;
     // Every response header as received (names as sent, in order) — for
     // showing an object's headers; the fields above are parsed from these.
     QList<std::pair<QString, QString>> responseHeaders;
 };
+
+// The headers of an object a client sets — what a copy with
+// MetadataDirective::Replace sends in full: anything left empty here is
+// gone afterwards. Values must be printable ASCII.
+struct ObjectHeaders {
+    QString contentType;                  // empty: application/octet-stream
+    QString cacheControl;
+    QString contentDisposition;
+    QString contentEncoding;
+    QString contentLanguage;
+    QString expires;                      // an HTTP date, sent as given
+    QString websiteRedirectLocation;
+    QMap<QString, QString> userMetadata;  // x-amz-meta-*, lower-case names
+    bool operator==(const ObjectHeaders&) const = default;
+};
+
+// The settable headers of an object as HEAD reported them.
+inline ObjectHeaders objectHeadersOf(const ObjectMeta& meta)
+{
+    ObjectHeaders h;
+    h.contentType = meta.contentType;
+    h.cacheControl = meta.cacheControl;
+    h.contentDisposition = meta.contentDisposition;
+    h.contentEncoding = meta.contentEncoding;
+    h.contentLanguage = meta.contentLanguage;
+    h.expires = meta.expires;
+    h.websiteRedirectLocation = meta.websiteRedirectLocation;
+    h.userMetadata = meta.userMetadata;
+    return h;
+}
 
 // How far a download's content could be verified. Reported honestly: an
 // ETag is only an MD5 for single-part uploads without SSE-KMS / SSE-C.
@@ -170,10 +217,17 @@ struct DeleteObjectResult {
     QString requestId;                    // x-amz-request-id, for the journal
 };
 
+// Where a copy's metadata and headers come from.
+enum class MetadataDirective : quint8 {
+    Copy,      // from the source (content type, headers, user metadata)
+    Replace,   // exactly CopyObjectParams::headers — everything else is dropped
+};
+
 // CopyObject within or between buckets (up to 5 GiB; larger objects need
-// UploadPartCopy). Metadata, content type and tags are copied (directive
-// COPY); the storage class is NOT — without storageClass the copy lands in
-// the server's default class. ACLs are never copied.
+// UploadPartCopy). By default metadata, headers and tags are copied
+// (directive COPY); the storage class is NOT — without storageClass the copy
+// lands in the server's default class. ACLs are never copied: the copy gets
+// cannedAcl, or the server's default (usually private).
 struct CopyObjectParams {
     QString sourceBucket;
     QString sourceKey;
@@ -182,6 +236,13 @@ struct CopyObjectParams {
     QString key;
     QString ifMatch;                      // x-amz-copy-source-if-match, ETag with quotes; empty: none
     QString storageClass;                 // of the copy; empty: server default
+    // Replace: `headers` are the copy's headers in full. A copy onto itself
+    // (same bucket and key, no sourceVersionId) must change something:
+    // Replace, a storageClass or an encryption.
+    MetadataDirective metadataDirective = MetadataDirective::Copy;
+    ObjectHeaders headers;                // with Replace only
+    QString serverSideEncryption;         // x-amz-server-side-encryption ("AES256"); empty: server default
+    QString cannedAcl;                    // x-amz-acl; empty: none
 };
 
 struct CopyObjectResult {
@@ -206,9 +267,11 @@ struct HeadObjectParams {
 struct CreateMultipartUploadParams {
     QString bucket;
     QString key;
-    QString contentType;                  // empty: application/octet-stream
-    QMap<QString, QString> metadata;      // as PutObjectParams::metadata
+    ObjectHeaders headers;                // content type, headers, user metadata of the object
     QString storageClass;
+    QString serverSideEncryption;         // as CopyObjectParams::serverSideEncryption
+    QString cannedAcl;                    // x-amz-acl; empty: none
+    QString tagging;                      // x-amz-tagging (URL query form "k=v&k2=v2"); empty: none
 };
 
 struct CreateMultipartUploadResult {
