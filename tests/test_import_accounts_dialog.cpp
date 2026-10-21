@@ -5,6 +5,7 @@
 #include "ui/ThemeManager.h"
 
 #include <QCheckBox>
+#include <QDir>
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
@@ -93,6 +94,24 @@ private slots:
             }
         }
         QVERIFY(lab);
+    }
+
+    // QBUCKET_SCREENSHOT_DIR set: saves import-accounts.png (devlog).
+    void screenshot()
+    {
+        const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
+        if (dir.isEmpty())
+            QSKIP("QBUCKET_SCREENSHOT_DIR not set");
+        AccountStore accounts(m_dir.filePath(QStringLiteral("accounts-shot.ini")));
+        SecretStore secrets(std::make_unique<testing::FakeKeychainBackend>());
+        ImportAccountsDialog dlg(&accounts, &secrets);
+        dlg.resize(980, 560);
+        dlg.show();
+        dlg.load(AccountImporter::Source::Aws, {fixture("credentials"), fixture("config")});
+        QTRY_COMPARE(dlg.table()->rowCount(), 5);
+        QTest::qWait(150);
+        QDir().mkpath(dir);
+        QVERIFY(dlg.grab().save(QDir(dir).filePath(QStringLiteral("import-accounts.png"))));
     }
 
     void aMissingFileSaysSo()

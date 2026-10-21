@@ -333,7 +333,7 @@ qbucket_add_test(test_account_dialog
 # skipped when unset). With QBUCKET_S3_IT_LOCAL one test per Docker backend.
 qbucket_add_test(it_operations
     it_operations.cpp
-    qbucket_controllers
+    qbucket_platform
     qbucket::s3_testsupport
 )
 set_tests_properties(it_operations PROPERTIES LABELS integration TIMEOUT 600)

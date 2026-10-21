@@ -60,6 +60,10 @@ Bucket Properties).
 **M6 done** — devlog 009 (bucket policy, CORS, lifecycle, access, object
 lock in Bucket Properties; retention and legal hold per object; the
 governance bypass; creating and deleting buckets).
+**M7 done** — devlog 010 (drag out: virtual files into Explorer, staged
+copies on Linux / Flatpak; open in the default app and upload the changes;
+bookmarks and recent locations; importing accounts from the AWS CLI and
+rclone).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -144,6 +148,20 @@ What exists:
   `AclSection`, `PublicAccessBlockSection`, `ObjectLockPage`,
   `OtherConfigPage`, `ui/CodeEditor`), `ui/CreateBucketDialog`, the
   Bucket menu, the DetailPane Lock tab.
+- M7, library: `GetObjectParams` (ranged reads into memory, If-Match),
+  `PutObjectParams::headers` / `cannedAcl` / `serverSideEncryption` /
+  `ifMatch` (also on `UploadRequest`, Complete, `TransferRecord`), the
+  write-only feature `ConditionalOverwrite`, `ProviderRegistry::
+  matchEndpoint`, `AwsConfigFiles`.
+- M7, app: `src/platform/` (`qbucket_platform`: `ExternalDrag`,
+  `StagedDrag` + `StagingMimeData`, `VirtualFileReader` over the plain-C++
+  `VirtualFileSource`; `platform/win/`: `VirtualFileDataObject`,
+  `RangeReaderStream`, `DropSource`, `VirtualFileDrag`),
+  `controllers/DragStaging`, `OpenFileService`, `ReplaceObjectJob`,
+  `AccountImporter`, `accounts/LocationStore`, `RcloneConfigReader`;
+  `ui/ObjectTableView`, `ImportAccountsDialog`, `OpenFilesDialog`,
+  `ManageBookmarksDialog`, the Bookmarks menu and sidebar section, the bar
+  for changed files; `DownloadJob::Options::transient` / `listDone`.
 - `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
   with the tests, run by hand, release builds only; `--version-keys` for
   the versions view).
@@ -154,7 +172,7 @@ What exists:
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M7** (drag out & platform polish).
+Next: **M8** (packaging & release).
 
 ## Devlog
 
@@ -375,6 +393,21 @@ Each of these cost time there; don't relearn them.
 - **Debugging a hanging QtTest binary:** after an abort, QtTest's crash
   handler forks to print a stack and can deadlock on the malloc lock —
   `QTEST_DISABLE_STACK_DUMP=1` shows the real failure.
+- **`QLatin1String` with a UTF-8 literal** ("…", "“") compares wrong: the
+  bytes are read as Latin-1. Use `QStringLiteral` / `u"…"` (a test failed
+  finding "&Open Files…" by text).
+- **`QMenu::clear()` keeps submenus alive** (only the actions go): a menu
+  rebuilt on `aboutToShow` keeps one submenu member instead of adding a
+  new one each time.
+- **lupdate sees only sources the build system compiles.** Texts of
+  Windows-only files (`platform/win/`) live in the platform-neutral base
+  (`ExternalDrag`), or the Linux `update_translations` never finds them.
+- **Windows code can be checked on Linux:** llvm-mingw (portable, in the
+  scratchpad) with `-fsyntax-only -Wshadow-all -D_WIN32_WINNT=0x0A00` and
+  the Linux Qt headers compiles the COM layer; the Windows CI stays the
+  judge (MSVC `/WX`, `test_virtual_file_drag`).
+- **A `#primary` button needs its own `:disabled` rule** — the accent
+  background otherwise makes a disabled one look enabled.
 - **The tab-bar base ignores the palette.** With `setDocumentMode(true)`
   the style paints the tab bar's base line in a fixed `#393e43` in both
   themes, and `QTabWidget::pane { border-top }` has no effect. The QSS
@@ -444,7 +477,10 @@ Second priority after safety, but mandatory with millions of objects
 
 - **The protocol core never checks which provider it talks to.** No
   endpoint/hostname sniffing in the library's client/transfer code or
-  anywhere in the app.
+  anywhere in the app — with one exception: `ProviderRegistry::
+  matchEndpoint` (an exact match against the profiles' preset endpoints)
+  suggests a profile when an account is set up (the import), confirmed by
+  the user. `tools/check-mutation-gate.sh` keeps it in `AccountImporter`.
   Every deviation from plain S3 is a `ProviderProfile` hook or a
   `Capabilities` flag (`PLAN.md` §3.1).
 - `GenericS3Profile` holds the S3 defaults; concrete profiles override only
@@ -499,6 +535,12 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
   leaves tags sent with `x-amz-tagging` unreadable (`GET ?tagging` → empty
   200): write them back with `PutObjectTagging`. VersityGW keeps standard
   headers a REPLACE leaves out; Garage ignores the storage class on copies.
+- **If-Match on writes is unusable on RGW** (Hetzner, Ceph 19.2): PutObject
+  compares it with the *unquoted* ETag (the RFC form is refused even when it
+  matches), CompleteMultipartUpload ignores it; Garage ignores it entirely.
+  `ConditionalOverwrite` is Supported for AWS only (it_s3_backend
+  `conditionalOverwrite`, VersityGW honours it); elsewhere a replace checks
+  the ETag with HEAD right before the write.
 - Storage classes per provider: Hetzner and Garage only STANDARD (Hetzner
   answers 400 InvalidArgument to STANDARD_IA).
 - **Versions:** a delete marker is only certain from `ListObjectVersions`

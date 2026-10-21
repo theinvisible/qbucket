@@ -61,9 +61,9 @@ ImportAccountsDialog::ImportAccountsDialog(AccountStore* accounts, SecretStore* 
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->setColumnWidth(ImportColumn, 28);
     m_table->setColumnWidth(NameColumn, 160);
-    m_table->setColumnWidth(ProviderColumn, 170);
+    m_table->setColumnWidth(ProviderColumn, 220);
     m_table->setColumnWidth(RegionColumn, 100);
-    m_table->setColumnWidth(EndpointColumn, 220);
+    m_table->setColumnWidth(EndpointColumn, 200);
     lay->addWidget(m_table, 1);
 
     auto* form = new QFormLayout;

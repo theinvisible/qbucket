@@ -796,7 +796,21 @@ delete bucket (optionally empty it first with a typed confirmation).
 `SessionController` merges profile capabilities with cached per-account
 probe results (§3.1).
 
-### M7 — Drag out & platform polish — **M** (1 week)
+### M7 — Drag out & platform polish — **M** (1 week) — ✅ done (devlog 010)
+
+Implemented in 8 commits on `main` (library first). Deviations from the
+text below: on Linux the drag does not wait while the button is held — it
+always offers file URLs and fills them in at the drop with copies staged
+in the cache (a small selection is staged as the drag starts, folders and
+large ones on "Prepare for Dragging Out", asking above the size limit);
+the Windows drag lists at most 10 000 objects. Added: `src/platform/` as
+the one place with platform code; If-Match on writes as the write-only
+feature `ConditionalOverwrite` (AWS yes; Hetzner, Ceph RGW and Garage no —
+RGW refuses even the right ETag on PUT and ignores it on Complete, so a
+replace checks with HEAD right before); `ReplaceObjectJob` for uploads
+from "Open" (everything but the content kept); the provider of an
+imported account suggested by an exact preset-endpoint match
+(`ProviderRegistry::matchEndpoint`, never used while talking to a server).
 
 - Windows: `platform/win/VirtualFileDrag` — custom `IDataObject` with
   `CFSTR_FILEDESCRIPTORW` + `CFSTR_FILECONTENTS` so Explorer pulls the bytes
@@ -1263,6 +1277,7 @@ regressions show up.
 | M4 ✅ | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
 | M5 ✅ | Versioning-aware confirmations, separate permanent-delete flow |
 | M6 | Read-back verification of every bucket config write, object-lock/governance safeguards ✅ |
+| M7 | ETag-pinned drag-out reads with an MD5 check at the end, replaces that keep every header / tag / ACL and never overwrite a change made meanwhile, secrets of imported accounts only in the keychain ✅ |
 
 **Effect on the timeline:** roughly **+2 weeks** overall (fault-injection
 server, operation planning, journal, verification paths). Parity estimate

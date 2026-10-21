@@ -117,6 +117,7 @@ QPushButton:hover { background: @hover@; }
 QPushButton:disabled { color: @text3@; }
 QPushButton:default, QPushButton#primary { background: @accent@; color: @accentFg@; border-color: transparent; }
 QPushButton:default:hover, QPushButton#primary:hover { background: @accentHover@; }
+QPushButton#primary:disabled { background: @panel2@; color: @text3@; border-color: @borderStrong@; }
 QPushButton#ghost { background: transparent; border-color: transparent; }
 QPushButton#danger { background: @danger@; color: #ffffff; border-color: transparent; }
 QPushButton#danger:disabled { background: @panel2@; color: @text3@; border-color: @borderStrong@; }
@@ -144,6 +145,9 @@ QWidget#sidebar { background: @panel2@; }
 QWidget#sidebar QTreeView { background: @panel2@; }
 QLabel#sectionHeader { color: @text3@; font-weight: 600; padding: 10px 12px 4px 12px; }
 QWidget#sidebar QListView { background: @panel2@; }
+QListView#bookmarkList::item { padding: 3px 12px 3px 22px; }
+QListView#bookmarkList::item:hover { background: @hover@; }
+QListView#bookmarkList::item:selected { background: @sel@; color: @text@; }
 QToolButton#sectionToggle { color: @text3@; font-weight: 600; background: transparent; border: none; border-top: 1px solid @border@; padding: 8px 8px 4px 8px; text-align: left; }
 QToolButton#sectionToggle:hover { color: @text@; }
 QLabel#sectionHint { color: @text3@; padding: 2px 12px 6px 12px; }

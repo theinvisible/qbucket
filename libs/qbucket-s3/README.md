@@ -10,7 +10,7 @@ A threaded, provider-aware S3 client library for Qt 6 — the protocol core of
 - Provider quirks live in provider profiles, never in the protocol core.
 - Errors are values (`Result<T>` / `Error`), no exceptions.
 
-> Status: **pre-1.0, under construction** (QBucket milestones M1–M6). The
+> Status: **pre-1.0, under construction** (QBucket milestones M1–M7). The
 > API changes between minor versions; see [CHANGELOG.md](CHANGELOG.md).
 
 Two targets:
@@ -26,8 +26,11 @@ Two targets:
   lifecycle, object lock, ACL, public access block — typed views that say
   when they can't hold a document; write guards against answers of the
   wrong operation), object retention and legal hold, the governance bypass,
-  presigned GET / PUT links, capabilities, provider profiles (storage
-  classes, canned ACLs; Hetzner, AWS, Ceph, Garage, generic).
+  ranged reads into memory, If-Match on writes (`ConditionalOverwrite`),
+  every settable header on a PUT, presigned GET / PUT links, capabilities,
+  provider profiles (storage classes, canned ACLs; Hetzner, AWS, Ceph,
+  Garage, generic; `ProviderRegistry::matchEndpoint` suggests one for an
+  endpoint), and `AwsConfigFiles` (the AWS CLI's profiles enumerated).
 - **`qbucket::s3_transfer`** — `Uploader`, `Downloader`, `Copier` (multipart
   in parallel, Content-MD5 on every part, ETag verification, pause / cancel),
   `AdaptiveConcurrency` (AIMD on SlowDown / 503), `PartPlanner`, hashing,

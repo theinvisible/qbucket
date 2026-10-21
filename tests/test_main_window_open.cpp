@@ -15,6 +15,7 @@
 
 #include <qbucket/s3/testing/FakeObjectStore.h>
 
+#include <QDir>
 #include <QFile>
 #include <QFrame>
 #include <QLabel>
@@ -49,6 +50,7 @@ private slots:
         QCoreApplication::setOrganizationName(QStringLiteral("qbucket-test"));
         m_settings = std::make_unique<SettingsController>();
         m_theme = std::make_unique<ThemeManager>();
+        m_theme->apply(QStringLiteral("Dark"));
     }
 
     void init()
@@ -109,6 +111,12 @@ private slots:
         }
         QTRY_VERIFY_WITH_TIMEOUT(!m_window->changeBar()->isHidden(), 5000);
         QVERIFY(m_window->changeBar()->findChild<QLabel*>()->text().contains(QLatin1String("notes.txt")));
+        if (const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR"); !dir.isEmpty()) {
+            m_window->resize(1280, 760);
+            QTest::qWait(150);
+            QDir().mkpath(dir);
+            QVERIFY(m_window->grab().save(QDir(dir).filePath(QStringLiteral("open-changed.png"))));
+        }
         QPushButton* upload = nullptr;
         for (QPushButton* b : m_window->changeBar()->findChildren<QPushButton*>()) {
             if (b->text() == QLatin1String("Upload"))
@@ -144,6 +152,10 @@ private slots:
         auto* dlg = m_window->findChild<OpenFilesDialog*>();
         QCOMPARE(dlg->table()->rowCount(), 1);
         QCOMPARE(dlg->table()->item(0, 0)->text(), QStringLiteral("notes.txt"));
+        if (const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR"); !dir.isEmpty()) {
+            QTest::qWait(150);
+            QVERIFY(dlg->grab().save(QDir(dir).filePath(QStringLiteral("open-files.png"))));
+        }
         QVERIFY(!dlg->uploadButton()->isEnabled());   // nothing changed
         QVERIFY(dlg->discardButton()->isEnabled());
         dlg->discardButton()->click();   // unchanged: closed without asking

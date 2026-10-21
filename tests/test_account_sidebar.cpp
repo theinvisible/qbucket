@@ -306,6 +306,16 @@ private slots:
         QTest::qWait(150);
         QDir().mkpath(dir);
         QVERIFY(sidebar.grab().save(QDir(dir).filePath(QStringLiteral("sidebar-dark.png"))));
+
+        // With bookmarks (M7).
+        LocationStore store(m_dir.filePath(QStringLiteral("locations-shot.json")));
+        store.addBookmark(QStringLiteral("PBS backups"), Location{prod.id, QStringLiteral("media"), QStringLiteral("pbs/vm/101/")});
+        store.addBookmark(QStringLiteral("Reports 2026"), Location{prod.id, QStringLiteral("shared-reports"), QStringLiteral("2026/")});
+        store.addBookmark(QStringLiteral("Lab scratch"), Location{staging.id, QStringLiteral("media"), QStringLiteral("scratch/")});
+        sidebar.setLocationStore(&store);
+        sidebar.resize(260, 420);
+        QTest::qWait(150);
+        QVERIFY(sidebar.grab().save(QDir(dir).filePath(QStringLiteral("sidebar-bookmarks.png"))));
     }
 
 private:

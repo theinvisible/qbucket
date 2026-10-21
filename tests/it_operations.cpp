@@ -24,6 +24,8 @@
 #include "controllers/EditObjectsJob.h"
 #include "controllers/ObjectPropertyJob.h"
 #include "controllers/RenameJob.h"
+#include "controllers/ReplaceObjectJob.h"
+#include "platform/VirtualFileReader.h"
 #include "controllers/RestoreVersionsJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -48,6 +50,9 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
+
+#include <atomic>
+#include <thread>
 
 using namespace qbucket;
 
@@ -467,6 +472,111 @@ private slots:
         std::optional<bool> privateOk;
         session()->putObjectAcl(back, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>& r) { privateOk = bool(r); });
         QVERIFY(QTest::qWaitFor([&] { return privateOk.has_value(); }, 30000) && *privateOk);
+    }
+
+    // An object edited in another application and saved back (M7, Open):
+    // the content replaced, headers, metadata and tags kept; with a stale
+    // ETag (changed by somebody else since it was opened) it is a conflict
+    // and left alone.
+    void replaceAnEditedObject()
+    {
+        const QString k = m_root + QStringLiteral("open/report.txt");
+        s3::PutObjectParams p;
+        p.bucket = m_bucket;
+        p.key = k;
+        p.data = "first draft\n";
+        s3::ObjectHeaders h;
+        h.contentType = QStringLiteral("text/plain; charset=utf-8");
+        h.cacheControl = QStringLiteral("no-cache");
+        h.userMetadata.insert(QStringLiteral("origin"), QStringLiteral("it"));
+        p.headers = h;
+        std::optional<bool> putOk;
+        QObject ctx;
+        session()->putObject(p, &ctx, [&](const s3::Result<s3::PutObjectResult>& r) { putOk = bool(r); });
+        QVERIFY(QTest::qWaitFor([&] { return putOk.has_value(); }, 30000) && *putOk);
+        const auto profile = s3::ProviderRegistry::builtin().findOrGeneric(m_account.providerId);
+        const bool tags = profile->capabilities().state(s3::Feature::ObjectTaggingWrite) == s3::CapabilityState::Supported;
+        if (tags) {
+            s3::PutObjectTaggingParams tp;
+            tp.bucket = m_bucket;
+            tp.key = k;
+            tp.tags = {{QStringLiteral("keep"), QStringLiteral("me")}};
+            std::optional<bool> tagOk;
+            session()->putObjectTagging(tp, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>& r) { tagOk = bool(r); });
+            QVERIFY(QTest::qWaitFor([&] { return tagOk.has_value(); }, 30000) && *tagOk);
+        }
+        const std::optional<s3::ObjectMeta> before = meta(k);
+        QVERIFY(before);
+        const QString edited = m_dir.filePath(QStringLiteral("report.txt"));
+        {
+            QFile f(edited);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("the final text\n");
+        }
+        Job* job = run(new ReplaceObjectJob(m_account, m_bucket, {k, edited, before->etag}));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        const std::optional<s3::ObjectMeta> after = meta(k);
+        QVERIFY(after);
+        QCOMPARE(after->size, qint64(15));
+        QCOMPARE(after->contentType, h.contentType);
+        QCOMPARE(after->cacheControl, h.cacheControl);
+        QCOMPARE(after->userMetadata.value(QStringLiteral("origin")), QStringLiteral("it"));
+        if (tags) {
+            std::optional<s3::Result<s3::ObjectTagging>> t;
+            session()->getObjectTagging(m_bucket, k, QString(), &ctx, [&](s3::Result<s3::ObjectTagging> r) { t.emplace(std::move(r)); });
+            QVERIFY(QTest::qWaitFor([&] { return t.has_value(); }, 30000) && *t);
+            QCOMPARE((*t)->tags.size(), 1);
+        }
+
+        // Opened before that write: a conflict, skipped by default.
+        const QString stale = m_dir.filePath(QStringLiteral("stale.txt"));
+        {
+            QFile f(stale);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("somebody else's\n");
+        }
+        job = run(new ReplaceObjectJob(m_account, m_bucket, {k, stale, before->etag}));
+        QCOMPARE(job->report().skipped, 1);
+        QCOMPARE(meta(k)->size, qint64(15));
+    }
+
+    // The data behind a virtual-file drag (Explorer on Windows), read from
+    // this server: ranged GETs with If-Match, the MD5 checked at the end.
+    void virtualFileReaderReadsBack()
+    {
+        QByteArray data(20 * 1024 + 17, Qt::Uninitialized);
+        for (int i = 0; i < data.size(); ++i)
+            data[i] = char((i * 7 + 1) & 0xFF);
+        const QString k = m_root + QStringLiteral("drag/blob.bin");
+        QVERIFY(put(k, data));
+        VirtualFileReader reader(session(), {m_account.id, m_bucket, {{k, false, data.size()}}});
+        reader.setChunkSizeForTesting(4096);
+        QByteArray got;
+        std::vector<VirtualFileSource::File> files;
+        VirtualFileSource::Status status = VirtualFileSource::Status::Failed;
+        std::atomic<bool> done{false};
+        std::thread t([&] {
+            status = reader.files(&files);
+            QByteArray buffer(3000, Qt::Uninitialized);
+            while (status == VirtualFileSource::Status::Ok) {
+                std::uint32_t n = 0;
+                status = reader.read(0, got.size(), buffer.data(), 3000, &n);
+                if (n == 0)
+                    break;
+                got.append(buffer.constData(), int(n));
+            }
+            done = true;
+        });
+        const bool finished = QTest::qWaitFor([&] { return done.load(); }, 60000);
+        if (!finished)
+            reader.cancel();
+        t.join();
+        QVERIFY(finished);
+        QCOMPARE(status, VirtualFileSource::Status::Ok);
+        QCOMPARE(files.size(), size_t(1));
+        QCOMPARE(got, data);
+        QCOMPARE(reader.summary(), QStringList{k + QStringLiteral(": md5 verified")});
     }
 
     // Tags and a canned ACL through their jobs — where the provider confirms
