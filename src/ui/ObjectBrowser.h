@@ -1,7 +1,9 @@
 #pragma once
 
 #include "domain/Location.h"
+#include "controllers/DragStaging.h"
 #include "models/ObjectSelection.h"
+#include "ui/ObjectTableView.h"
 #include "models/ObjectTableModel.h"
 
 #include <QWidget>
@@ -17,6 +19,7 @@ class QTableView;
 
 namespace qbucket {
 
+class ExternalDrag;
 class ObjectRowDelegate;
 
 class AccountSessions;
@@ -39,7 +42,10 @@ public:
 
     [[nodiscard]] BrowseController* navigation() const { return m_nav; }
     [[nodiscard]] ObjectTableModel* model() const { return m_model; }
-    [[nodiscard]] QTableView* view() const { return m_view; }
+    [[nodiscard]] ObjectTableView* view() const { return m_view; }
+    [[nodiscard]] QAction* prepareDragAction() const { return m_actPrepareDrag; }
+    // Dragging rows out into a file manager (the platform's way).
+    void setExternalDrag(ExternalDrag* drag, DragStaging* staging);
     [[nodiscard]] PathBar* pathBar() const { return m_pathBar; }
 
     void openBucket(const QUuid& account, const QString& bucket);
@@ -127,6 +133,8 @@ private:
     void updatePage_();
     void onActivated_(const QModelIndex& index);
     [[nodiscard]] bool canOpen_(const QModelIndexList& rows) const;
+    [[nodiscard]] std::optional<DragStaging::Selection> dragSelection_() const;
+    bool startExternalDrag_(Qt::DropActions actions);
     void maybePrefetch_();
     void rememberCurrent_();
     void restoreCurrent_();
@@ -160,10 +168,13 @@ private:
     QWidget* m_messagePage = nullptr;
     QLabel* m_message = nullptr;
     QPushButton* m_retry = nullptr;
-    QTableView* m_view = nullptr;
+    ObjectTableView* m_view = nullptr;
+    ExternalDrag* m_externalDrag = nullptr;
+    DragStaging* m_staging = nullptr;
     QString m_currentKey;   // kept across model resets
 
     QAction* m_actOpen = nullptr;
+    QAction* m_actPrepareDrag = nullptr;
     QAction* m_actCopy = nullptr;
     QAction* m_actCut = nullptr;
     QAction* m_actPaste = nullptr;

@@ -19,6 +19,7 @@
 #include "controllers/RestoreVersionsJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
+#include "controllers/DragStaging.h"
 #include "controllers/OpenFileService.h"
 #include "controllers/OperationController.h"
 #include "controllers/PresignService.h"
@@ -26,6 +27,7 @@
 #include "controllers/DownloadJob.h"
 #include "controllers/TransferService.h"
 #include "controllers/UploadJob.h"
+#include "platform/ExternalDrag.h"
 #include "ui/AccountSidebar.h"
 #include "ui/BucketPropertiesDialog.h"
 #include "ui/CreateBucketDialog.h"
@@ -170,6 +172,8 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_presign = new PresignService(m_operations, this);
         m_locations = new LocationStore(this);
         m_openFiles = new OpenFileService(m_operations, {}, {}, this);
+        m_staging = new DragStaging(m_operations, {}, this);
+        m_externalDrag = ExternalDrag::create(m_staging, m_operations, this).release();
         const auto applyTransferSettings = [this] {
             m_sessions->setTransferLanes(m_settings->transferThreads());
             m_transfers->setMaxParallelParts(m_settings->transferParallelParts());
@@ -999,6 +1003,7 @@ void MainWindow::connectBrowser_()
     m_editMenu->addSeparator();
     m_editMenu->addAction(m_browser->downloadAction());
     m_editMenu->addAction(m_browser->downloadToAction());
+    m_editMenu->addAction(m_browser->prepareDragAction());
     m_editMenu->addAction(m_browser->presignAction());
     m_editMenu->addSeparator();
     m_editMenu->addAction(m_browser->restoreVersionAction());
@@ -1576,8 +1581,12 @@ void MainWindow::connectOpenFiles_()
         return;
     m_actOpenFiles->setEnabled(true);
     m_openFiles->setOpener([](const QUrl& url) { return QDesktopServices::openUrl(url); });
+    m_browser->setExternalDrag(m_externalDrag, m_staging);
+    connect(m_staging, &DragStaging::message, this, [this](const QString& text) { statusBar()->showMessage(text, 8000); });
     const auto applyLimit = [this] {
-        m_openFiles->setConfirmAboveBytes(qint64(m_settings->fetchConfirmMiB()) * 1024 * 1024);
+        const qint64 limit = qint64(m_settings->fetchConfirmMiB()) * 1024 * 1024;
+        m_openFiles->setConfirmAboveBytes(limit);
+        m_staging->setConfirmAboveBytes(limit);
     };
     applyLimit();
     connect(m_settings, &SettingsController::transferSettingsChanged, this, applyLimit);

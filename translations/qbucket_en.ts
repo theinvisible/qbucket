@@ -347,6 +347,17 @@
     </message>
 </context>
 <context>
+    <name>qbucket::DragStaging</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DragStaging.cpp" line="148"/>
+        <source>Ready to drag out: %n item(s).</source>
+        <translation>
+            <numerusform>Ready to drag out: %n item.</numerusform>
+            <numerusform>Ready to drag out: %n items.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::EditMetadataDialog</name>
     <message numerus="yes">
         <location filename="../../src/ui/EditMetadataDialog.cpp" line="48"/>
@@ -409,7 +420,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="270"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="274"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -417,7 +428,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="746"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="750"/>
         <source>%n folder(s) of s3://%1</source>
         <translation>
             <numerusform>%n folder of s3://%1</numerusform>
@@ -425,7 +436,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="889"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="893"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -433,7 +444,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1620"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1629"/>
         <source>(%n more changed file(s))</source>
         <translation>
             <numerusform>(%n more changed file)</numerusform>
@@ -441,7 +452,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1654"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1663"/>
         <source>%n file(s) opened from QBucket were changed and not uploaded.</source>
         <translation>
             <numerusform>%n file opened from QBucket was changed and not uploaded.</numerusform>
@@ -449,7 +460,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1818"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1827"/>
         <source>%n account(s) imported — their secrets are kept for this session only.</source>
         <translation>
             <numerusform>%n account imported — its secret is kept for this session only.</numerusform>
@@ -457,7 +468,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="1820"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="1829"/>
         <source>%n account(s) imported.</source>
         <translation>
             <numerusform>%n account imported.</numerusform>
@@ -468,7 +479,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="834"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="896"/>
         <source>%n version(s)</source>
         <translation>
             <numerusform>%n version</numerusform>
@@ -476,7 +487,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="835"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="897"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -488,7 +499,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="837"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="899"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -496,7 +507,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="843"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="905"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>

@@ -3,6 +3,7 @@
 #include "controllers/AccountSessions.h"
 #include "controllers/BrowseController.h"
 #include "models/ObjectSelection.h"
+#include "platform/ExternalDrag.h"
 #include "support/FakeBucket.h"
 #include "support/FakeKeychainBackend.h"
 #include "ui/ObjectBrowser.h"
@@ -37,6 +38,21 @@ using qbucket::testing::FakeBucket;
 namespace {
 
 const QString kKeyId = QStringLiteral("AKIDBROWSER");
+
+// Records what the browser hands to the platform's drag.
+class RecordingDrag : public ExternalDrag {
+public:
+    using ExternalDrag::ExternalDrag;
+    Qt::DropAction exec(QObject*, QMimeData* internal, const DragStaging::Selection& selection, Qt::DropActions,
+                        Qt::DropAction) override
+    {
+        mime.reset(internal);
+        selections.append(selection);
+        return Qt::CopyAction;
+    }
+    std::unique_ptr<QMimeData> mime;
+    QList<DragStaging::Selection> selections;
+};
 const QString kSecret = QStringLiteral("browser-secret");
 using State = ObjectTableModel::State;
 
@@ -87,6 +103,37 @@ private slots:
         m_secrets.reset();
         m_accounts.reset();
         m_server.reset();
+    }
+
+    void rowsDragOutThroughThePlatform()
+    {
+        m_bucket.add(QStringLiteral("docs/"), 0);
+        m_bucket.add(QStringLiteral("readme.txt"), 7);
+        m_bucket.sort();
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.resize(700, 400);
+        browser.show();
+        RecordingDrag drag;
+        browser.setExternalDrag(&drag, nullptr);
+        browser.openBucket(m_account, QStringLiteral("bkt"));
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        browser.view()->selectAll();
+        browser.setDownloadsAllowed(true, QString());
+        browser.view()->startDragForTesting(Qt::CopyAction | Qt::MoveAction);
+        QCOMPARE(drag.selections.size(), 1);
+        const DragStaging::Selection& sel = drag.selections.first();
+        QCOMPARE(sel.account, m_account);
+        QCOMPARE(sel.bucket, QStringLiteral("bkt"));
+        QCOMPARE(sel.items.size(), 2);
+        QCOMPARE(sel.items.at(0).key, QStringLiteral("docs/"));
+        QVERIFY(sel.items.at(0).folder);
+        QCOMPARE(sel.items.at(1).key, QStringLiteral("readme.txt"));
+        QCOMPARE(sel.items.at(1).size, 7);
+        // The in-app formats travel along: drops on folders and buckets work as before.
+        QVERIFY(drag.mime);
+        QVERIFY(ObjectSelection::fromMimeData(drag.mime.get()).has_value());
+        // No staging here: the preparing action stays out of sight.
+        QVERIFY(!browser.prepareDragAction()->isVisible());
     }
 
     void withoutSessionsItShowsAHint()

@@ -280,6 +280,11 @@ qbucket_add_test(test_open_file_service
     qbucket_controllers
     qbucket::s3_testsupport
 )
+qbucket_add_test(test_drag_staging
+    test_drag_staging.cpp
+    qbucket_platform
+    qbucket::s3_testsupport
+)
 
 qbucket_add_test(test_edit_metadata_dialog
     test_edit_metadata_dialog.cpp

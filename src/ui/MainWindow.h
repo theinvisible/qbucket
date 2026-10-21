@@ -26,6 +26,8 @@ class ActivityLog;
 class CapabilityController;
 class CapabilityStore;
 class Job;
+class DragStaging;
+class ExternalDrag;
 class Journal;
 class OpenFileService;
 class OperationController;
@@ -161,6 +163,8 @@ private:
     TransferModel* m_transferModel = nullptr;
     LocationStore* m_locations = nullptr;
     OpenFileService* m_openFiles = nullptr;
+    DragStaging* m_staging = nullptr;
+    ExternalDrag* m_externalDrag = nullptr;   // a child of this window
     QFrame* m_changeBar = nullptr;
     QLabel* m_changeText = nullptr;
     QUuid m_changeId;

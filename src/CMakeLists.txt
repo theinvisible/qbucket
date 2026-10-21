@@ -117,6 +117,8 @@ add_library(qbucket_controllers STATIC
     controllers/DeleteJob.cpp
     controllers/DiscardTransfersJob.h
     controllers/DiscardTransfersJob.cpp
+    controllers/DragStaging.h
+    controllers/DragStaging.cpp
     controllers/DownloadJob.h
     controllers/DownloadJob.cpp
     controllers/ConnectionTester.h
@@ -181,6 +183,23 @@ target_link_libraries(qbucket_ui_foundation
 # --- Application windows & dialogs -----------------------------------------
 # A library rather than part of the executable so the window smoke test can
 # build the real MainWindow.
+# --- Platform: what differs between Windows and Linux (drag out) -------------
+# The only place with platform #ifdefs for features; Windows sources are
+# added below (A5: virtual-file drag).
+add_library(qbucket_platform STATIC
+    platform/ExternalDrag.h
+    platform/ExternalDrag.cpp
+    platform/StagedDrag.h
+    platform/StagedDrag.cpp
+    platform/StagingMimeData.h
+    platform/StagingMimeData.cpp
+)
+target_include_directories(qbucket_platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(qbucket_platform
+    PUBLIC  qbucket_controllers Qt6::Gui
+    PRIVATE qbucket::compile_options
+)
+
 add_library(qbucket_app_ui STATIC
     ui/AccountDialog.h
     ui/AccountDialog.cpp
@@ -230,6 +249,8 @@ add_library(qbucket_app_ui STATIC
     ui/OpenFilesDialog.cpp
     ui/OperationPreviewDialog.h
     ui/OperationPreviewDialog.cpp
+    ui/ObjectTableView.h
+    ui/ObjectTableView.cpp
     ui/ObjectRowDelegate.h
     ui/ObjectRowDelegate.cpp
     ui/PathBar.h
@@ -250,7 +271,7 @@ target_compile_definitions(qbucket_app_ui PRIVATE
     QBUCKET_VERSION_STRING="${PROJECT_VERSION}"
 )
 target_link_libraries(qbucket_app_ui
-    PUBLIC  qbucket_accounts qbucket_controllers qbucket_models qbucket_ui_foundation Qt6::Widgets
+    PUBLIC  qbucket_accounts qbucket_controllers qbucket_models qbucket_platform qbucket_ui_foundation Qt6::Widgets
     PRIVATE qbucket::compile_options
 )
 

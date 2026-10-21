@@ -1,5 +1,8 @@
 #include "ui/ObjectBrowser.h"
 
+#include "platform/ExternalDrag.h"
+#include "ui/ObjectTableView.h"
+
 #include "accounts/AccountStore.h"
 #include "controllers/AccountSessions.h"
 #include "controllers/BrowseController.h"
@@ -79,7 +82,8 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
     // all of them out again after every inserted page — 47 ms per page at
     // 1M rows against 9 ms (bench_listing). Column widths are fixed +
     // Interactive: ResizeToContents is O(rows) per resize (xyz-profiler).
-    m_view = new QTableView;
+    m_view = new ObjectTableView;
+    m_view->setDragStarter([this](Qt::DropActions actions) { return startExternalDrag_(actions); });
     m_view->setObjectName(QStringLiteral("objectView"));
     m_view->setShowGrid(false);
     m_view->setWordWrap(false);
@@ -356,6 +360,46 @@ void ObjectBrowser::onActivated_(const QModelIndex& index)
     m_nav->navigate({here.account, here.bucket, index.data(ObjectTableModel::KeyRole).toString()});
 }
 
+void ObjectBrowser::setExternalDrag(ExternalDrag* drag, DragStaging* staging)
+{
+    m_externalDrag = drag;
+    m_staging = staging;
+    if (m_staging)
+        connect(m_staging, &DragStaging::stateChanged, this, &ObjectBrowser::updateActions_);
+    updateActions_();
+}
+
+std::optional<DragStaging::Selection> ObjectBrowser::dragSelection_() const
+{
+    const Location here = m_nav->current();
+    if (!here.hasBucket() || m_mode == ObjectTableModel::Mode::Versions)
+        return std::nullopt;
+    DragStaging::Selection sel;
+    sel.account = here.account;
+    sel.bucket = here.bucket;
+    for (const QModelIndex& r : selectedRows()) {
+        sel.items.append({r.data(ObjectTableModel::KeyRole).toString(), r.data(ObjectTableModel::IsFolderRole).toBool(),
+                          r.data(ObjectTableModel::SizeRole).toLongLong()});
+    }
+    if (sel.items.isEmpty())
+        return std::nullopt;
+    return sel;
+}
+
+bool ObjectBrowser::startExternalDrag_(Qt::DropActions actions)
+{
+    if (!m_externalDrag || !m_downloadsAllowed)
+        return false;
+    const std::optional<DragStaging::Selection> sel = dragSelection_();
+    if (!sel)
+        return false;
+    QMimeData* internal = m_model->mimeData(selectedRows());
+    if (!internal)
+        return false;
+    m_externalDrag->exec(m_view, internal, *sel, actions, m_view->defaultDropAction());
+    return true;
+}
+
 bool ObjectBrowser::canOpen_(const QModelIndexList& rows) const
 {
     if (rows.size() != 1)
@@ -551,6 +595,11 @@ void ObjectBrowser::buildActions_()
     // Like a file manager's "delete permanently" (Cut is Ctrl+X only here).
     m_actDeleteAllVersions = make(tr("Delete All Versions…"), QKeySequence(Qt::SHIFT | Qt::Key_Delete));
     m_actRestoreDeleted = make(tr("Restore Deleted Objects…"), QKeySequence());
+    m_actPrepareDrag = make(tr("Prepare for Dragging Out"), QKeySequence());
+    connect(m_actPrepareDrag, &QAction::triggered, this, [this] {
+        if (const std::optional<DragStaging::Selection> sel = dragSelection_(); sel && m_staging)
+            m_staging->prepare(*sel, false);
+    });
 
     // Backspace goes up, like a file manager — wherever the focus is in
     // the browser (a line edit keeps its own Backspace).
@@ -615,6 +664,17 @@ void ObjectBrowser::updateActions_()
         a->setEnabled(!rows.isEmpty() && m_downloadsAllowed);
         a->setToolTip(m_downloadsAllowed ? tr("Download the selection") : m_downloadsReason);
     }
+    // Dragging into a file manager needs local copies here (not on Windows).
+    const std::optional<DragStaging::Selection> sel = m_staging ? dragSelection_() : std::nullopt;
+    const DragStaging::State staged = sel ? m_staging->state(*sel) : DragStaging::State::None;
+    m_actPrepareDrag->setVisible(m_staging && m_externalDrag && m_externalDrag->needsStaging());
+    m_actPrepareDrag->setEnabled(sel && m_downloadsAllowed && staged != DragStaging::State::Preparing
+                                 && staged != DragStaging::State::Ready);
+    m_actPrepareDrag->setToolTip(!m_downloadsAllowed                        ? m_downloadsReason
+                                 : staged == DragStaging::State::Ready     ? tr("Ready: drag the selection out")
+                                 : staged == DragStaging::State::Preparing ? tr("Downloading…")
+                                                                           : tr("Download the selection first, then drag "
+                                                                                "it into a file manager"));
 }
 
 // The versions view lists what was, not what is: nothing in it is copied,
@@ -806,6 +866,8 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
     menu.addSeparator();
     menu.addAction(m_actDownload);
     menu.addAction(m_actDownloadTo);
+    if (!versions && m_actPrepareDrag->isVisible())
+        menu.addAction(m_actPrepareDrag);
     menu.addAction(m_actPresign);
     menu.addSeparator();
     if (versions) {
