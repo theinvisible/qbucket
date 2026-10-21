@@ -7,12 +7,15 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFontDatabase>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QLocale>
+#include <QPlainTextEdit>
 #include <QPushButton>
+#include <QTabWidget>
 #include <QVBoxLayout>
 
 namespace qbucket {
@@ -62,6 +65,28 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
         auto* line = new QLabel(d);
         line->setWordWrap(true);
         lay->addWidget(line);
+    }
+    if (!p.document.isEmpty() || !p.currentDocument.isEmpty()) {
+        // A configuration change: the new document, and what is set now.
+        auto* tabs = new QTabWidget;
+        tabs->setObjectName(QStringLiteral("previewDocuments"));
+        tabs->setDocumentMode(true);
+        const auto page = [](const QString& text, const QString& name) {
+            auto* view = new QPlainTextEdit(text);
+            view->setObjectName(name);
+            view->setReadOnly(true);
+            view->setLineWrapMode(QPlainTextEdit::NoWrap);
+            view->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+            return view;
+        };
+        tabs->addTab(page(p.document.isEmpty() ? tr("(nothing)") : p.document, QStringLiteral("previewNew")),
+                     tr("New"));
+        tabs->addTab(page(p.currentDocument.isEmpty() ? tr("(nothing is set)") : p.currentDocument,
+                          QStringLiteral("previewCurrent")),
+                     tr("Now"));
+        tabs->setMinimumHeight(220);
+        setMinimumWidth(640);
+        lay->addWidget(tabs, 1);
     }
     if (!p.samples.isEmpty()) {
         auto* list = new QListWidget;
@@ -122,6 +147,23 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
                                        : p.permanentText,
              Theme::dangerColor());
     }
+    if (p.bypassOffer) {
+        m_bypass = new QCheckBox(tr("Bypass GOVERNANCE retention for this operation"));
+        m_bypass->setObjectName(QStringLiteral("bypassGovernance"));
+        m_bypass->setToolTip(tr("Sends x-amz-bypass-governance-retention. COMPLIANCE retention and legal holds still "
+                                "hold."));
+        lay->addWidget(m_bypass);
+        m_bypassWarning = new QLabel(tr("Versions protected by a GOVERNANCE retention are changed or deleted anyway. "
+                                        "This is what the retention is meant to prevent — be sure it is wanted."));
+        m_bypassWarning->setWordWrap(true);
+        m_bypassWarning->setStyleSheet(QStringLiteral("color: %1;").arg(Theme::dangerColor().name()));
+        m_bypassWarning->setVisible(false);
+        lay->addWidget(m_bypassWarning);
+        connect(m_bypass, &QCheckBox::toggled, this, [this](bool on) {
+            m_bypassWarning->setVisible(on);
+            updateButton_();
+        });
+    }
 
     // Extra steps.
     if (account.environment == Environment::Production) {
@@ -129,8 +171,9 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
         lay->addWidget(m_production);
         connect(m_production, &QCheckBox::toggled, this, &OperationPreviewDialog::updateButton_);
     }
-    if (!p.typeToConfirm.isEmpty()) {
-        lay->addWidget(new QLabel(tr("Type “%1” to confirm:").arg(p.typeToConfirm)));
+    if (!p.typeToConfirm.isEmpty() || p.bypassOffer) {
+        m_typeLabel = new QLabel;
+        lay->addWidget(m_typeLabel);
         m_typed = new QLineEdit;
         m_typed->setObjectName(QStringLiteral("typedConfirmation"));
         lay->addWidget(m_typed);
@@ -154,6 +197,7 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
         if (result == QDialog::Accepted) {
             if (m_policy)
                 m_job->setConflictPolicy(Job::ConflictPolicy(m_policy->currentData().toInt()));
+            m_job->setBypassGovernance(m_bypass && m_bypass->isChecked());
             m_job->confirm();
         } else {
             m_job->cancel();
@@ -167,13 +211,28 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
     updateButton_();
 }
 
+QString OperationPreviewDialog::expectedTyping() const
+{
+    if (!m_job)
+        return {};
+    QString name = m_job->preview().typeToConfirm;
+    if (m_bypass && m_bypass->isChecked())
+        return name.isEmpty() ? QStringLiteral("BYPASS") : QStringLiteral("BYPASS ") + name;
+    return name;
+}
+
 void OperationPreviewDialog::updateButton_()
 {
     bool ok = true;
     if (m_production)
         ok = ok && m_production->isChecked();
-    if (m_typed && m_job)
-        ok = ok && m_typed->text() == m_job->preview().typeToConfirm;
+    const QString expected = expectedTyping();
+    if (m_typed) {
+        m_typeLabel->setText(tr("Type “%1” to confirm:").arg(expected));
+        m_typeLabel->setVisible(!expected.isEmpty());
+        m_typed->setVisible(!expected.isEmpty());
+        ok = ok && m_typed->text() == expected;
+    }
     m_confirm->setEnabled(ok);
 }
 

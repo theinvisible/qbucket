@@ -57,6 +57,14 @@ public:
         // both" names the new one (empty: an upload's "name (1)").
         QList<ConflictPolicy> policies;
         QString keepBothLabel;
+        // Object lock: the preview offers the governance bypass for this one
+        // run (setBypassGovernance) — with its own warning and a stronger
+        // typed confirmation. Never on by default.
+        bool bypassOffer = false;
+        // A configuration change: the new document and the one set now
+        // (empty: none), as text to read.
+        QString document;
+        QString currentDocument;
     };
     struct Report {
         qint64 succeeded = 0;
@@ -125,6 +133,9 @@ public:
     // Chosen in the preview, before confirm().
     void setConflictPolicy(ConflictPolicy policy) { m_conflictPolicy = policy; }
     [[nodiscard]] ConflictPolicy conflictPolicy() const { return m_conflictPolicy; }
+    // Only where the preview offered it (Preview::bypassOffer).
+    void setBypassGovernance(bool bypass) { m_bypassGovernance = bypass && m_preview.bypassOffer; }
+    [[nodiscard]] bool bypassGovernance() const { return m_bypassGovernance; }
     [[nodiscard]] bool isCancelled() const { return m_cancelled; }
     [[nodiscard]] bool isConfirmed() const { return m_confirmed; }
 
@@ -165,6 +176,7 @@ private:
     friend class OperationController;
     friend class ObjectCopyRunner;   // journals and copies on behalf of its job
     friend class InPlaceCopy;        // likewise
+    friend class VersionPurger;      // likewise
     void setPhase_(Phase phase);
     void refuse_(const QString& reason);
 
@@ -184,6 +196,7 @@ private:
     bool m_paused = false;
     bool m_suspended = false;
     ConflictPolicy m_conflictPolicy = ConflictPolicy::Skip;
+    bool m_bypassGovernance = false;
     bool m_confirmed = false;
     OperationController* m_controller = nullptr;
 };

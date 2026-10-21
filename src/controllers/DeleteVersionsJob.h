@@ -2,6 +2,7 @@
 
 #include "controllers/Job.h"
 #include "controllers/PlanFile.h"
+#include "controllers/VersionPurger.h"
 
 #include <QDateTime>
 #include <QSet>
@@ -24,8 +25,10 @@ class VersionWalk;
 // view showed; a selected version that no longer exists is skipped, "is a
 // delete marker" comes from the listing only. Refused while MFA delete is
 // on (QBucket sends no MFA codes). Execute: DeleteObjects batches with
-// version ids where BatchDelete is confirmed, single deletes otherwise;
-// locked versions fail with the reason, never with a bypass. Verify: the
+// version ids where BatchDelete is confirmed, single deletes otherwise
+// (VersionPurger); locked versions fail with the reason — on a bucket with
+// object lock the preview offers the governance bypass for this one run
+// (setBypassGovernance), never implicitly. Verify: the
 // keys / folders listed again (Versions, Everything) or the objects looked
 // up (Undelete), once more after a pause before a mismatch is reported.
 class DeleteVersionsJob : public Job {
@@ -43,8 +46,6 @@ public:
     };
 
     static constexpr int kSamples = 10;
-    static constexpr int kParallelBatches = 2;
-    static constexpr int kParallelSingles = 4;
     static constexpr int kVerifyHeadLimit = 1000;
     static constexpr int kRecheckDelayMs = 3000;
 
@@ -65,7 +66,7 @@ public:
     [[nodiscard]] QString title() const override;
     [[nodiscard]] QList<s3::Feature> requiredFeatures() const override;
     [[nodiscard]] bool isDestructive() const override { return m_kind != Kind::Undelete; }
-    [[nodiscard]] bool usedBatches() const { return m_useBatches; }
+    [[nodiscard]] bool usedBatches() const { return m_purger && m_purger->usedBatches(); }
     void setRecheckDelayForTesting(int ms) { m_recheckMs = ms; }
 
 protected:
@@ -75,14 +76,8 @@ protected:
     void onCancel() override;
 
 private:
-    struct Target {
-        QString key;
-        QString versionId;
-        bool marker = false;
-        bool latest = false;
-        qint64 size = 0;
-        QString revealsVersion;   // Undelete: the version that becomes current
-    };
+    // extra: Undelete — the version that becomes current.
+    using Target = VersionPurger::Target;
     struct Walk {
         QString prefix;
         bool exact = false;
@@ -100,19 +95,13 @@ private:
     void addTarget_(const Target& t);
     void planDone_();
     // execute
-    void pump_();
-    void sendBatch_(const QList<Target>& targets);
-    void sendSingle_(const Target& t);
-    void deleted_(const Target& t, const QString& requestId);
-    void failed_(const Target& t, const QString& reason);
-    void settled_();
+    void purged_();
     // verify
     void verifyPass_(bool recheck);
     void verifyNextWalk_(bool recheck);
     void verifyNextHead_(bool recheck);
     void verifyDone_(bool recheck);
     [[nodiscard]] Report report_() const;
-    [[nodiscard]] static Target targetOf(const QStringList& record);
 
     Kind m_kind;
     QString m_planDir;
@@ -142,17 +131,9 @@ private:
     QList<QPair<QString, QString>> m_revealed;   // Undelete: key → version that comes back (verify)
 
     // executing
-    bool m_useBatches = false;
-    int m_batchSize = 1;
-    int m_inFlight = 0;
-    bool m_reading = false;
-    bool m_eof = false;
-    qint64 m_succeeded = 0;
+    VersionPurger* m_purger = nullptr;
     qint64 m_skipped = 0;
     QStringList m_notes;
-    QStringList m_failures;
-    QSet<QString> m_failedSet;        // "key\0versionId"
-    QSet<QString> m_failedKeys;
 
     // verifying
     qsizetype m_verifyIndex = 0;

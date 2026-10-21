@@ -218,6 +218,12 @@ qbucket_add_test(test_copy_job
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_bucket_config_jobs
+    test_bucket_config_jobs.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_version_jobs
     test_version_jobs.cpp
     qbucket_controllers

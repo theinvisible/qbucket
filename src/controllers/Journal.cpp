@@ -84,6 +84,8 @@ void Journal::append(const QList<Record>& records)
             o.insert(QStringLiteral("requestId"), r.requestId);
         if (!r.message.isEmpty())
             o.insert(QStringLiteral("message"), r.message);
+        if (r.bypassGovernance)
+            o.insert(QStringLiteral("bypassGovernance"), true);
         lines += QJsonDocument(o).toJson(QJsonDocument::Compact) + '\n';
     }
     const QString dir = m_dir;

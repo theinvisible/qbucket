@@ -37,6 +37,7 @@ public:
         int httpStatus = 0;
         QString requestId;
         QString message;       // error text or note
+        bool bypassGovernance = false;   // sent with x-amz-bypass-governance-retention
     };
 
     explicit Journal(QObject* parent = nullptr);

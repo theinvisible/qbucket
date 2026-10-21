@@ -864,82 +864,127 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Versionierung umschalten</translation>
     </message>
     <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="524"/>
+        <source>Changing the bucket policy</source>
+        <translation>Bucket-Policy ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="525"/>
+        <source>Changing CORS rules</source>
+        <translation>CORS-Regeln ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="526"/>
+        <source>Changing lifecycle rules</source>
+        <translation>Lifecycle-Regeln ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="527"/>
+        <source>Changing the default retention</source>
+        <translation>Standard-Aufbewahrung ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="528"/>
+        <source>Changing the bucket ACL</source>
+        <translation>Bucket-ACL ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="529"/>
+        <source>Changing the public access block</source>
+        <translation>Public Access Block ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="530"/>
+        <source>Changing an object&apos;s retention</source>
+        <translation>Aufbewahrung eines Objekts ändern</translation>
+    </message>
+    <message>
         <location filename="../src/controllers/CapabilityController.cpp" line="531"/>
+        <source>Changing a legal hold</source>
+        <translation>Legal Hold ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="539"/>
         <source>Supported</source>
         <translation>Unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="532"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="540"/>
         <source>Not supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="533"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="541"/>
         <source>Not permitted</source>
         <translation>Nicht erlaubt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="534"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="542"/>
         <source>Unknown</source>
         <translation>Unbekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="542"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="550"/>
         <source>Checked</source>
         <translation>Geprüft</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="543"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
         <source>Learned from a request</source>
         <translation>Aus einer Anfrage gelernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="544"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="552"/>
         <source>Provider profile</source>
         <translation>Anbieterprofil</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="554"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="562"/>
         <source>known from the provider profile</source>
         <translation>aus dem Anbieterprofil bekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="559"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="567"/>
         <source>HTTP %1 %2, %3</source>
         <translation>HTTP %1 %2, %3</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="567"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="575"/>
         <source>%1 is switched off for this provider: its proxy mishandles these requests.</source>
         <translation>%1 ist für diesen Anbieter abgeschaltet: Sein Proxy behandelt diese Anfragen falsch.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="568"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="576"/>
         <source>The server does not support %1 (%2).</source>
         <translation>Der Server unterstützt %1 nicht (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="570"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="578"/>
         <source>These credentials may not use %1 (%2).</source>
         <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="573"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="581"/>
         <source>%1 is not confirmed for this server: QBucket only writes tags and ACLs where the provider is known to handle them safely.</source>
         <translation>%1 ist für diesen Server nicht bestätigt: QBucket schreibt Tags und ACLs nur, wo der Provider sie bekanntermaßen sicher behandelt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="577"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="585"/>
+        <source>%1 is not confirmed for this server: QBucket only changes object locks where the provider is known to handle the request safely.</source>
+        <translation>%1 ist für diesen Server nicht bestätigt: QBucket ändert Objektsperren nur, wo bekannt ist, dass der Anbieter die Anfrage sicher behandelt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="591"/>
         <source>%1 is not confirmed for this server: QBucket only changes a bucket&apos;s settings where the provider is known to handle the request safely.</source>
         <translation>%1 ist für diesen Server nicht bestätigt: QBucket ändert Bucket-Einstellungen nur dort, wo der Provider die Anfrage nachweislich sicher behandelt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="580"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="594"/>
         <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="582"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="596"/>
         <source>%1 is not verified on this server.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
     </message>
@@ -1497,7 +1542,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message>
         <location filename="../src/controllers/DeleteVersionsJob.cpp" line="168"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="376"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="363"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
@@ -1517,32 +1562,32 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>%1: unter dem Löschmarker ist keine Version mehr</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="277"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="275"/>
         <source>%1 (version %2)</source>
         <translation>%1 (Version %2)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="300"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="286"/>
         <source>%1: this version no longer exists</source>
         <translation>%1: diese Version gibt es nicht mehr</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="307"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="293"/>
         <source>The plan could not be written: %1</source>
         <translation>Der Plan konnte nicht geschrieben werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="311"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="297"/>
         <source>nothing deleted to restore</source>
         <translation>nichts Gelöschtes wiederherzustellen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="311"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="297"/>
         <source>nothing to delete</source>
         <translation>nichts zu löschen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="324"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="310"/>
         <source>s3://%1 — %n selected item(s)</source>
         <translation>
             <numerusform>s3://%1 — %n ausgewähltes Element</numerusform>
@@ -1550,7 +1595,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="326"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="312"/>
         <source>%n selected item(s) are skipped — see the report.</source>
         <translation>
             <numerusform>%n ausgewähltes Element wird übersprungen — siehe Bericht.</numerusform>
@@ -1558,12 +1603,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="329"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="315"/>
         <source>Restore</source>
         <translation>Wiederherstellen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="332"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="318"/>
         <source>%n object(s) come back: the delete markers over their newest version are removed (%1 marker(s)).</source>
         <translation>
             <numerusform>%n Objekt kommt zurück: Die Löschmarker über seiner neuesten Version werden entfernt (%1 Marker).</numerusform>
@@ -1571,22 +1616,22 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="335"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="321"/>
         <source>Nothing is copied or overwritten; deleting them again works as before.</source>
         <translation>Nichts wird kopiert oder überschrieben; erneutes Löschen funktioniert wie zuvor.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="337"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="323"/>
         <source>Delete Permanently</source>
         <translation>Endgültig löschen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="340"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="326"/>
         <source>This cannot be undone: deleted versions are gone for good, also on a versioned bucket.</source>
         <translation>Das lässt sich nicht rückgängig machen: Gelöschte Versionen sind endgültig weg, auch in einem versionierten Bucket.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="342"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="328"/>
         <source>%n version(s)</source>
         <translation>
             <numerusform>%n Version</numerusform>
@@ -1594,7 +1639,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="344"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="330"/>
         <source>%1, %n delete marker(s)</source>
         <translation>
             <numerusform>%1, %n Löschmarker</numerusform>
@@ -1602,7 +1647,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="345"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="331"/>
         <source>Of %n object(s).</source>
         <translation>
             <numerusform>Von einem Objekt.</numerusform>
@@ -1610,12 +1655,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="347"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="333"/>
         <source>Every version goes: the objects disappear completely, nothing is left to restore.</source>
         <translation>Alle Versionen werden gelöscht: Die Objekte verschwinden ganz, es bleibt nichts zum Wiederherstellen.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="350"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="336"/>
         <source>%n current version(s) are among them: the previous version becomes current, or the object disappears when none is left.</source>
         <translation>
             <numerusform>Eine aktuelle Version ist dabei: Die vorige Version wird aktuell, oder das Objekt verschwindet, wenn keine bleibt.</numerusform>
@@ -1623,45 +1668,28 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="354"/>
-        <source>Object lock is enabled: versions under retention or a legal hold can&apos;t be deleted and are reported, never bypassed.</source>
-        <translation>Object Lock ist aktiv: Versionen unter Aufbewahrung oder Legal Hold lassen sich nicht löschen und werden gemeldet, nie umgangen.</translation>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="340"/>
+        <source>Object lock is enabled: versions under retention or a legal hold can&apos;t be deleted and are reported — unless GOVERNANCE retention is bypassed below.</source>
+        <translation>Object Lock ist aktiv: Versionen mit Aufbewahrung oder Legal Hold lassen sich nicht löschen und werden gemeldet – außer die GOVERNANCE-Aufbewahrung wird unten umgangen.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="426"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="482"/>
-        <source>not connected</source>
-        <translation>nicht verbunden</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="451"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="500"/>
-        <source>protected by object lock, or not permitted (%1)</source>
-        <translation>durch Object Lock geschützt oder nicht erlaubt (%1)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="463"/>
-        <source>the answer was lost — they may or may not be deleted</source>
-        <translation>die Antwort ging verloren — sie sind vielleicht gelöscht, vielleicht nicht</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="535"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="385"/>
         <source>cancelled — what was sent is in the journal</source>
         <translation>abgebrochen — was gesendet wurde, steht im Journal</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="580"/>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="619"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="429"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="468"/>
         <source>not checked (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="605"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="454"/>
         <source>not checked: %1</source>
         <translation>nicht geprüft: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="653"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="502"/>
         <source>%n object(s) looked up: they are back</source>
         <translation>
             <numerusform>%n Objekt nachgeschlagen: es ist wieder da</numerusform>
@@ -1669,7 +1697,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="654"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="503"/>
         <source>%n object(s) are still not back: %1</source>
         <translation>
             <numerusform>%n Objekt ist noch nicht wieder da: %1</numerusform>
@@ -1677,12 +1705,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="657"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="506"/>
         <source>listed again: nothing of it is left</source>
         <translation>erneut gelistet: nichts davon ist übrig</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="658"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="507"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n Version wird noch gelistet: %1</numerusform>
@@ -4025,17 +4053,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>„%1“ ist ein schreibgeschütztes Konto. Schalte das in den Kontoeinstellungen ab, um etwas zu ändern.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="144"/>
+        <location filename="../src/controllers/OperationController.cpp" line="147"/>
         <source>Could not confirm what the server supports right now; nothing was changed.</source>
         <translation>Konnte gerade nicht bestätigen, was der Server unterstützt; nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="174"/>
+        <location filename="../src/controllers/OperationController.cpp" line="177"/>
         <source>done: %1 changed, %2 skipped</source>
         <translation>fertig: %1 geändert, %2 übersprungen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/OperationController.cpp" line="175"/>
+        <location filename="../src/controllers/OperationController.cpp" line="178"/>
         <source>done: %n changed</source>
         <translation>
             <numerusform>fertig: %n geändert</numerusform>
@@ -4043,12 +4071,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="178"/>
+        <location filename="../src/controllers/OperationController.cpp" line="181"/>
         <source>partly failed: %1 changed, %2 failed</source>
         <translation>teilweise fehlgeschlagen: %1 geändert, %2 fehlgeschlagen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/OperationController.cpp" line="181"/>
+        <location filename="../src/controllers/OperationController.cpp" line="184"/>
         <source>failed: %n not changed</source>
         <translation>
             <numerusform>fehlgeschlagen: %n nicht geändert</numerusform>
@@ -4056,12 +4084,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="182"/>
+        <location filename="../src/controllers/OperationController.cpp" line="185"/>
         <source>failed: %1</source>
         <translation>fehlgeschlagen: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/OperationController.cpp" line="185"/>
+        <location filename="../src/controllers/OperationController.cpp" line="188"/>
         <source>cancelled: %n changed before</source>
         <translation>
             <numerusform>abgebrochen: %n vorher geändert</numerusform>
@@ -4069,12 +4097,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="188"/>
+        <location filename="../src/controllers/OperationController.cpp" line="191"/>
         <source>not started: %1</source>
         <translation>nicht gestartet: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="193"/>
+        <location filename="../src/controllers/OperationController.cpp" line="196"/>
         <source>%1 — %2</source>
         <translation>%1 — %2</translation>
     </message>
@@ -4082,12 +4110,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::OperationPreviewDialog</name>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="26"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="29"/>
         <source>%1 — %2</source>
         <translation>%1 — %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="56"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="59"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n Objekt</numerusform>
@@ -4095,13 +4123,33 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="58"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="61"/>
         <source>%1, %2</source>
         <translation>%1, %2</translation>
     </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="82"/>
+        <source>(nothing)</source>
+        <translation>(nichts)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="83"/>
+        <source>New</source>
+        <translation>Neu</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="84"/>
+        <source>(nothing is set)</source>
+        <translation>(nichts gesetzt)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="86"/>
+        <source>Now</source>
+        <translation>Jetzt</translation>
+    </message>
     <message numerus="yes">
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="71"/>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="87"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="96"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="112"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… und %n weiteres</numerusform>
@@ -4109,7 +4157,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="80"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="105"/>
         <source>%n of them exist already:</source>
         <translation>
             <numerusform>%n davon existiert bereits:</numerusform>
@@ -4117,37 +4165,52 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="92"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="117"/>
         <source>Existing objects:</source>
         <translation>Vorhandene Objekte:</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="99"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="124"/>
         <source>Skip them</source>
         <translation>Überspringen</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="101"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="126"/>
         <source>Overwrite them</source>
         <translation>Überschreiben</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="103"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="128"/>
         <source>Keep both (upload as “name (1)”)</source>
         <translation>Beide behalten (als „Name (1)“ hochladen)</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="121"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="146"/>
         <source>This cannot be undone: the bucket keeps no earlier versions.</source>
         <translation>Das lässt sich nicht rückgängig machen: Der Bucket behält keine früheren Versionen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="128"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="151"/>
+        <source>Bypass GOVERNANCE retention for this operation</source>
+        <translation>GOVERNANCE-Aufbewahrung für diesen Vorgang umgehen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="153"/>
+        <source>Sends x-amz-bypass-governance-retention. COMPLIANCE retention and legal holds still hold.</source>
+        <translation>Sendet x-amz-bypass-governance-retention. COMPLIANCE-Aufbewahrung und Legal Holds gelten weiterhin.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="156"/>
+        <source>Versions protected by a GOVERNANCE retention are changed or deleted anyway. This is what the retention is meant to prevent — be sure it is wanted.</source>
+        <translation>Versionen unter GOVERNANCE-Aufbewahrung werden trotzdem geändert oder gelöscht. Genau das soll die Aufbewahrung verhindern – sicherstellen, dass es gewollt ist.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="170"/>
         <source>This is a production account — I have checked the scope above.</source>
         <translation>Das ist ein Produktivkonto — ich habe den Umfang oben geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="133"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="231"/>
         <source>Type “%1” to confirm:</source>
         <translation>Zur Bestätigung „%1“ eintippen:</translation>
     </message>
@@ -4569,6 +4632,350 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/controllers/RestoreVersionsJob.cpp" line="341"/>
         <source>every restored object checked (content, headers, class, tags, permissions)</source>
         <translation>jedes wiederhergestellte Objekt geprüft (Inhalt, Header, Class, Tags, Berechtigungen)</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::SetBucketConfigJob</name>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="39"/>
+        <source>on</source>
+        <translation>ein</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="39"/>
+        <source>off</source>
+        <translation>aus</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="72"/>
+        <source>the bucket policy</source>
+        <translation>die Bucket-Policy</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="73"/>
+        <source>the policy status</source>
+        <translation>den Policy-Status</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="74"/>
+        <source>the CORS rules</source>
+        <translation>die CORS-Regeln</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="75"/>
+        <source>the lifecycle rules</source>
+        <translation>die Lifecycle-Regeln</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="76"/>
+        <source>the default retention</source>
+        <translation>die Standard-Aufbewahrung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="77"/>
+        <source>the bucket ACL</source>
+        <translation>die Bucket-ACL</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="78"/>
+        <source>the public access block</source>
+        <translation>den Public Access Block</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="79"/>
+        <source>the bucket tags</source>
+        <translation>die Bucket-Tags</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="80"/>
+        <source>the website configuration</source>
+        <translation>die Website-Konfiguration</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="81"/>
+        <source>the access logging</source>
+        <translation>das Zugriffsprotokoll</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="82"/>
+        <source>the replication rules</source>
+        <translation>die Replikationsregeln</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="83"/>
+        <source>the default encryption</source>
+        <translation>die Standardverschlüsselung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="84"/>
+        <source>the event notifications</source>
+        <translation>die Ereignisbenachrichtigungen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="85"/>
+        <source>the ownership controls</source>
+        <translation>die Ownership Controls</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="92"/>
+        <source>Remove %1 of “%2”</source>
+        <translation>%1 von „%2“ entfernen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="93"/>
+        <source>Change %1 of “%2”</source>
+        <translation>%1 von „%2“ ändern</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="149"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="163"/>
+        <source>QBucket doesn&apos;t change %1.</source>
+        <translation>QBucket ändert %1 nicht.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="151"/>
+        <source>The document is not valid: %1</source>
+        <translation>Das Dokument ist ungültig: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="161"/>
+        <source>%1 can&apos;t be removed this way.</source>
+        <translation>%1 lässt sich so nicht entfernen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="165"/>
+        <source>No ACL chosen.</source>
+        <translation>Keine ACL gewählt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="174"/>
+        <source>The bucket&apos;s current state could not be checked. Nothing was changed.</source>
+        <translation>Der aktuelle Zustand des Buckets ließ sich nicht prüfen. Es wurde nichts geändert.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="179"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="350"/>
+        <source>Not connected.</source>
+        <translation>Nicht verbunden.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="185"/>
+        <source>%1 could not be read: %2</source>
+        <translation>%1 konnte nicht gelesen werden: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="211"/>
+        <source>%1: nothing is set</source>
+        <translation>%1: nichts gesetzt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="211"/>
+        <source>%1: unchanged</source>
+        <translation>%1: unverändert</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="218"/>
+        <source>Remove</source>
+        <translation>Entfernen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="218"/>
+        <source>Apply</source>
+        <translation>Übernehmen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="221"/>
+        <source>Canned ACL: %1</source>
+        <translation>Vordefinierte ACL: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="225"/>
+        <source>Nothing is set now.</source>
+        <translation>Derzeit ist nichts gesetzt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="237"/>
+        <source>Whatever the policy allowed or denied no longer applies.</source>
+        <translation>Was die Policy erlaubt oder verboten hat, gilt nicht mehr.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="240"/>
+        <source>Web pages on other sites can no longer read from this bucket through a browser.</source>
+        <translation>Webseiten anderer Domains können über den Browser nicht mehr aus diesem Bucket lesen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="243"/>
+        <source>Nothing expires or moves automatically any more.</source>
+        <translation>Nichts läuft mehr automatisch ab oder wird verschoben.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="246"/>
+        <source>Public ACLs and public policies take effect again, where there are any.</source>
+        <translation>Öffentliche ACLs und Policies wirken wieder, wo es welche gibt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="257"/>
+        <source>Anyone on the internet may write or delete objects with this policy.</source>
+        <translation>Mit dieser Policy darf jeder im Internet Objekte schreiben oder löschen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="259"/>
+        <source>Anyone on the internet may read what the policy names, without credentials.</source>
+        <translation>Jeder im Internet darf lesen, was die Policy nennt – ohne Zugangsdaten.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="261"/>
+        <source>A Deny statement can lock out these credentials too — QBucket included, also from changing the policy again.</source>
+        <translation>Eine Deny-Anweisung kann auch diese Zugangsdaten aussperren – QBucket eingeschlossen, auch vom erneuten Ändern der Policy.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="277"/>
+        <source>every object</source>
+        <translation>alle Objekte</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="278"/>
+        <source>objects with the rule&apos;s tags</source>
+        <translation>Objekte mit den Tags der Regel</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="278"/>
+        <source>objects under “%1”</source>
+        <translation>Objekte unter „%1“</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="279"/>
+        <source>A rule</source>
+        <translation>Eine Regel</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="279"/>
+        <source>Rule “%1”</source>
+        <translation>Regel „%1“</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="281"/>
+        <source>%1 deletes %2 %n day(s) after they were written (a delete marker; the version stays).</source>
+        <translation>
+            <numerusform>%1 löscht %2 einen Tag nach dem Schreiben (ein Löschmarker; die Version bleibt).</numerusform>
+            <numerusform>%1 löscht %2 %n Tage nach dem Schreiben (ein Löschmarker; die Version bleibt).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="283"/>
+        <source>%1 deletes %2 for good %n day(s) after they were written.</source>
+        <translation>
+            <numerusform>%1 löscht %2 einen Tag nach dem Schreiben endgültig.</numerusform>
+            <numerusform>%1 löscht %2 %n Tage nach dem Schreiben endgültig.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="286"/>
+        <source>%1 deletes %2 on %3.</source>
+        <translation>%1 löscht %2 am %3.</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="289"/>
+        <source>%1 deletes earlier versions of %2 for good %n day(s) after they were replaced.</source>
+        <translation>
+            <numerusform>%1 löscht frühere Versionen von %2 einen Tag nach dem Ersetzen endgültig.</numerusform>
+            <numerusform>%1 löscht frühere Versionen von %2 %n Tage nach dem Ersetzen endgültig.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="294"/>
+        <source>Lifecycle rules apply to what exists now as well, from the server&apos;s next run on.</source>
+        <translation>Lifecycle-Regeln gelten auch für Vorhandenes, ab dem nächsten Lauf des Servers.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="302"/>
+        <source>COMPLIANCE: every version written from now on can&apos;t be deleted or overwritten by anyone — not even the account owner — until its retention has run out.</source>
+        <translation>COMPLIANCE: Jede ab jetzt geschriebene Version kann niemand löschen oder überschreiben – nicht einmal der Kontoinhaber –, bis ihre Aufbewahrung abgelaufen ist.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="306"/>
+        <source>GOVERNANCE: new versions can&apos;t be deleted until their retention runs out, except by someone allowed to bypass it.</source>
+        <translation>GOVERNANCE: Neue Versionen lassen sich bis zum Ende ihrer Aufbewahrung nicht löschen, außer von jemandem, der sie umgehen darf.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="309"/>
+        <source>It applies to versions written from now on; some servers take a few minutes to pass it on to every upload.</source>
+        <translation>Sie gilt für ab jetzt geschriebene Versionen; manche Server brauchen einige Minuten, bis jeder Upload sie bekommt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="316"/>
+        <source>Anyone on the internet may list the bucket and write to it.</source>
+        <translation>Jeder im Internet darf den Bucket auflisten und hineinschreiben.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="319"/>
+        <source>Anyone on the internet may list the bucket.</source>
+        <translation>Jeder im Internet darf den Bucket auflisten.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="321"/>
+        <source>Any account of this provider may list the bucket.</source>
+        <translation>Jedes Konto dieses Anbieters darf den Bucket auflisten.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="325"/>
+        <source>The current ACL has grants a canned ACL can&apos;t express; they are replaced.</source>
+        <translation>Die aktuelle ACL hat Berechtigungen, die eine vordefinierte ACL nicht ausdrücken kann; sie werden ersetzt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="331"/>
+        <source>Block public ACLs: %1; ignore public ACLs: %2; block public policies: %3; restrict public buckets: %4.</source>
+        <translation>Öffentliche ACLs blockieren: %1; öffentliche ACLs ignorieren: %2; öffentliche Policies blockieren: %3; öffentliche Buckets einschränken: %4.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="368"/>
+        <source>The server&apos;s answer doesn&apos;t fit the request (%1).</source>
+        <translation>Die Antwort des Servers passt nicht zur Anfrage (%1).</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="371"/>
+        <source>The server refused: %1</source>
+        <translation>Der Server lehnte ab: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="406"/>
+        <source>not checked (not connected)</source>
+        <translation>nicht geprüft (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="418"/>
+        <source>not read back: %1</source>
+        <translation>nicht zurückgelesen: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="420"/>
+        <source>read back: nothing is set</source>
+        <translation>zurückgelesen: nichts gesetzt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="420"/>
+        <source>read back: as sent</source>
+        <translation>zurückgelesen: wie gesendet</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="422"/>
+        <source>the server still reports something else — check again in a few minutes</source>
+        <translation>der Server meldet noch etwas anderes – in ein paar Minuten erneut prüfen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="445"/>
+        <source>The bucket “%1” is gone — the server may have deleted it instead of %2. %3</source>
+        <translation>Der Bucket „%1“ ist weg – der Server hat ihn womöglich statt %2 gelöscht. %3</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="451"/>
+        <source>The bucket is still there.</source>
+        <translation>Der Bucket ist noch da.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="457"/>
+        <source>; the bucket could not be looked up: %1</source>
+        <translation>; der Bucket konnte nicht abgefragt werden: %1</translation>
     </message>
 </context>
 <context>
@@ -5078,6 +5485,26 @@ F5 drücken, um es erneut zu versuchen.</translation>
             <numerusform>%n Datei per MD5 geprüft</numerusform>
             <numerusform>%n Dateien per MD5 geprüft</numerusform>
         </translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::VersionPurger</name>
+    <message>
+        <location filename="../src/controllers/VersionPurger.cpp" line="98"/>
+        <location filename="../src/controllers/VersionPurger.cpp" line="159"/>
+        <source>not connected</source>
+        <translation>nicht verbunden</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/VersionPurger.cpp" line="127"/>
+        <location filename="../src/controllers/VersionPurger.cpp" line="183"/>
+        <source>protected by object lock, or not permitted (%1)</source>
+        <translation>durch Object Lock geschützt oder nicht erlaubt (%1)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/VersionPurger.cpp" line="139"/>
+        <source>the answer was lost — they may or may not be deleted</source>
+        <translation>die Antwort ging verloren — sie sind vielleicht gelöscht, vielleicht nicht</translation>
     </message>
 </context>
 </TS>

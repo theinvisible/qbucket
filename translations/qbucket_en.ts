@@ -121,7 +121,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="324"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="310"/>
         <source>s3://%1 — %n selected item(s)</source>
         <translation>
             <numerusform>s3://%1 — %n selected item</numerusform>
@@ -129,7 +129,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="326"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="312"/>
         <source>%n selected item(s) are skipped — see the report.</source>
         <translation>
             <numerusform>%n selected item is skipped — see the report.</numerusform>
@@ -137,7 +137,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="332"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="318"/>
         <source>%n object(s) come back: the delete markers over their newest version are removed (%1 marker(s)).</source>
         <translation>
             <numerusform>%n object comes back: the delete markers over its newest version are removed (%1 marker(s)).</numerusform>
@@ -145,7 +145,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="342"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="328"/>
         <source>%n version(s)</source>
         <translation>
             <numerusform>%n version</numerusform>
@@ -153,7 +153,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="344"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="330"/>
         <source>%1, %n delete marker(s)</source>
         <translation>
             <numerusform>%1, %n delete marker</numerusform>
@@ -161,7 +161,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="345"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="331"/>
         <source>Of %n object(s).</source>
         <translation>
             <numerusform>Of one object.</numerusform>
@@ -169,7 +169,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="350"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="336"/>
         <source>%n current version(s) are among them: the previous version becomes current, or the object disappears when none is left.</source>
         <translation>
             <numerusform>A current version is among them: the previous version becomes current, or the object disappears when none is left.</numerusform>
@@ -177,7 +177,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="653"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="502"/>
         <source>%n object(s) looked up: they are back</source>
         <translation>
             <numerusform>%n object looked up: it is back</numerusform>
@@ -185,7 +185,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="654"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="503"/>
         <source>%n object(s) are still not back: %1</source>
         <translation>
             <numerusform>%n object is still not back: %1</numerusform>
@@ -193,7 +193,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="658"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="507"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n version is still listed: %1</numerusform>
@@ -432,7 +432,7 @@
 <context>
     <name>qbucket::OperationController</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="175"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="178"/>
         <source>done: %n changed</source>
         <translation>
             <numerusform>done: %n changed</numerusform>
@@ -440,7 +440,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="181"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="184"/>
         <source>failed: %n not changed</source>
         <translation>
             <numerusform>failed: %n not changed</numerusform>
@@ -448,7 +448,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="185"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="188"/>
         <source>cancelled: %n changed before</source>
         <translation>
             <numerusform>cancelled: %n changed before</numerusform>
@@ -459,7 +459,7 @@
 <context>
     <name>qbucket::OperationPreviewDialog</name>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="56"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="59"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n object</numerusform>
@@ -467,8 +467,8 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="71"/>
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="87"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="96"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="112"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… and %n more</numerusform>
@@ -476,7 +476,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="80"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="105"/>
         <source>%n of them exist already:</source>
         <translation>
             <numerusform>%n of them exists already:</numerusform>
@@ -554,6 +554,33 @@
         <translation>
             <numerusform>%n selected version is skipped — see the report.</numerusform>
             <numerusform>%n selected versions are skipped — see the report.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::SetBucketConfigJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/SetBucketConfigJob.cpp" line="281"/>
+        <source>%1 deletes %2 %n day(s) after they were written (a delete marker; the version stays).</source>
+        <translation>
+            <numerusform>%1 deletes %2 a day after they were written (a delete marker; the version stays).</numerusform>
+            <numerusform>%1 deletes %2 %n days after they were written (a delete marker; the version stays).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/SetBucketConfigJob.cpp" line="283"/>
+        <source>%1 deletes %2 for good %n day(s) after they were written.</source>
+        <translation>
+            <numerusform>%1 deletes %2 for good a day after they were written.</numerusform>
+            <numerusform>%1 deletes %2 for good %n days after they were written.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/SetBucketConfigJob.cpp" line="289"/>
+        <source>%1 deletes earlier versions of %2 for good %n day(s) after they were replaced.</source>
+        <translation>
+            <numerusform>%1 deletes earlier versions of %2 for good a day after they were replaced.</numerusform>
+            <numerusform>%1 deletes earlier versions of %2 for good %n days after they were replaced.</numerusform>
         </translation>
     </message>
 </context>

@@ -75,8 +75,11 @@ add_library(qbucket_controllers STATIC
     controllers/RestoreVersionsJob.h
     controllers/RestoreVersionsJob.cpp
     controllers/SetBucketVersioningJob.h
+    controllers/SetBucketConfigJob.cpp
+    controllers/SetBucketConfigJob.h
     controllers/SetBucketVersioningJob.cpp
     controllers/VersionWalk.h
+    controllers/VersionPurger.cpp
     controllers/VersionWalk.cpp
     controllers/CopyJob.h
     controllers/CopyJob.cpp

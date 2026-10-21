@@ -51,6 +51,9 @@ OperationController::Check OperationController::check(const QUuid& account, cons
 
 OperationController::Check OperationController::checkJob_(const Job* job, bool destructive) const
 {
+    // A job on no bucket (creating one): the account and the server.
+    if (job->buckets().isEmpty())
+        return check(job->account().id, QString(), job->requiredFeatures(), destructive, job->isMutating());
     for (const QString& bucket : job->buckets()) {
         const Check gate = check(job->account().id, bucket, job->requiredFeatures(), destructive, job->isMutating());
         if (!gate.allowed)
