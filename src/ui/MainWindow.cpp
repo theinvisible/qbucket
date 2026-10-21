@@ -257,7 +257,7 @@ void MainWindow::connectOperations_()
         // What the job changed is listed afresh.
         const Location here = m_browser->navigation()->current();
         if (job->outcome() != Job::Outcome::Refused && job->phase() == Job::Phase::Finished
-            && here.account == job->account().id && here.bucket == job->bucket())
+            && here.account == job->account().id && job->buckets().contains(here.bucket))
             m_browser->refresh();
     });
     connect(m_jobCancel, &QToolButton::clicked, this, [this] {

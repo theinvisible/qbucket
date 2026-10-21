@@ -49,6 +49,16 @@ OperationController::Check OperationController::check(const QUuid& account, cons
     return {};
 }
 
+OperationController::Check OperationController::checkJob_(const Job* job, bool destructive) const
+{
+    for (const QString& bucket : job->buckets()) {
+        const Check gate = check(job->account().id, bucket, job->requiredFeatures(), destructive, job->isMutating());
+        if (!gate.allowed)
+            return gate;
+    }
+    return {};
+}
+
 void OperationController::start(Job* job)
 {
     job->setParent(this);
@@ -59,8 +69,7 @@ void OperationController::start(Job* job)
     QMetaObject::invokeMethod(this, [this, guard = QPointer<Job>(job)] {
         if (!guard || guard->phase() != Job::Phase::Created)
             return;
-        const Check gate = check(guard->account().id, guard->bucket(), guard->requiredFeatures(),
-                                 guard->isDestructive(), guard->isMutating());
+        const Check gate = checkJob_(guard, guard->isDestructive());
         if (!gate.allowed) {
             guard->refuse_(gate.reason);
             return;
@@ -99,8 +108,7 @@ void OperationController::previewed_(Job* job)
 
 void OperationController::confirm_(Job* job)
 {
-    const Check gate = check(job->account().id, job->bucket(), job->requiredFeatures(), job->isDestructive(),
-                             job->isMutating());
+    const Check gate = checkJob_(job, job->isDestructive());
     if (!gate.allowed) {
         job->refuse_(gate.reason);
         return;
@@ -109,25 +117,34 @@ void OperationController::confirm_(Job* job)
         execute_(job);
         return;
     }
-    // Destructive: decide on results young enough to trust — probe if not.
-    // The job stays "awaiting confirmation" meanwhile: cancelling it then
-    // ends it at once, nothing having been sent.
+    // Destructive: decide on results young enough to trust — probe if not,
+    // every bucket the job touches. The job stays "awaiting confirmation"
+    // meanwhile: cancelling it then ends it at once, nothing having been sent.
+    ensureFreshThenExecute_(job, job->buckets());
+}
+
+void OperationController::ensureFreshThenExecute_(Job* job, QStringList buckets)
+{
+    if (buckets.isEmpty()) {
+        const Check again = checkJob_(job, true);
+        if (!again.allowed) {
+            job->refuse_(again.reason);
+            return;
+        }
+        execute_(job);
+        return;
+    }
+    const QString bucket = buckets.takeFirst();
     const QPointer<Job> guard(job);
-    m_capabilities->ensureFresh(job->account().id, job->bucket(), kFreshBeforeDestructiveSecs, job,
-                                [this, guard](bool fresh) {
+    m_capabilities->ensureFresh(job->account().id, bucket, kFreshBeforeDestructiveSecs, job,
+                                [this, guard, rest = std::move(buckets)](bool fresh) {
         if (!guard || guard->isCancelled())
             return;
         if (!fresh) {
             guard->refuse_(tr("Could not confirm what the server supports right now; nothing was changed."));
             return;
         }
-        const Check again = check(guard->account().id, guard->bucket(), guard->requiredFeatures(), true,
-                                  guard->isMutating());
-        if (!again.allowed) {
-            guard->refuse_(again.reason);
-            return;
-        }
-        execute_(guard);
+        ensureFreshThenExecute_(guard, rest);
     });
 }
 

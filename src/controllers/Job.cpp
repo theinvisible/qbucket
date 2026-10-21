@@ -138,6 +138,13 @@ void Job::journal_(const QList<Journal::Record>& records)
         m_controller->journal()->append(records);
 }
 
+Journal::Record Job::record_(const QString& operation, const QString& key, const QString& bucket) const
+{
+    Journal::Record r = record_(operation, key);
+    r.bucket = bucket;
+    return r;
+}
+
 Journal::Record Job::record_(const QString& operation, const QString& key) const
 {
     Journal::Record r;

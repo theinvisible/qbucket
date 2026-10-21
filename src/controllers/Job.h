@@ -51,6 +51,10 @@ public:
         // ("name — here 12 MB, 2026-10-20; there 10 MB, 2026-09-01").
         qint64 conflicts = 0;
         QStringList conflictSamples;
+        // The policies offered for them (empty: all three) and how "keep
+        // both" names the new one (empty: an upload's "name (1)").
+        QList<ConflictPolicy> policies;
+        QString keepBothLabel;
     };
     struct Report {
         qint64 succeeded = 0;
@@ -75,6 +79,9 @@ public:
     [[nodiscard]] QString id() const { return m_id; }
     [[nodiscard]] const Account& account() const { return m_account; }
     [[nodiscard]] QString bucket() const { return m_bucket; }
+    // Every bucket the job reads or writes (a copy: source and target) —
+    // the gate checks each, MainWindow refreshes each.
+    [[nodiscard]] virtual QStringList buckets() const { return {m_bucket}; }
     [[nodiscard]] Phase phase() const { return m_phase; }
     [[nodiscard]] Outcome outcome() const { return m_outcome; }
     [[nodiscard]] const Preview& preview() const { return m_preview; }
@@ -147,6 +154,7 @@ protected:
     void journal_(const QList<Journal::Record>& records);
     // A journal record of this job with account and bucket filled in.
     [[nodiscard]] Journal::Record record_(const QString& operation, const QString& key = {}) const;
+    [[nodiscard]] Journal::Record record_(const QString& operation, const QString& key, const QString& bucket) const;
     // The account's session; nullptr after shutdown.
     [[nodiscard]] s3::Session* session_() const;
     [[nodiscard]] OperationController* controller_() const { return m_controller; }

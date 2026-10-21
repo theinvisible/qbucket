@@ -765,12 +765,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="555"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="556"/>
+        <source>%1 is not confirmed for this server: QBucket only writes tags and ACLs where the provider is known to handle them safely.</source>
+        <translation>%1 ist für diesen Server nicht bestätigt: QBucket schreibt Tags und ACLs nur, wo der Provider sie bekanntermaßen sicher behandelt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="559"/>
         <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="557"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="561"/>
         <source>%1 is not verified on this server.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
     </message>
@@ -2299,17 +2304,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>„%1“ ist ein schreibgeschütztes Konto. Schalte das in den Kontoeinstellungen ab, um etwas zu ändern.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="121"/>
+        <location filename="../src/controllers/OperationController.cpp" line="144"/>
         <source>Could not confirm what the server supports right now; nothing was changed.</source>
         <translation>Konnte gerade nicht bestätigen, was der Server unterstützt; nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="157"/>
+        <location filename="../src/controllers/OperationController.cpp" line="174"/>
         <source>done: %1 changed, %2 skipped</source>
         <translation>fertig: %1 geändert, %2 übersprungen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/OperationController.cpp" line="158"/>
+        <location filename="../src/controllers/OperationController.cpp" line="175"/>
         <source>done: %n changed</source>
         <translation>
             <numerusform>fertig: %n geändert</numerusform>
@@ -2317,12 +2322,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="161"/>
+        <location filename="../src/controllers/OperationController.cpp" line="178"/>
         <source>partly failed: %1 changed, %2 failed</source>
         <translation>teilweise fehlgeschlagen: %1 geändert, %2 fehlgeschlagen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/OperationController.cpp" line="164"/>
+        <location filename="../src/controllers/OperationController.cpp" line="181"/>
         <source>failed: %n not changed</source>
         <translation>
             <numerusform>fehlgeschlagen: %n nicht geändert</numerusform>
@@ -2330,12 +2335,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="165"/>
+        <location filename="../src/controllers/OperationController.cpp" line="182"/>
         <source>failed: %1</source>
         <translation>fehlgeschlagen: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/OperationController.cpp" line="168"/>
+        <location filename="../src/controllers/OperationController.cpp" line="185"/>
         <source>cancelled: %n changed before</source>
         <translation>
             <numerusform>abgebrochen: %n vorher geändert</numerusform>
@@ -2343,12 +2348,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="171"/>
+        <location filename="../src/controllers/OperationController.cpp" line="188"/>
         <source>not started: %1</source>
         <translation>nicht gestartet: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/OperationController.cpp" line="176"/>
+        <location filename="../src/controllers/OperationController.cpp" line="193"/>
         <source>%1 — %2</source>
         <translation>%1 — %2</translation>
     </message>
@@ -2396,32 +2401,32 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Vorhandene Objekte:</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="93"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="97"/>
         <source>Skip them</source>
         <translation>Überspringen</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="94"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="99"/>
         <source>Overwrite them</source>
         <translation>Überschreiben</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="95"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="101"/>
         <source>Keep both (upload as “name (1)”)</source>
         <translation>Beide behalten (als „Name (1)“ hochladen)</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="111"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="119"/>
         <source>This cannot be undone: the bucket keeps no earlier versions.</source>
         <translation>Das lässt sich nicht rückgängig machen: Der Bucket behält keine früheren Versionen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="115"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="123"/>
         <source>This is a production account — I have checked the scope above.</source>
         <translation>Das ist ein Produktivkonto — ich habe den Umfang oben geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/ui/OperationPreviewDialog.cpp" line="120"/>
+        <location filename="../src/ui/OperationPreviewDialog.cpp" line="128"/>
         <source>Type “%1” to confirm:</source>
         <translation>Zur Bestätigung „%1“ eintippen:</translation>
     </message>

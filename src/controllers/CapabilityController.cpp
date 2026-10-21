@@ -552,6 +552,10 @@ QString CapabilityController::reason(s3::Feature f, const s3::CapabilityEntry& e
     case s3::CapabilityState::NotPermitted:
         return tr("These credentials may not use %1 (%2).").arg(name, detail);
     case s3::CapabilityState::Unknown:
+        if (f == s3::Feature::ObjectTaggingWrite || f == s3::Feature::ObjectAclWrite) {
+            return tr("%1 is not confirmed for this server: QBucket only writes tags and ACLs where the "
+                      "provider is known to handle them safely.").arg(name);
+        }
         return destructive ? tr("%1 is not verified on this server; destructive actions need a confirmed "
                                 "capability.").arg(name)
                            : tr("%1 is not verified on this server.").arg(name);

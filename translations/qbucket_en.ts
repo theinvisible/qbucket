@@ -220,7 +220,7 @@
 <context>
     <name>qbucket::OperationController</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="158"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="175"/>
         <source>done: %n changed</source>
         <translation>
             <numerusform>done: %n changed</numerusform>
@@ -228,7 +228,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="164"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="181"/>
         <source>failed: %n not changed</source>
         <translation>
             <numerusform>failed: %n not changed</numerusform>
@@ -236,7 +236,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/OperationController.cpp" line="168"/>
+        <location filename="../../src/controllers/OperationController.cpp" line="185"/>
         <source>cancelled: %n changed before</source>
         <translation>
             <numerusform>cancelled: %n changed before</numerusform>

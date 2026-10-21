@@ -83,6 +83,9 @@ private:
     void previewed_(Job* job);
     void confirm_(Job* job);
     void execute_(Job* job);
+    // check() for every bucket of the job.
+    [[nodiscard]] Check checkJob_(const Job* job, bool destructive) const;
+    void ensureFreshThenExecute_(Job* job, QStringList buckets);
     void finished_(Job* job);
 
     AccountStore* m_accounts;

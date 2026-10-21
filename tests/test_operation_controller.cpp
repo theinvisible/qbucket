@@ -50,12 +50,14 @@ public:
     bool holdExecution = false;   // stay in Executing until release()
     int pauses = 0;
     int resumes = 0;
+    QStringList bucketList;   // non-empty: buckets() (a copy across buckets)
 
     [[nodiscard]] QString title() const override { return QStringLiteral("Test job"); }
     [[nodiscard]] QList<s3::Feature> requiredFeatures() const override { return m_features; }
     [[nodiscard]] bool isDestructive() const override { return m_destructive; }
     [[nodiscard]] bool isMutating() const override { return mutating; }
     [[nodiscard]] bool canPause() const override { return pausable; }
+    [[nodiscard]] QStringList buckets() const override { return bucketList.isEmpty() ? Job::buckets() : bucketList; }
 
     void release()
     {
@@ -314,6 +316,58 @@ private slots:
             m_ops->check(m_h->account.id, QStringLiteral("bkt"), {s3::Feature::Lifecycle}, false);
         QVERIFY(!c.allowed);
         QVERIFY(c.reason.contains(QLatin1String("501")));
+    }
+
+    // A job across buckets (a copy) is checked on each of them.
+    void everyBucketOfAJobIsChecked()
+    {
+        m_caps->bucketOpened(m_h->account.id, QStringLiteral("bkt"));
+        QTRY_VERIFY_WITH_TIMEOUT(m_caps->bucketSet(m_h->account.id, QStringLiteral("bkt")).has_value(), 10000);
+        auto* fine = new TestJob(m_h->account, 1, false, {s3::Feature::Lifecycle});
+        fine->bucketList = {QStringLiteral("other")};   // not probed: allowed unverified (not destructive)
+        QSignalSpy fineDone(fine, &Job::finished);
+        connect(m_ops.get(), &OperationController::previewNeeded, fine, [fine](Job* j) {
+            if (j == fine)
+                j->confirm();
+        });
+        m_ops->start(fine);
+        QVERIFY(fineDone.wait(10000));
+        QCOMPARE(fine->outcome(), Job::Outcome::Succeeded);
+
+        auto* blocked = new TestJob(m_h->account, 1, false, {s3::Feature::Lifecycle});
+        blocked->bucketList = {QStringLiteral("other"), QStringLiteral("bkt")};   // bkt: 501
+        QSignalSpy done(blocked, &Job::finished);
+        m_ops->start(blocked);
+        QVERIFY(done.wait(10000));
+        QCOMPARE(blocked->outcome(), Job::Outcome::Refused);
+        QVERIFY(blocked->errorText().contains(QLatin1String("501")));
+        QCOMPARE(blocked->planned, 0);
+    }
+
+    // Destructive: the capabilities of every bucket are made fresh first.
+    void aDestructiveJobProbesEveryBucket()
+    {
+        auto* job = new TestJob(m_h->account, 1, true);
+        job->bucketList = {QStringLiteral("bkt"), QStringLiteral("second")};
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        QSignalSpy done(job, &Job::finished);
+        m_ops->start(job);
+        QVERIFY(preview.wait(5000));
+        job->confirm();
+        QVERIFY(done.wait(15000));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY(m_caps->bucketSet(m_h->account.id, QStringLiteral("bkt")).has_value());
+        QVERIFY(m_caps->bucketSet(m_h->account.id, QStringLiteral("second")).has_value());
+    }
+
+    // Tag / ACL writes need write support the profile confirms — a read
+    // probe doesn't do (generic profile: unknown, refused with the reason).
+    void tagAndAclWritesNeedConfirmedSupport()
+    {
+        const OperationController::Check c =
+            m_ops->check(m_h->account.id, QStringLiteral("bkt"), {s3::Feature::ObjectTaggingWrite}, true);
+        QVERIFY(!c.allowed);
+        QVERIFY2(c.reason.contains(QLatin1String("tags and ACLs")), qPrintable(c.reason));
     }
 
     void cancellingBeforeConfirmationSendsNothing()

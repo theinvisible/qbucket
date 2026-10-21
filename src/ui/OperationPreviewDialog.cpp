@@ -90,10 +90,18 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
         row->addWidget(new QLabel(tr("Existing objects:")));
         m_policy = new QComboBox;
         m_policy->setObjectName(QStringLiteral("conflictPolicy"));
-        m_policy->addItem(tr("Skip them"), int(Job::ConflictPolicy::Skip));
-        m_policy->addItem(tr("Overwrite them"), int(Job::ConflictPolicy::Overwrite));
-        m_policy->addItem(tr("Keep both (upload as “name (1)”)"), int(Job::ConflictPolicy::KeepBoth));
-        m_policy->setCurrentIndex(m_policy->findData(int(job->conflictPolicy())));
+        const auto offered = [&p](Job::ConflictPolicy policy) {
+            return p.policies.isEmpty() || p.policies.contains(policy);
+        };
+        if (offered(Job::ConflictPolicy::Skip))
+            m_policy->addItem(tr("Skip them"), int(Job::ConflictPolicy::Skip));
+        if (offered(Job::ConflictPolicy::Overwrite))
+            m_policy->addItem(tr("Overwrite them"), int(Job::ConflictPolicy::Overwrite));
+        if (offered(Job::ConflictPolicy::KeepBoth)) {
+            m_policy->addItem(p.keepBothLabel.isEmpty() ? tr("Keep both (upload as “name (1)”)") : p.keepBothLabel,
+                              int(Job::ConflictPolicy::KeepBoth));
+        }
+        m_policy->setCurrentIndex(std::max(0, m_policy->findData(int(job->conflictPolicy()))));
         row->addWidget(m_policy, 1);
         lay->addLayout(row);
     }
