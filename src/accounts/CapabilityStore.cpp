@@ -143,6 +143,18 @@ void CapabilityStore::removeAll(const QUuid& account)
     });
 }
 
+void CapabilityStore::removeBucket(const QUuid& account, const QString& bucket)
+{
+    s3::CapabilitySet set;
+    set.scope = s3::CapabilityScope::Bucket;
+    set.bucket = bucket;
+    const QString path = accountDir_(account) + u'/' + fileNameFor(set);
+    m_io.start([path] {
+        if (QFile::exists(path) && !QFile::remove(path))
+            qCWarning(lcApp).noquote() << "could not remove" << path;
+    });
+}
+
 void CapabilityStore::appendHistory(const QUuid& account, const QList<QJsonObject>& entries)
 {
     if (entries.isEmpty())

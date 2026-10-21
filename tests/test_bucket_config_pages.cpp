@@ -13,6 +13,7 @@
 #include "ui/AclSection.h"
 #include "ui/BucketPropertiesDialog.h"
 #include "ui/CodeEditor.h"
+#include "ui/CreateBucketDialog.h"
 #include "ui/CorsPage.h"
 #include "ui/LifecyclePage.h"
 #include "ui/ObjectLockPage.h"
@@ -389,6 +390,33 @@ private slots:
         page->list()->setCurrentItem(tags);
         QVERIFY(page->viewer()->toPlainText().contains(QLatin1String("<Key>team</Key>")));
         QVERIFY(page->viewer()->isReadOnly());
+    }
+
+    void createBucketDialog()
+    {
+        probe();
+        CreateBucketDialog dlg(m_ops.get(), m_h->account.id);
+        QVERIFY(!dlg.createButton()->isEnabled());
+        dlg.nameEdit()->setText(QStringLiteral("Not_Valid"));
+        QVERIFY(!dlg.createButton()->isEnabled());
+        QVERIFY(!dlg.problemLabel()->text().isEmpty());
+        dlg.nameEdit()->setText(QStringLiteral("  my-new-bucket "));
+        QVERIFY(dlg.createButton()->isEnabled());
+        QCOMPARE(dlg.name(), QStringLiteral("my-new-bucket"));
+        QVERIFY(dlg.versioningCheck()->isEnabled());   // AWS: confirmed
+        dlg.objectLockCheck()->setChecked(true);
+        QVERIFY(dlg.versioningCheck()->isChecked());
+        QVERIFY(!dlg.versioningCheck()->isEnabled());   // comes with the lock
+        QVERIFY(dlg.options().objectLock && dlg.options().versioning);
+    }
+
+    void createBucketDialogSaysWhatIsntConfirmed()
+    {
+        useProvider(QStringLiteral("generic"));
+        probe();
+        CreateBucketDialog plain(m_ops.get(), m_h->account.id);
+        QVERIFY(!plain.versioningCheck()->isEnabled());
+        QVERIFY(plain.versioningCheck()->toolTip().contains(QLatin1String("not confirmed")));
     }
 
     // QBUCKET_SCREENSHOT_DIR (with a real platform, or offscreen to look):

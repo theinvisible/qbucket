@@ -162,6 +162,13 @@ void AccountSidebar::showContextMenu_(const QPoint& pos)
         const QString bucket = index.data(AccountTreeModel::BucketRole).toString();
         menu.addAction(tr("Properties…"), this, [this, id, bucket] { emit bucketPropertiesRequested(id, bucket); });
     }
+    menu.addSeparator();
+    menu.addAction(tr("New Bucket…"), this, [this, id] { emit createBucketRequested(id); });
+    if (kind == AccountTreeModel::Kind::Bucket) {
+        const QString bucket = index.data(AccountTreeModel::BucketRole).toString();
+        menu.addAction(tr("Delete Bucket “%1”…").arg(bucket), this,
+                       [this, id, bucket] { emit deleteBucketRequested(id, bucket); });
+    }
     if (kind == AccountTreeModel::Kind::Bucket && index.data(AccountTreeModel::ExternalRole).toBool()) {
         const QString bucket = index.data(AccountTreeModel::BucketRole).toString();
         menu.addAction(tr("Remove “%1” from the List").arg(bucket), this,

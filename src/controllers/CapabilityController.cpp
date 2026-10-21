@@ -168,6 +168,22 @@ void CapabilityController::bucketOpened(const QUuid& account, const QString& buc
         probeBucket_(account, bucket);
 }
 
+void CapabilityController::forgetBucket(const QUuid& account, const QString& bucket)
+{
+    if (bucket.isEmpty())
+        return;
+    if (const auto it = m_caps.find(account); it != m_caps.end()) {
+        AccountCaps& caps = **it;
+        if (const auto b = caps.buckets.find(bucket); b != caps.buckets.end()) {
+            finishWaiters_(b->second, false);
+            caps.buckets.erase(b);
+        }
+        caps.opened.remove(bucket);
+    }
+    m_store->removeBucket(account, bucket);
+    emit capabilitiesUpdated(account, bucket);
+}
+
 void CapabilityController::recheck(const QUuid& account, const QString& bucket)
 {
     const std::shared_ptr<AccountCaps> caps = m_caps.value(account);

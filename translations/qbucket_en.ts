@@ -59,6 +59,49 @@
     </message>
 </context>
 <context>
+    <name>qbucket::DeleteBucketJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="165"/>
+        <source>%n object(s)</source>
+        <translation>
+            <numerusform>%n object</numerusform>
+            <numerusform>%n objects</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="166"/>
+        <source>%n version(s)</source>
+        <translation>
+            <numerusform>%n version</numerusform>
+            <numerusform>%n versions</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="168"/>
+        <source>%1, %n delete marker(s)</source>
+        <translation>
+            <numerusform>%1, %n delete marker</numerusform>
+            <numerusform>%1, %n delete markers</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="170"/>
+        <source>%1, %n unfinished upload(s)</source>
+        <translation>
+            <numerusform>%1, %n unfinished upload</numerusform>
+            <numerusform>%1, %n unfinished uploads</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="239"/>
+        <source>the bucket stays: %n version(s) could not be deleted</source>
+        <translation>
+            <numerusform>the bucket stays: one version could not be deleted</numerusform>
+            <numerusform>the bucket stays: %n versions could not be deleted</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::DeleteJob</name>
     <message numerus="yes">
         <location filename="../../src/controllers/DeleteJob.cpp" line="58"/>
@@ -355,7 +398,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="231"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="238"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -363,7 +406,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="620"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="636"/>
         <source>%n folder(s) of s3://%1</source>
         <translation>
             <numerusform>%n folder of s3://%1</numerusform>
@@ -371,7 +414,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="763"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="779"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -421,7 +464,7 @@
 <context>
     <name>qbucket::ObjectLockPage</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectLockPage.cpp" line="127"/>
+        <location filename="../../src/ui/ObjectLockPage.cpp" line="129"/>
         <source>%n year(s)</source>
         <translation>
             <numerusform>%n year</numerusform>
@@ -429,7 +472,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectLockPage.cpp" line="127"/>
+        <location filename="../../src/ui/ObjectLockPage.cpp" line="129"/>
         <source>%n day(s)</source>
         <translation>
             <numerusform>%n day</numerusform>

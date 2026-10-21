@@ -51,6 +51,8 @@ public:
     void save(const QUuid& account, const s3::CapabilitySet& set);
     // When the account is deleted.
     void removeAll(const QUuid& account);
+    // When the bucket is deleted.
+    void removeBucket(const QUuid& account, const QString& bucket);
 
     void appendHistory(const QUuid& account, const QList<QJsonObject>& entries);
     // Oldest first.

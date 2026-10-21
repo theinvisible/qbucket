@@ -9,6 +9,9 @@
 #include "controllers/CopyJob.h"
 #include "controllers/ConnectionTester.h"
 #include "controllers/CreateFolderJob.h"
+#include "controllers/CreateBucketJob.h"
+#include "models/AccountTreeModel.h"
+#include "controllers/DeleteBucketJob.h"
 #include "controllers/DeleteJob.h"
 #include "controllers/DeleteVersionsJob.h"
 #include "controllers/EditObjectsJob.h"
@@ -24,6 +27,7 @@
 #include "controllers/UploadJob.h"
 #include "ui/AccountSidebar.h"
 #include "ui/BucketPropertiesDialog.h"
+#include "ui/CreateBucketDialog.h"
 #include "ui/CapabilitiesDialog.h"
 #include "ui/EditMetadataDialog.h"
 #include "ui/IncompleteUploadsDialog.h"
@@ -49,6 +53,7 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QCheckBox>
 #include <QButtonGroup>
 #include <QClipboard>
 #include <QCloseEvent>
@@ -204,6 +209,8 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         startCopy_(sel, here.account, here.bucket, prefix, move);
     });
     connect(m_sidebar, &AccountSidebar::bucketPropertiesRequested, this, &MainWindow::showBucketProperties_);
+    connect(m_sidebar, &AccountSidebar::createBucketRequested, this, &MainWindow::createBucket_);
+    connect(m_sidebar, &AccountSidebar::deleteBucketRequested, this, &MainWindow::deleteBucket_);
     connect(m_sidebar, &AccountSidebar::objectsDroppedOnBucket, this,
             [this](const QUuid& account, const QString& bucket, const ObjectSelection& sel, bool move) {
                 startCopy_(sel, account, bucket, QString(), move);
@@ -284,6 +291,15 @@ void MainWindow::connectOperations_()
         showJobReport_(job);
         // What the job changed is listed afresh.
         const Location here = m_browser->navigation()->current();
+        const bool created = qobject_cast<CreateBucketJob*>(job) != nullptr;
+        const bool deleted = qobject_cast<DeleteBucketJob*>(job) != nullptr;
+        if ((created || deleted) && job->outcome() != Job::Outcome::Refused) {
+            m_sidebar->model()->refresh(m_sidebar->model()->accountIndex(job->account().id));
+            if (deleted && here.account == job->account().id && here.bucket == job->bucket()
+                && job->outcome() == Job::Outcome::Succeeded)
+                m_browser->navigation()->navigate({job->account().id, {}, {}});
+            return;
+        }
         if (job->outcome() != Job::Outcome::Refused && job->phase() == Job::Phase::Finished
             && here.account == job->account().id && job->buckets().contains(here.bucket))
             m_browser->refresh();
@@ -974,6 +990,11 @@ void MainWindow::updateNavigation_()
     m_actRefresh->setEnabled(here || m_sessions);
     m_actEditPath->setEnabled(nav->current().isValid());
     m_actCapabilities->setEnabled(m_capabilities && nav->current().isValid());
+    if (m_actNewBucket) {
+        m_actNewBucket->setEnabled(m_operations && nav->current().isValid());
+        m_actBucketProperties->setEnabled(m_operations && nav->current().hasBucket());
+        m_actDeleteBucket->setEnabled(m_operations && nav->current().hasBucket());
+    }
     if (m_actIncompleteUploads) {
         OperationController::Check list{false, tr("Open a bucket first.")};
         if (m_operations && nav->current().hasBucket())
@@ -1016,6 +1037,44 @@ void MainWindow::showBucketProperties_(const QUuid& accountId, const QString& bu
         caps->show();
     });
     dlg->show();
+}
+
+void MainWindow::createBucket_(const QUuid& accountId)
+{
+    if (!m_operations || accountId.isNull())
+        return;
+    auto* dlg = new CreateBucketDialog(m_operations, accountId, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QDialog::accepted, this, [this, dlg, accountId] {
+        const std::optional<Account> account = m_accounts->account(accountId);
+        if (account)
+            m_operations->start(new CreateBucketJob(*account, dlg->name(), dlg->options()));
+    });
+    dlg->open();
+}
+
+void MainWindow::deleteBucket_(const QUuid& accountId, const QString& bucket)
+{
+    if (!m_operations || bucket.isEmpty())
+        return;
+    auto* box = new QMessageBox(QMessageBox::Warning, tr("Delete Bucket"),
+                                tr("Delete the bucket “%1”?").arg(bucket), QMessageBox::Cancel, this);
+    box->setInformativeText(tr("A bucket can only be deleted when it is empty. QBucket can delete what is in it "
+                               "first — every version and unfinished upload, for good. The next step shows exactly "
+                               "what and asks you to type the bucket's name."));
+    auto* everything = new QCheckBox(tr("Delete everything in it, too"));
+    box->setCheckBox(everything);
+    QPushButton* go = box->addButton(tr("Continue…"), QMessageBox::AcceptRole);
+    box->setDefaultButton(QMessageBox::Cancel);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    connect(box, &QMessageBox::finished, this, [this, box, go, everything, accountId, bucket] {
+        if (box->clickedButton() != go)
+            return;
+        const std::optional<Account> account = m_accounts->account(accountId);
+        if (account)
+            m_operations->start(new DeleteBucketJob(*account, bucket, everything->isChecked(), m_operations->planDir()));
+    });
+    box->open();
 }
 
 void MainWindow::showIncompleteUploads_()
@@ -1137,6 +1196,22 @@ void MainWindow::buildMenuBar_()
     // The transfer-panel toggle is appended once the dock exists
     // (buildTransferDock_).
     view->addSeparator();
+
+    auto* bucketMenu = mb->addMenu(tr("&Bucket"));
+    m_actNewBucket = bucketMenu->addAction(tr("&New Bucket…"), this, [this] {
+        createBucket_(m_browser->navigation()->current().account);
+    });
+    m_actBucketProperties = bucketMenu->addAction(tr("&Properties…"), this, [this] {
+        const Location here = m_browser->navigation()->current();
+        showBucketProperties_(here.account, here.bucket);
+    });
+    bucketMenu->addSeparator();
+    m_actDeleteBucket = bucketMenu->addAction(tr("&Delete Bucket…"), this, [this] {
+        const Location here = m_browser->navigation()->current();
+        deleteBucket_(here.account, here.bucket);
+    });
+    for (QAction* a : {m_actNewBucket, m_actBucketProperties, m_actDeleteBucket})
+        a->setEnabled(false);
 
     auto* tools = mb->addMenu(tr("&Tools"));
     m_actCapabilities = tools->addAction(tr("Server &Capabilities…"), this, &MainWindow::showCapabilities_);

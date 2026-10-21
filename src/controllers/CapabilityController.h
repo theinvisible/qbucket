@@ -51,6 +51,8 @@ public:
     void bucketOpened(const QUuid& account, const QString& bucket);
     // Probe now, fresh or not (the capabilities page's "Check Again").
     void recheck(const QUuid& account, const QString& bucket = {});
+    // The bucket is gone: its results, in memory and stored.
+    void forgetBucket(const QUuid& account, const QString& bucket);
     // Before a destructive operation: results younger than maxAgeSecs are
     // fine, otherwise the bucket is probed first. `done(true)` once the
     // results are fresh, `done(false)` if the probe failed. Queued, never

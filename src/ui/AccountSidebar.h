@@ -47,6 +47,9 @@ signals:
                                 const qbucket::ObjectSelection& selection, bool move);
     // "Properties…" of a bucket.
     void bucketPropertiesRequested(const QUuid& account, const QString& bucket);
+    // "New Bucket…" of an account, "Delete Bucket…" of a bucket.
+    void createBucketRequested(const QUuid& account);
+    void deleteBucketRequested(const QUuid& account, const QString& bucket);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

@@ -68,6 +68,10 @@ add_library(qbucket_controllers STATIC
     controllers/RenameJob.cpp
     controllers/DeleteVersionsJob.h
     controllers/DeleteVersionsJob.cpp
+    controllers/DeleteBucketJob.h
+    controllers/DeleteBucketJob.cpp
+    controllers/CreateBucketJob.h
+    controllers/CreateBucketJob.cpp
     controllers/InPlaceCopy.h
     controllers/InPlaceCopy.cpp
     controllers/ObjectCopyRunner.h
@@ -175,6 +179,8 @@ add_library(qbucket_app_ui STATIC
     ui/BucketConfigPage.h
     ui/BucketConfigPage.cpp
     ui/BucketPropertiesDialog.cpp
+    ui/CreateBucketDialog.h
+    ui/CreateBucketDialog.cpp
     ui/CodeEditor.h
     ui/CodeEditor.cpp
     ui/CodeHighlighter.h

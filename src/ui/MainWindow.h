@@ -76,6 +76,10 @@ private:
     void restoreDeleted_();
     void downloadVersions_(const QStringList& keys, const QStringList& versionIds, const QString& folder);
     void showIncompleteUploads_();
+    // "New Bucket…" in this account; "Delete Bucket…": asks whether to
+    // delete what is in it, then the job's preview asks the rest.
+    void createBucket_(const QUuid& account);
+    void deleteBucket_(const QUuid& account, const QString& bucket);
     void connectOperations_();
     void updateJobStatus_();
     void showJobReport_(Job* job);
@@ -147,6 +151,9 @@ private:
     QAction*      m_actThemeSystem  = nullptr;
     QAction*      m_actCapabilities = nullptr;
     QAction*      m_actIncompleteUploads = nullptr;
+    QAction*      m_actNewBucket = nullptr;
+    QAction*      m_actBucketProperties = nullptr;
+    QAction*      m_actDeleteBucket = nullptr;
     QAction*      m_actNewFolder    = nullptr;
     QAction*      m_actUploadFiles  = nullptr;
     QAction*      m_actUploadFolder = nullptr;
