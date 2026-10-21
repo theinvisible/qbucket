@@ -69,6 +69,8 @@ struct Uploader::Impl {
     int hashing = 0;
     int uploading = 0;
     bool completing = false;
+    // A resumed upload waits for ListParts before anything starts.
+    bool matching = false;
     bool completeRetried = false;
     std::vector<RequestId> pendingRequests;   // create / complete / head / list
     std::vector<QPointer<QTimer>> retryTimers;
@@ -307,6 +309,7 @@ struct Uploader::Impl {
         for (const PartRecord& p : state_.parts)
             recorded[p.partNumber] = p;
         resumed = true;
+        matching = true;
         listServerParts(0, std::move(recorded), {});
     }
 
@@ -326,6 +329,7 @@ struct Uploader::Impl {
                         // Aborted or expired: start over with a new upload.
                         qCInfo(lcTransfer).noquote() << "upload of" << req.key << "is gone on the server; starting over";
                         restarted = true;
+                        matching = false;
                         uploadId.clear();
                         createUpload();
                         return;
@@ -346,8 +350,11 @@ struct Uploader::Impl {
 
     void matchParts(const std::map<int, PartRecord>& recorded, const std::map<int, PartInfo>& server)
     {
+        matching = false;
         for (int n = 1; n <= plan.partCount; ++n) {
             Part& part = parts[size_t(n - 1)];
+            if (part.status != PartStatus::Pending)
+                continue;   // can't happen while pump() waits for us; never count a part twice
             const auto s = server.find(n);
             if (s == server.end() || s->second.size != plan.partLength(n))
                 continue;   // not there (or not ours): upload it
@@ -384,8 +391,8 @@ struct Uploader::Impl {
             }
             return;
         }
-        if (plan.multipart && uploadId.isEmpty())
-            return;   // still creating
+        if (plan.multipart && (uploadId.isEmpty() || matching))
+            return;   // still creating, or still asking the server what it has
         if (doneParts == plan.partCount) {
             if (!completing)
                 completeUpload();
@@ -610,6 +617,17 @@ struct Uploader::Impl {
 
     void completeUpload()
     {
+        // Every part must be there with its ETag — never send a Complete the
+        // server could assemble into a different object.
+        for (size_t i = 0; i < parts.size(); ++i) {
+            if (parts[i].status != PartStatus::Done || parts[i].etag.isEmpty()) {
+                fail(Error::make(ErrorCategory::Internal,
+                                 QStringLiteral("part %1 of %2 is not uploaded; the upload was not completed")
+                                     .arg(i + 1).arg(req.key)),
+                     true);
+                return;
+            }
+        }
         completing = true;
         CompleteMultipartUploadParams p;
         p.bucket = req.bucket;

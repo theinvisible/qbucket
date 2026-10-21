@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest>
 
 using namespace qbucket::s3;
@@ -411,6 +412,45 @@ private Q_SLOTS:
             QCOMPARE(after.value(p.partNumber), before.value(p.partNumber));
         QVERIFY(flushResumeWrites(5000));
         QVERIFY(m_resume->ids().isEmpty());
+    }
+
+    // While ListParts is still out, nothing may start: another transfer
+    // freeing a slot of the shared limiter used to pump the parts early, the
+    // server's parts were then counted twice, and Complete went out with a
+    // part missing (seen under load in test_upload_job).
+    void resumeWaitsForTheServersParts()
+    {
+        const QByteArray data = pattern(300 * kKiB);
+        const QString path = writeFile(QStringLiteral("big.bin"), data);
+        {
+            auto up = uploader(request(path, QStringLiteral("big.bin")));
+            QSignalSpy finished(up.get(), &Uploader::finished);
+            connect(up.get(), &Uploader::progress, this, [&](qint64, qint64) {
+                if (up->partsDone() >= 4)
+                    up->cancel(true);
+            });
+            up->start();
+            QVERIFY(finished.wait(10000));
+        }
+        QVERIFY(flushResumeWrites(5000));
+        const QMap<int, int> before = partHits();
+        const auto recorded = m_resume->load(QStringLiteral("t1"));
+        QVERIFY(recorded);
+
+        m_store->setDelay(QStringLiteral("ListParts"), 400);
+        auto again = Uploader::fromStore(m_session.get(), m_resume, QStringLiteral("t1"), m_limiter.get());
+        // Another transfer of the account finishes a part meanwhile.
+        QTimer::singleShot(150, this, [this] {
+            if (const auto slot = m_limiter->tryAcquire())
+                m_limiter->release(*slot, AdaptiveConcurrency::Outcome::Succeeded);
+        });
+        QVERIFY(runToEnd(*again));
+        if (!again->result())
+            QFAIL(qPrintable(again->result().error().toString()));
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("big.bin"))->data, data);
+        const QMap<int, int> after = partHits();
+        for (const PartRecord& p : recorded->parts)
+            QCOMPARE(after.value(p.partNumber), before.value(p.partNumber));
     }
 
     void resumeAdoptsPartsTheRecordMissed()

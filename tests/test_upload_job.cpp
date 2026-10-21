@@ -413,9 +413,12 @@ private slots:
         m_objects->setDelay(QStringLiteral("PutObject"), 0);
         m_objects->setDelay(QStringLiteral("UploadPart"), 0);
         auto* resumed = new UploadJob(m_h->account, records->first());
+        QStringList failures;
+        connect(resumed, &Job::finished, this, [&failures, resumed] { failures = resumed->report().failures; });
         QSignalSpy resumedDone(resumed, &Job::finished);
         m_ops->start(resumed);
         QVERIFY(resumedDone.wait(60000));
+        QVERIFY2(failures.isEmpty(), qPrintable(failures.join(QLatin1String(" | "))));
         QCOMPARE(resumed->outcome(), Job::Outcome::Succeeded);
         QCOMPARE(m_objects->keys(kBucket).size(), 21);
         QCOMPARE(m_objects->object(kBucket, QStringLiteral("backup/trip/big.bin"))->size, big.size());

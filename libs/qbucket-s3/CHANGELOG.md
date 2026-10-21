@@ -196,6 +196,12 @@ version bump may break the API.
 
 ### Fixed
 
+- `transfer::Uploader`: a resumed upload no longer starts parts before
+  ListParts answered. A slot freed in the shared `AdaptiveConcurrency`
+  meanwhile used to pump them early; the server's parts were then counted
+  twice and Complete was attempted with a part missing (the client refused
+  to send it). Complete now also checks every part itself.
+
 - `ServerFingerprint::requestIdShape` no longer contains the length of
   request ids that are neither hex nor RGW-style: ids of a growing counter
   changed the fingerprint with every probe, and `capabilities::merge` then
