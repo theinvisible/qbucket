@@ -162,6 +162,7 @@ protected:
 private:
     friend class OperationController;
     friend class ObjectCopyRunner;   // journals and copies on behalf of its job
+    friend class InPlaceCopy;        // likewise
     void setPhase_(Phase phase);
     void refuse_(const QString& reason);
 

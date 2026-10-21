@@ -1,11 +1,11 @@
 #!/bin/sh
 # PLAN.md §12.1 — one gate for every mutation: the library's writing API
-# (Session::putObject, putObjectTagging, putObjectAcl, deleteObject(s),
-# copyObject, the multipart calls, createBucket, deleteBucket) is called from src/controllers/ only, where
+# (Session::putObject, putObjectTagging, putObjectAcl, putBucketVersioning,
+# deleteObject(s), copyObject, the multipart calls, createBucket, deleteBucket) is called from src/controllers/ only, where
 # every call runs inside a Job of the OperationController. Run from the
 # repository root.
 set -eu
-pattern='(->|\.)(putObject|putObjectTagging|putObjectAcl|deleteObjects?|copyObject|createMultipartUpload|uploadPart|uploadPartCopy|completeMultipartUpload|abortMultipartUpload|createBucket|deleteBucket)[[:space:]]*\('
+pattern='(->|\.)(putObject|putObjectTagging|putObjectAcl|putBucketVersioning|deleteObjects?|copyObject|createMultipartUpload|uploadPart|uploadPartCopy|completeMultipartUpload|abortMultipartUpload|createBucket|deleteBucket)[[:space:]]*\('
 hits=$(grep -rnE "$pattern" src --include='*.cpp' --include='*.h' | grep -v '^src/controllers/' || true)
 # The transfer engine's writers (Uploader, Copier) as well.
 writers='qbucket/s3/transfer/(Uploader|Copier)\.h'

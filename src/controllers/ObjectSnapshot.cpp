@@ -7,17 +7,18 @@
 namespace qbucket {
 
 void ObjectSnapshot::read(s3::Session* session, const QString& bucket, const QString& key, bool withTags,
-                          bool withAcl, QObject* context, std::function<void(s3::Result<ObjectSnapshot>)> done)
+                          bool withAcl, QObject* context, std::function<void(s3::Result<ObjectSnapshot>)> done,
+                          const QString& versionId)
 {
     auto snap = std::make_shared<ObjectSnapshot>();
     auto finish = std::make_shared<std::function<void(s3::Result<ObjectSnapshot>)>>(std::move(done));
     // The ACL last, then done.
-    auto readAcl = [session, bucket, key, withAcl, context, snap, finish] {
+    auto readAcl = [session, bucket, key, versionId, withAcl, context, snap, finish] {
         if (!withAcl) {
             (*finish)(*snap);
             return;
         }
-        session->getObjectAcl(bucket, key, QString(), context, [snap, finish](s3::Result<s3::AccessControlPolicy> acl) {
+        session->getObjectAcl(bucket, key, versionId, context, [snap, finish](s3::Result<s3::AccessControlPolicy> acl) {
             if (!acl && acl.error().category == s3::ErrorCategory::Unsupported) {
                 snap->aclUnsupported = true;
                 (*finish)(*snap);
@@ -31,8 +32,8 @@ void ObjectSnapshot::read(s3::Session* session, const QString& bucket, const QSt
             (*finish)(*snap);
         });
     };
-    session->headObject(bucket, key, QString(), context,
-                        [session, bucket, key, withTags, context, snap, finish, readAcl](s3::Result<s3::ObjectMeta> head) {
+    session->headObject(bucket, key, versionId, context,
+                        [session, bucket, key, versionId, withTags, context, snap, finish, readAcl](s3::Result<s3::ObjectMeta> head) {
         if (!head) {
             (*finish)(head.error());
             return;
@@ -42,7 +43,7 @@ void ObjectSnapshot::read(s3::Session* session, const QString& bucket, const QSt
             readAcl();
             return;
         }
-        session->getObjectTagging(bucket, key, QString(), context, [snap, finish, readAcl](s3::Result<s3::ObjectTagging> tags) {
+        session->getObjectTagging(bucket, key, versionId, context, [snap, finish, readAcl](s3::Result<s3::ObjectTagging> tags) {
             if (!tags && tags.error().category == s3::ErrorCategory::Unsupported) {
                 snap->tagsUnsupported = true;
                 readAcl();

@@ -2,15 +2,13 @@
 
 #include "controllers/CapabilityController.h"
 #include "controllers/ConnectionTester.h"
+#include "controllers/InPlaceCopy.h"
 #include "controllers/OperationController.h"
-#include "controllers/TransferService.h"
 
 #include <qbucket/s3/Session.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
-#include <qbucket/s3/transfer/Copier.h>
 
 #include <QLocale>
-#include <QTimer>
 
 #include <algorithm>
 
@@ -42,50 +40,6 @@ bool sameClass(const QString& a, const QString& b)
 {
     const auto norm = [](const QString& c) { return c.isEmpty() ? QStringLiteral("STANDARD") : c.toUpper(); };
     return norm(a) == norm(b);
-}
-
-// The class header a copy must send: the default needs none.
-QString classToSend(const QString& target)
-{
-    return target.isEmpty() || target.compare(QLatin1String("STANDARD"), Qt::CaseInsensitive) == 0 ? QString() : target;
-}
-
-bool sameTags(s3::TagSet a, s3::TagSet b)
-{
-    const auto byKey = [](const s3::Tag& x, const s3::Tag& y) { return x.key < y.key; };
-    std::sort(a.begin(), a.end(), byKey);
-    std::sort(b.begin(), b.end(), byKey);
-    return a == b;
-}
-
-// What differs between the headers a copy should have and has (names only).
-QStringList headerDifferences(const s3::ObjectHeaders& want, const s3::ObjectHeaders& have)
-{
-    QStringList out;
-    // An empty content type becomes the server's default.
-    if (!want.contentType.isEmpty() && want.contentType != have.contentType)
-        out.append(QStringLiteral("Content-Type"));
-    // A struct, not std::pair: MSVC can't parse a pointer-to-member type as a
-    // template argument here (C3083).
-    struct Field {
-        const char* name;
-        QString s3::ObjectHeaders::*member;
-    };
-    const Field fields[] = {
-        {"Cache-Control", &s3::ObjectHeaders::cacheControl},
-        {"Content-Disposition", &s3::ObjectHeaders::contentDisposition},
-        {"Content-Encoding", &s3::ObjectHeaders::contentEncoding},
-        {"Content-Language", &s3::ObjectHeaders::contentLanguage},
-        {"Expires", &s3::ObjectHeaders::expires},
-        {"x-amz-website-redirect-location", &s3::ObjectHeaders::websiteRedirectLocation},
-    };
-    for (const auto& [name, member] : fields) {
-        if (want.*member != have.*member)
-            out.append(QLatin1String(name));
-    }
-    if (want.userMetadata != have.userMetadata)
-        out.append(QStringLiteral("x-amz-meta-*"));
-    return out;
 }
 
 } // namespace
@@ -170,11 +124,6 @@ EditObjectsJob::ChangeSpec EditObjectsJob::ChangeSpec::between(const s3::ObjectH
 struct EditObjectsJob::Active {
     Entry entry;
     ObjectSnapshot snap;
-    s3::ObjectHeaders headers;   // what the copy carries
-    QString targetClass;
-    QString canned;              // the ACL sent along (non-private)
-    bool inParts = false;
-    bool rechecked = false;
 };
 
 EditObjectsJob::EditObjectsJob(const Account& account, const QString& bucket, const QList<Item>& items,
@@ -182,11 +131,17 @@ EditObjectsJob::EditObjectsJob(const Account& account, const QString& bucket, co
     : Job(account, bucket, parent),
       m_items(items),
       m_change(std::move(change)),
-      m_planDir(planDir)
+      m_planDir(planDir),
+      m_copy(new InPlaceCopy(this))
 {
 }
 
 EditObjectsJob::~EditObjectsJob() = default;
+
+void EditObjectsJob::setRecheckDelayForTesting(int ms)
+{
+    m_copy->setRecheckDelay(ms);
+}
 
 QString EditObjectsJob::title() const
 {
@@ -466,9 +421,13 @@ void EditObjectsJob::snapshotTaken_(const std::shared_ptr<Active>& a)
         return;
     }
     const s3::ObjectHeaders current = s3::objectHeadersOf(m);
-    a->headers = m_change.applyTo(current);
-    a->targetClass = m_change.storageClass.value_or(m.storageClass);
-    if (a->headers == current && sameClass(a->targetClass, m.storageClass)) {
+    InPlaceCopy::Request req;
+    req.key = a->entry.key;
+    req.source = a->snap;
+    req.headers = m_change.applyTo(current);
+    req.targetClass = m_change.storageClass.value_or(m.storageClass);
+    req.journalNote = QStringLiteral("edit in place");
+    if (req.headers == current && sameClass(req.targetClass, m.storageClass)) {
         --m_inFlight;
         skipped_(a->entry.key, tr("already as asked"));
         return;
@@ -476,188 +435,9 @@ void EditObjectsJob::snapshotTaken_(const std::shared_ptr<Active>& a)
     if (const std::optional<s3::AccessControlPolicy>& acl = a->snap.acl) {
         const QString canned = s3::cannedAclOf(*acl).value_or(QString());
         if (canned != QLatin1String("private"))
-            a->canned = canned;
+            req.canned = canned;
     }
-    s3::Session* session = session_();
-    if (!session) {
-        done_(a, tr("not changed (not connected)"));
-        return;
-    }
-    const QString sse = m.serverSideEncryption == QLatin1String("AES256") ? m.serverSideEncryption : QString();
-    if (m.size > kCopyLimit) {
-        TransferService* transfers = controller_()->transfers();
-        if (!transfers) {
-            done_(a, tr("not changed (no transfer service)"));
-            return;
-        }
-        a->inParts = true;
-        s3::transfer::CopyRequest req;
-        req.sourceBucket = req.bucket = bucket();
-        req.sourceKey = req.key = a->entry.key;
-        req.ifMatch = m.etag;
-        req.storageClass = classToSend(a->targetClass);
-        req.replaceHeaders = a->headers;
-        req.serverSideEncryption = sse;
-        req.cannedAcl = a->canned;
-        auto copier = std::make_unique<s3::transfer::Copier>(session, req, transfers->limiter(account().id));
-        s3::transfer::Copier* raw = copier.get();
-        connect(raw, &s3::transfer::Copier::finished, this, [this, raw, a] {
-            const s3::Result<s3::transfer::CopyResult>& r = raw->result();
-            Journal::Record rec = record_(QStringLiteral("MultipartCopy"), a->entry.key);
-            rec.message = QStringLiteral("edit in place");
-            if (r) {
-                rec.httpStatus = 200;
-                rec.versionId = r->versionId;
-                journal_({rec});
-                copied_(a);
-            } else {
-                rec.result = Journal::Result::Failed;
-                rec.httpStatus = r.error().httpStatus;
-                rec.message += QStringLiteral(": ") + r.error().toString();
-                journal_({rec});
-                done_(a, r.error().category == s3::ErrorCategory::PreconditionFailed
-                             ? tr("changed meanwhile — left alone")
-                             : tr("not changed: %1").arg(ConnectionTester::describe(r.error())));
-            }
-            for (auto it = m_copiers.begin(); it != m_copiers.end(); ++it) {
-                if (it->get() == raw) {
-                    it->release()->deleteLater();
-                    m_copiers.erase(it);
-                    break;
-                }
-            }
-        });
-        m_copiers.push_back(std::move(copier));
-        raw->start();
-        return;
-    }
-    s3::CopyObjectParams p;
-    p.sourceBucket = p.bucket = bucket();
-    p.sourceKey = p.key = a->entry.key;
-    p.ifMatch = m.etag;
-    p.metadataDirective = s3::MetadataDirective::Replace;
-    p.headers = a->headers;
-    p.storageClass = classToSend(a->targetClass);
-    p.serverSideEncryption = sse;
-    p.cannedAcl = a->canned;
-    session->copyObject(p, m_run.get(), [this, a](const s3::Result<s3::CopyObjectResult>& r) {
-        Journal::Record rec = record_(s3::operationName(s3::Operation::CopyObject), a->entry.key);
-        rec.message = QStringLiteral("edit in place");
-        if (!r) {
-            const s3::Error& err = r.error();
-            rec.result = err.outcomeUnknown ? Journal::Result::Unknown : Journal::Result::Failed;
-            rec.httpStatus = err.httpStatus;
-            rec.requestId = err.requestId;
-            rec.message += QStringLiteral(": ") + err.toString();
-            journal_({rec});
-            done_(a, err.category == s3::ErrorCategory::PreconditionFailed
-                         ? tr("changed meanwhile — left alone")
-                         : tr("not changed: %1").arg(ConnectionTester::describe(err)));
-            return;
-        }
-        rec.httpStatus = 200;
-        rec.requestId = r->requestId;
-        rec.versionId = r->versionId;
-        journal_({rec});
-        copied_(a);
-    });
-}
-
-void EditObjectsJob::copied_(const std::shared_ptr<Active>& a)
-{
-    if (!a->snap.tags.value_or(s3::TagSet()).isEmpty()) {
-        restoreTags_(a);
-        return;
-    }
-    check_(a);
-}
-
-// RGW drops an object's tags on such a copy: put them back (and only then
-// check everything).
-void EditObjectsJob::restoreTags_(const std::shared_ptr<Active>& a)
-{
-    s3::Session* session = session_();
-    if (!session) {
-        done_(a, tr("changed, but its tags could not be checked (not connected)"));
-        return;
-    }
-    session->getObjectTagging(bucket(), a->entry.key, QString(), m_run.get(), [this, a](const s3::Result<s3::ObjectTagging>& now) {
-        if (now && sameTags(now->tags, *a->snap.tags)) {
-            check_(a);
-            return;
-        }
-        s3::Session* s = session_();
-        if (!s) {
-            done_(a, tr("changed, but its tags could not be written back (not connected)"));
-            return;
-        }
-        s3::PutObjectTaggingParams p;
-        p.bucket = bucket();
-        p.key = a->entry.key;
-        p.tags = *a->snap.tags;
-        s->putObjectTagging(p, m_run.get(), [this, a](const s3::Result<s3::SubresourceWriteResult>& r) {
-            Journal::Record rec = record_(s3::operationName(s3::Operation::PutObjectTagging), a->entry.key);
-            rec.message = QStringLiteral("tags carried over the edit");
-            if (!r) {
-                rec.result = Journal::Result::Failed;
-                rec.httpStatus = r.error().httpStatus;
-                rec.message += QStringLiteral(": ") + r.error().toString();
-                journal_({rec});
-                QStringList tags;
-                for (const s3::Tag& t : *a->snap.tags)
-                    tags.append(t.key + u'=' + t.value);
-                done_(a, tr("changed, but its tags could not be written back (%1): they were %2")
-                             .arg(ConnectionTester::describe(r.error()), tags.join(QStringLiteral(", "))));
-                return;
-            }
-            rec.httpStatus = 200;
-            rec.requestId = r->requestId;
-            journal_({rec});
-            check_(a);
-        });
-    });
-}
-
-void EditObjectsJob::check_(const std::shared_ptr<Active>& a)
-{
-    s3::Session* session = session_();
-    if (!session) {
-        done_(a, tr("changed, but not checked (not connected)"));
-        return;
-    }
-    const bool tags = !a->snap.tags.value_or(s3::TagSet()).isEmpty();
-    const bool acl = !a->canned.isEmpty();
-    ObjectSnapshot::read(session, bucket(), a->entry.key, tags, acl, m_run.get(), [this, a, tags, acl](s3::Result<ObjectSnapshot> now) {
-        QStringList wrong;
-        if (!now) {
-            wrong.append(ConnectionTester::describe(now.error()));
-        } else {
-            const s3::ObjectMeta& m = now->meta;
-            if (m.size != a->snap.meta.size)
-                wrong.append(tr("size"));
-            const QString& before = a->snap.meta.etag;
-            if (!a->inParts && !before.contains(u'-') && m.etag != before)
-                wrong.append(tr("content (ETag)"));
-            wrong += headerDifferences(a->headers, s3::objectHeadersOf(m));
-            if (!sameClass(m.storageClass, a->targetClass))
-                wrong.append(tr("storage class (%1)").arg(m.storageClass.isEmpty() ? QStringLiteral("STANDARD") : m.storageClass));
-            if (tags && (!now->tags || !sameTags(*now->tags, *a->snap.tags)))
-                wrong.append(tr("tags"));
-            if (acl && (!now->acl || s3::cannedAclOf(*now->acl) != std::optional<QString>(a->canned)))
-                wrong.append(tr("permissions"));
-        }
-        if (wrong.isEmpty()) {
-            done_(a, {});
-            return;
-        }
-        if (!a->rechecked) {
-            // Reads may lag behind a write for a moment.
-            a->rechecked = true;
-            QTimer::singleShot(m_recheckMs, m_run.get(), [this, a] { check_(a); });
-            return;
-        }
-        done_(a, tr("changed, but it doesn't match: %1").arg(wrong.join(QStringLiteral(", "))));
-    });
+    m_copy->run(req, [this, a](const QString& failure) { done_(a, failure); });
 }
 
 void EditObjectsJob::done_(const std::shared_ptr<Active>& a, const QString& failure)
@@ -703,8 +483,7 @@ void EditObjectsJob::onCancel()
         m_pager.reset();
         break;
     case Phase::Executing:
-        for (const auto& c : m_copiers)
-            c->cancel();
+        m_copy->cancel();
         settled_();
         break;
     default:

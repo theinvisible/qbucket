@@ -560,232 +560,232 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>%1 › %2: Der Server hat %3 abgelehnt; es wird nicht mehr angeboten.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="478"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="494"/>
         <source>Versioning</source>
         <translation>Versionierung</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="479"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="495"/>
         <source>Object lock</source>
         <translation>Object Lock</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="480"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="496"/>
         <source>Legal hold</source>
         <translation>Legal Hold</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="481"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="497"/>
         <source>Retention</source>
         <translation>Aufbewahrung</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="482"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="498"/>
         <source>Lifecycle rules</source>
         <translation>Lifecycle-Regeln</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="483"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="499"/>
         <source>CORS</source>
         <translation>CORS</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="484"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="500"/>
         <source>Bucket policy</source>
         <translation>Bucket-Richtlinie</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="485"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="501"/>
         <source>Policy status</source>
         <translation>Richtlinienstatus</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="486"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="502"/>
         <source>Bucket ACL</source>
         <translation>Bucket-ACL</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="487"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="503"/>
         <source>Object ACL</source>
         <translation>Objekt-ACL</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="488"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="504"/>
         <source>Bucket tags</source>
         <translation>Bucket-Tags</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="489"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="505"/>
         <source>Object tags</source>
         <translation>Objekt-Tags</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="490"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="506"/>
         <source>Default encryption</source>
         <translation>Standardverschlüsselung</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="491"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="507"/>
         <source>Customer-provided keys (SSE-C)</source>
         <translation>Eigene Schlüssel (SSE-C)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="492"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="508"/>
         <source>Static website</source>
         <translation>Statische Website</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="493"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="509"/>
         <source>Replication</source>
         <translation>Replikation</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="494"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="510"/>
         <source>Access logging</source>
         <translation>Zugriffsprotokollierung</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="495"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="511"/>
         <source>Event notifications</source>
         <translation>Ereignisbenachrichtigungen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="496"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="512"/>
         <source>Public access block</source>
         <translation>Öffentlichen Zugriff blockieren</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="497"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="513"/>
         <source>Ownership controls</source>
         <translation>Besitzkontrollen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="498"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
         <source>Listing multipart uploads</source>
         <translation>Multipart-Uploads auflisten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="499"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
         <source>Listing object versions</source>
         <translation>Objektversionen auflisten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="500"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="516"/>
         <source>Conditional writes</source>
         <translation>Bedingte Schreibzugriffe</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="501"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="517"/>
         <source>Copying between buckets</source>
         <translation>Kopieren zwischen Buckets</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="502"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="518"/>
         <source>Deleting many objects at once</source>
         <translation>Viele Objekte auf einmal löschen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="503"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="519"/>
         <source>Presigned links</source>
         <translation>Vorsignierte Links</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="504"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="520"/>
         <source>Multipart uploads</source>
         <translation>Multipart-Uploads</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="505"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="521"/>
         <source>Writing object tags</source>
         <translation>Objekt-Tags schreiben</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="506"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="522"/>
         <source>Changing object ACLs</source>
         <translation>Objekt-ACLs ändern</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="507"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="523"/>
         <source>Switching versioning</source>
         <translation>Versionierung umschalten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="531"/>
         <source>Supported</source>
         <translation>Unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="516"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="532"/>
         <source>Not supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="517"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="533"/>
         <source>Not permitted</source>
         <translation>Nicht erlaubt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="518"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="534"/>
         <source>Unknown</source>
         <translation>Unbekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="526"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="542"/>
         <source>Checked</source>
         <translation>Geprüft</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="527"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="543"/>
         <source>Learned from a request</source>
         <translation>Aus einer Anfrage gelernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="528"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="544"/>
         <source>Provider profile</source>
         <translation>Anbieterprofil</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="538"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="554"/>
         <source>known from the provider profile</source>
         <translation>aus dem Anbieterprofil bekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="543"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="559"/>
         <source>HTTP %1 %2, %3</source>
         <translation>HTTP %1 %2, %3</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="567"/>
         <source>%1 is switched off for this provider: its proxy mishandles these requests.</source>
         <translation>%1 ist für diesen Anbieter abgeschaltet: Sein Proxy behandelt diese Anfragen falsch.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="552"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="568"/>
         <source>The server does not support %1 (%2).</source>
         <translation>Der Server unterstützt %1 nicht (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="554"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="570"/>
         <source>These credentials may not use %1 (%2).</source>
         <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="557"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="573"/>
         <source>%1 is not confirmed for this server: QBucket only writes tags and ACLs where the provider is known to handle them safely.</source>
         <translation>%1 ist für diesen Server nicht bestätigt: QBucket schreibt Tags und ACLs nur, wo der Provider sie bekanntermaßen sicher behandelt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="561"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="577"/>
         <source>%1 is not confirmed for this server: QBucket only changes a bucket&apos;s settings where the provider is known to handle the request safely.</source>
         <translation>%1 ist für diesen Server nicht bestätigt: QBucket ändert Bucket-Einstellungen nur dort, wo der Provider die Anfrage nachweislich sicher behandelt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="564"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="580"/>
         <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="566"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="582"/>
         <source>%1 is not verified on this server.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
     </message>
@@ -1230,54 +1230,54 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message>
         <location filename="../src/controllers/DeleteJob.cpp" line="268"/>
-        <location filename="../src/controllers/DeleteJob.cpp" line="318"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="329"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="298"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="309"/>
         <source>the answer was lost — the objects may or may not be deleted</source>
         <translation>die Antwort ging verloren — die Objekte sind möglicherweise gelöscht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="349"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="362"/>
         <source>cancelled — %1 of %2 deleted</source>
         <translation>abgebrochen — %1 von %2 gelöscht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="369"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="382"/>
         <source>deleted; cancelled while verifying</source>
         <translation>gelöscht; beim Prüfen abgebrochen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="397"/>
-        <location filename="../src/controllers/DeleteJob.cpp" line="430"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="410"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="443"/>
         <source>not verified (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="407"/>
-        <location filename="../src/controllers/DeleteJob.cpp" line="439"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="420"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="452"/>
         <source>not verified: %1</source>
         <translation>nicht geprüft: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="452"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="465"/>
         <source>verified (folders listed, the first %1 single objects looked up)</source>
         <translation>geprüft (Ordner aufgelistet, die ersten %1 einzelnen Objekte abgefragt)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="453"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="466"/>
         <source>verified: nothing left</source>
         <translation>geprüft: nichts übrig</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteJob.cpp" line="466"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="479"/>
         <source>still there after the delete</source>
         <translation>nach dem Löschen noch vorhanden</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteJob.cpp" line="468"/>
+        <location filename="../src/controllers/DeleteJob.cpp" line="481"/>
         <source>%n object(s) still there after deleting</source>
         <translation>
             <numerusform>%n Objekt nach dem Löschen noch vorhanden</numerusform>
@@ -1911,22 +1911,22 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::EditObjectsJob</name>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="130"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="84"/>
         <source>%1: removed</source>
         <translation>%1: entfernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="130"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="84"/>
         <source>%1: %2</source>
         <translation>%1: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="142"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="96"/>
         <source>Storage class: %1</source>
         <translation>Storage Class: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="193"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="148"/>
         <source>%n items</source>
         <translation>
             <numerusform>%n Element</numerusform>
@@ -1934,62 +1934,62 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="194"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="149"/>
         <source>Edit the headers of “%1”</source>
         <translation>Header von „%1“ bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="195"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="150"/>
         <source>Change the storage class of “%1”</source>
         <translation>Storage Class von „%1“ ändern</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="210"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="165"/>
         <source>Nothing to change.</source>
         <translation>Nichts zu ändern.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="229"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="184"/>
         <source>These credentials may not read the objects&apos; tags: an edit could lose them. Nothing was changed.</source>
         <translation>Diese Zugangsdaten dürfen die Tags der Objekte nicht lesen: eine Bearbeitung könnte sie verlieren. Nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="233"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="188"/>
         <source>These credentials may not read the objects&apos; permissions: an edit could make public objects private. Nothing was changed.</source>
         <translation>Diese Zugangsdaten dürfen die Berechtigungen der Objekte nicht lesen: eine Bearbeitung könnte öffentliche Objekte privat machen. Nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="255"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="210"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="271"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="226"/>
         <source>Could not look up “%1”: %2</source>
         <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="289"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="244"/>
         <source>Could not list the folder: %1</source>
         <translation>Der Ordner konnte nicht aufgelistet werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="319"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="274"/>
         <source>The plan could not be written: %1</source>
         <translation>Der Plan konnte nicht geschrieben werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="327"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="282"/>
         <source>Edit</source>
         <translation>Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="327"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="282"/>
         <source>Change Class</source>
         <translation>Class ändern</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="329"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="284"/>
         <source>%n items in s3://%1</source>
         <translation>
             <numerusform>%n Element in s3://%1</numerusform>
@@ -1997,180 +1997,112 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="334"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="289"/>
         <source>Each object is copied onto itself with the new headers; its tags and permissions are carried over and everything is checked afterwards.</source>
         <translation>Jedes Objekt wird mit den neuen Headern auf sich selbst kopiert; Tags und Berechtigungen werden übernommen und danach alles geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="338"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="293"/>
         <source>The bucket keeps versions: each object gets a new version, the previous ones stay.</source>
         <translation>Der Bucket führt Versionen: jedes Objekt bekommt eine neue Version, die früheren bleiben.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="341"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="296"/>
         <source>The objects are rewritten in place: their previous headers are gone and their modification time changes.</source>
         <translation>Die Objekte werden an Ort und Stelle neu geschrieben: ihre bisherigen Header sind weg, und ihre Änderungszeit ändert sich.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="345"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="300"/>
         <source>Objects under retention or a legal hold are skipped: the new version would not be protected.</source>
         <translation>Objekte unter Aufbewahrung oder Legal Hold werden übersprungen: die neue Version wäre nicht geschützt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="349"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="304"/>
         <source>Objects with tags are skipped: writing tags isn&apos;t confirmed for this server.</source>
         <translation>Objekte mit Tags werden übersprungen: das Schreiben von Tags ist für diesen Server nicht bestätigt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="351"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="306"/>
         <source>Public objects are skipped: changing ACLs isn&apos;t confirmed for this server.</source>
         <translation>Öffentliche Objekte werden übersprungen: das Ändern von ACLs ist für diesen Server nicht bestätigt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="354"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="309"/>
         <source>%1 is an archive class: the objects can&apos;t be read until they are restored (hours), and a minimum storage time is charged.</source>
         <translation>%1 ist eine Archiv-Class: die Objekte sind erst nach einer Wiederherstellung (Stunden) lesbar, und eine Mindest-Speicherdauer wird berechnet.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="405"/>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="483"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="360"/>
         <source>not changed (not connected)</source>
         <translation>nicht geändert (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="412"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="367"/>
         <source>deleted since it was planned</source>
         <translation>seit der Planung gelöscht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="416"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="371"/>
         <source>not changed: its current state could not be read completely (%1)</source>
         <translation>nicht geändert: sein aktueller Zustand ließ sich nicht vollständig lesen (%1)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="429"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="384"/>
         <source>encrypted with a customer key (SSE-C): QBucket has no key to copy it</source>
         <translation>mit einem Kundenschlüssel verschlüsselt (SSE-C): QBucket hat keinen Schlüssel, um es zu kopieren</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="431"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="386"/>
         <source>encrypted with KMS: not carried over by QBucket yet</source>
         <translation>mit KMS verschlüsselt: übernimmt QBucket noch nicht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="433"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="388"/>
         <source>under retention until %1: the new version would not be protected</source>
         <translation>unter Aufbewahrung bis %1: die neue Version wäre nicht geschützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="436"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="391"/>
         <source>under a legal hold: the new version would not be protected</source>
         <translation>unter Legal Hold: die neue Version wäre nicht geschützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="439"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="394"/>
         <source>in the archive class %1: restore it first</source>
         <translation>in der Archiv-Class %1: zuerst wiederherstellen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="443"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="398"/>
         <source>has permissions for particular accounts that a copy would lose</source>
         <translation>hat Berechtigungen für bestimmte Accounts, die eine Kopie verlieren würde</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="445"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="400"/>
         <source>is %1, and changing ACLs isn&apos;t confirmed for this server</source>
         <translation>ist %1, und das Ändern von ACLs ist für diesen Server nicht bestätigt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="449"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="404"/>
         <source>has tags, and writing tags isn&apos;t confirmed for this server</source>
         <translation>hat Tags, und das Schreiben von Tags ist für diesen Server nicht bestätigt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="451"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="406"/>
         <source>has headers or metadata that aren&apos;t plain ASCII and can&apos;t be sent back unchanged</source>
         <translation>hat Header oder Metadaten, die kein einfaches ASCII sind und nicht unverändert zurückgeschickt werden können</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="460"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="415"/>
         <source>changed since it was planned</source>
         <translation>seit der Planung verändert</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="473"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="432"/>
         <source>already as asked</source>
         <translation>schon wie gewünscht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="490"/>
-        <source>not changed (no transfer service)</source>
-        <translation>nicht geändert (kein Transfer-Dienst)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="519"/>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="554"/>
-        <source>changed meanwhile — left alone</source>
-        <translation>inzwischen verändert — nicht angetastet</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="520"/>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="555"/>
-        <source>not changed: %1</source>
-        <translation>nicht geändert: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="581"/>
-        <source>changed, but its tags could not be checked (not connected)</source>
-        <translation>geändert, aber seine Tags ließen sich nicht prüfen (nicht verbunden)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="591"/>
-        <source>changed, but its tags could not be written back (not connected)</source>
-        <translation>geändert, aber seine Tags ließen sich nicht zurückschreiben (nicht verbunden)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="609"/>
-        <source>changed, but its tags could not be written back (%1): they were %2</source>
-        <translation>geändert, aber seine Tags ließen sich nicht zurückschreiben (%1): sie waren %2</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="625"/>
-        <source>changed, but not checked (not connected)</source>
-        <translation>geändert, aber nicht geprüft (nicht verbunden)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="637"/>
-        <source>size</source>
-        <translation>Größe</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="640"/>
-        <source>content (ETag)</source>
-        <translation>Inhalt (ETag)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="643"/>
-        <source>storage class (%1)</source>
-        <translation>Storage Class (%1)</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="645"/>
-        <source>tags</source>
-        <translation>Tags</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="647"/>
-        <source>permissions</source>
-        <translation>Berechtigungen</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="659"/>
-        <source>changed, but it doesn&apos;t match: %1</source>
-        <translation>geändert, aber es stimmt nicht überein: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="730"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="509"/>
         <source>every changed object checked (headers, class, tags, permissions)</source>
         <translation>jedes geänderte Objekt geprüft (Header, Class, Tags, Berechtigungen)</translation>
     </message>
@@ -2181,6 +2113,81 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/controllers/FolderSizeTask.cpp" line="38"/>
         <source>cancelled</source>
         <translation>abgebrochen</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::InPlaceCopy</name>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="94"/>
+        <source>not changed (not connected)</source>
+        <translation>nicht geändert (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="123"/>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="171"/>
+        <source>changed meanwhile — left alone</source>
+        <translation>inzwischen verändert — nicht angetastet</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="124"/>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="172"/>
+        <source>not changed: %1</source>
+        <translation>nicht geändert: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="140"/>
+        <source>not changed (no transfer service)</source>
+        <translation>nicht geändert (kein Transfer-Dienst)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="207"/>
+        <source>changed, but its tags could not be checked (not connected)</source>
+        <translation>geändert, aber seine Tags ließen sich nicht prüfen (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="218"/>
+        <source>changed, but its tags could not be written back (not connected)</source>
+        <translation>geändert, aber seine Tags ließen sich nicht zurückschreiben (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="236"/>
+        <source>changed, but its tags could not be written back (%1): they were %2</source>
+        <translation>geändert, aber seine Tags ließen sich nicht zurückschreiben (%1): sie waren %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="252"/>
+        <source>changed, but not checked (not connected)</source>
+        <translation>geändert, aber nicht geprüft (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="266"/>
+        <source>size</source>
+        <translation>Größe</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="269"/>
+        <source>content (ETag)</source>
+        <translation>Inhalt (ETag)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="272"/>
+        <source>storage class (%1)</source>
+        <translation>Storage Class (%1)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="274"/>
+        <source>tags</source>
+        <translation>Tags</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="276"/>
+        <source>permissions</source>
+        <translation>Berechtigungen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/InPlaceCopy.cpp" line="288"/>
+        <source>changed, but it doesn&apos;t match: %1</source>
+        <translation>geändert, aber es stimmt nicht überein: %1</translation>
     </message>
 </context>
 <context>

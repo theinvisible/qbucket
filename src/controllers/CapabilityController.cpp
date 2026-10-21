@@ -469,6 +469,22 @@ s3::Decision CapabilityController::decide(const QUuid& account, const QString& b
     return destructive ? s3::Decision::Blocked : s3::Decision::AllowedUnverified;
 }
 
+CapabilityController::Versioning CapabilityController::versioningOf(const QUuid& account, const QString& bucket) const
+{
+    Versioning v;
+    const std::optional<s3::CapabilitySet> set = bucketSet(account, bucket);
+    if (!set || !set->probedAt.isValid())
+        return v;
+    v.known = true;
+    const QString& status = set->bucketState.versioning;
+    v.status = status == QLatin1String("Enabled")     ? s3::VersioningStatus::Enabled
+             : status == QLatin1String("Suspended") ? s3::VersioningStatus::Suspended
+                                                    : s3::VersioningStatus::Never;
+    v.mfaDelete = set->bucketState.mfaDelete;
+    v.objectLock = set->bucketState.objectLockEnabled;
+    return v;
+}
+
 // --- texts -------------------------------------------------------------------
 
 QString CapabilityController::featureName(s3::Feature f)

@@ -97,7 +97,9 @@ private slots:
         m_journal->waitForIdle();
         QFile f(m_journal->fileFor(QDateTime::currentDateTimeUtc()));
         QVERIFY(f.open(QIODevice::ReadOnly));
-        QCOMPARE(f.readAll().count("\"op\":\"DeleteObjects\""), 3);   // one line per request
+        const QByteArray journal = f.readAll();
+        QCOMPARE(journal.count("\"message\":\"batch of"), 3);              // one line per request
+        QCOMPARE(journal.count("\"op\":\"DeleteObjects\""), 3 + 2501);   // and one per object
         // The job is deleted after it finished — and its plan with it.
         QTRY_VERIFY(!QFile::exists(planPath));
     }

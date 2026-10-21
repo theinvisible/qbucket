@@ -279,6 +279,17 @@ void DeleteJob::sendBatch_(const QStringList& keys)
         QList<Journal::Record> records;
         if (r) {
             m_succeeded += r->deleted.size();
+            // One record per object: on a versioned bucket it names the
+            // delete marker that now hides the object (the way back).
+            for (const auto& d : r->deleted) {
+                Journal::Record one = record_(s3::operationName(s3::Operation::DeleteObjects), d.key);
+                one.httpStatus = 200;
+                one.requestId = r->requestId;
+                one.versionId = d.deleteMarker ? d.deleteMarkerVersionId : d.versionId;
+                if (d.deleteMarker)
+                    one.message = QStringLiteral("delete marker");
+                records.append(one);
+            }
             for (const auto& f : r->failed) {
                 addFailure_(f.key, f.code.isEmpty() ? f.message : f.code);
                 Journal::Record one = record_(s3::operationName(s3::Operation::DeleteObjects), f.key);
@@ -327,6 +338,8 @@ void DeleteJob::sendSingle_(const QString& key)
             rec.httpStatus = 204;
             rec.requestId = r->requestId;
             rec.versionId = r->versionId;
+            if (r->deleteMarker)
+                rec.message = QStringLiteral("delete marker");
         } else {
             const s3::Error& e = r.error();
             addFailure_(key, ConnectionTester::describe(e));

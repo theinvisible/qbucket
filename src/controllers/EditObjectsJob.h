@@ -11,13 +11,10 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
 
 namespace qbucket {
 
-namespace s3::transfer {
-class Copier;
-}
+class InPlaceCopy;
 
 // Changes headers, user metadata or the storage class of objects in place
 // (PLAN.md §6 M4, §12.3) — a copy of each object onto itself with
@@ -35,7 +32,7 @@ class Copier;
 //     the class, tags and ACL — once more after a moment (Hetzner's reads
 //     lag), then a mismatch is a failure.
 // The scope is listed afresh (folders: every object below; folder markers
-// are left alone).
+// are left alone). The copy and its check are InPlaceCopy's.
 class EditObjectsJob : public Job {
     Q_OBJECT
 
@@ -78,7 +75,7 @@ public:
     [[nodiscard]] QList<s3::Feature> requiredFeatures() const override;
     [[nodiscard]] const ChangeSpec& change() const { return m_change; }
     // For tests: the pause before the second look at a mismatch.
-    void setRecheckDelayForTesting(int ms) { m_recheckMs = ms; }
+    void setRecheckDelayForTesting(int ms);
 
 protected:
     void plan() override;
@@ -102,9 +99,6 @@ private:
     void pump_();
     void start_(const Entry& e);
     void snapshotTaken_(const std::shared_ptr<Active>& a);
-    void copied_(const std::shared_ptr<Active>& a);
-    void restoreTags_(const std::shared_ptr<Active>& a);
-    void check_(const std::shared_ptr<Active>& a);
     void done_(const std::shared_ptr<Active>& a, const QString& failure);
     void skipped_(const QString& key, const QString& why);
     // Why this object can't be edited safely; empty: it can.
@@ -118,7 +112,7 @@ private:
     std::unique_ptr<PlanFile> m_plan;
     std::unique_ptr<QObject> m_run;
     std::unique_ptr<s3::ListObjectsPager> m_pager;
-    std::vector<std::unique_ptr<s3::transfer::Copier>> m_copiers;
+    InPlaceCopy* m_copy = nullptr;   // child
     int m_itemIndex = 0;
     bool m_large = false;
     qint64 m_bytes = 0;
@@ -137,7 +131,6 @@ private:
     QStringList m_notes;
     QStringList m_failedKeys;
     QStringList m_failures;
-    int m_recheckMs = 2000;
 };
 
 } // namespace qbucket

@@ -86,7 +86,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteJob.cpp" line="468"/>
+        <location filename="../../src/controllers/DeleteJob.cpp" line="481"/>
         <source>%n object(s) still there after deleting</source>
         <translation>
             <numerusform>%n object still there after deleting</numerusform>
@@ -194,7 +194,7 @@
 <context>
     <name>qbucket::EditObjectsJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/EditObjectsJob.cpp" line="193"/>
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="148"/>
         <source>%n items</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -202,7 +202,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/EditObjectsJob.cpp" line="329"/>
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="284"/>
         <source>%n items in s3://%1</source>
         <translation>
             <numerusform>%n item in s3://%1</numerusform>

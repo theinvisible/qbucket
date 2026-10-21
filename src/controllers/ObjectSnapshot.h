@@ -27,11 +27,12 @@ struct ObjectSnapshot {
     bool tagsUnsupported = false;
     bool aclUnsupported = false;
 
-    // HEAD, then the tags and the ACL as asked; any failure but "not
-    // implemented" for tags / ACL fails the read.
-    // `done` runs on the context's thread.
+    // HEAD, then the tags and the ACL as asked — of `versionId` when given,
+    // else of the current object; any failure but "not implemented" for
+    // tags / ACL fails the read. `done` runs on the context's thread.
     static void read(s3::Session* session, const QString& bucket, const QString& key, bool withTags, bool withAcl,
-                     QObject* context, std::function<void(s3::Result<ObjectSnapshot>)> done);
+                     QObject* context, std::function<void(s3::Result<ObjectSnapshot>)> done,
+                     const QString& versionId = {});
 };
 
 } // namespace qbucket

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <qbucket/s3/Capabilities.h>
+#include <qbucket/s3/Types.h>
 
 #include <QHash>
 #include <QJsonObject>
@@ -67,6 +68,16 @@ public:
 
     // The account's change history (oldest first), from the store.
     void loadHistory(const QUuid& account, QObject* context, std::function<void(const QList<QJsonObject>&)> done);
+
+    // A bucket's versioning as last probed. `known` is false before the
+    // first probe — callers then assume the worst (deletes are permanent).
+    struct Versioning {
+        bool known = false;
+        s3::VersioningStatus status = s3::VersioningStatus::Never;
+        std::optional<bool> mfaDelete;
+        std::optional<bool> objectLock;
+    };
+    [[nodiscard]] Versioning versioningOf(const QUuid& account, const QString& bucket) const;
 
     // Bucket result over server result over profile knowledge.
     [[nodiscard]] s3::CapabilityEntry entry(const QUuid& account, const QString& bucket, s3::Feature f) const;
