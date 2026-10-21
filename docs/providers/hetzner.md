@@ -112,6 +112,12 @@ Multipart uploads (`it_s3_backend`, nbg1, 2026-10-20):
   existing object. The profile knows `ConditionalWrites` as Unsupported, so
   the library refuses the header locally and uploads check for an existing
   target with HEAD (a small race window, documented in the app).
+- **`If-Match` on writes is unusable** (2026-10-21, `conditionalOverwrite`):
+  PutObject refuses the right ETag as well as a wrong one (412), and
+  CompleteMultipartUpload ignores the header and overwrites. Ceph RGW 19.2
+  does the same (it compares with the *unquoted* ETag). The profile knows
+  `ConditionalOverwrite` as Unsupported; replacing an object (an edit saved
+  in another app) checks the ETag with HEAD right before the write.
 - UploadPartCopy with byte ranges and `x-amz-copy-source-if-match` works
   (`multipartCopy`) — renames above 5 GiB copy in parts.
 - **Kill / resume** (devlog 006): a 2 GiB `s3cp` upload (256 parts) killed

@@ -107,6 +107,7 @@ private Q_SLOTS:
         // Verified on nbg1: If-None-Match is ignored (overwrites), multipart
         // requests keep their query string.
         QCOMPARE(HetznerProfile().capabilities().state(Feature::ConditionalWrites), CapabilityState::Unsupported);
+        QCOMPARE(HetznerProfile().capabilities().state(Feature::ConditionalOverwrite), CapabilityState::Unsupported);
         QCOMPARE(HetznerProfile().capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
 
         CapabilityEntry cors{CapabilityState::Supported, CapabilitySource::Probed, {}, 404, {}, false, 0};

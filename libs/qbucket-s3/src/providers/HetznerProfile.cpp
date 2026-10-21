@@ -84,6 +84,11 @@ CapabilitySet HetznerProfile::capabilities() const
     // on the key of an existing object left it intact
     // (multipartRequestsLeaveAnExistingObjectAlone).
     known(Feature::ConditionalWrites, CapabilityState::Unsupported);
+    // If-Match on PutObject refuses even the right (quoted) ETag, and
+    // CompleteMultipartUpload ignores it — like Ceph RGW 19.2 (nbg1,
+    // 2026-10-21, it_s3_backend conditionalOverwrite). Replacing an object
+    // checks with HEAD right before instead.
+    known(Feature::ConditionalOverwrite, CapabilityState::Unsupported);
     // Object tag and ACL writes keep their subresource through the proxy:
     // PUT ?tagging / ?acl on a missing key answer 404 and create nothing, on
     // an existing object they leave content, ETag and size alone and read

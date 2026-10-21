@@ -53,5 +53,7 @@
   "_objectLockWrite": "On qbucket-it-lockcfg (created with object lock, guard object), GOVERNANCE only. A new or removed default retention reaches every gateway's writes only after up to ~1.5 min (6 s and 87 s measured); the read-back shows it at once.",
   "objectLockWrite": true,
   "retentionWrite": true,
-  "legalHoldWrite": true
+  "legalHoldWrite": true,
+  "_conditionalOverwrite": "nbg1, 2026-10-21: If-Match on PutObject refuses the right (quoted) ETag as well as a wrong one (412), CompleteMultipartUpload ignores If-Match and overwrites — the RGW behaviour (Ceph 19.2 in Docker compares with the unquoted ETag). HetznerProfile: Unsupported.",
+  "conditionalOverwrite": false
 }

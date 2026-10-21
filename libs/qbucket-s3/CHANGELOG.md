@@ -305,7 +305,7 @@ version bump may break the API.
   `CompleteMultipartUploadParams::ifMatch` and the write-only feature
   `ConditionalOverwrite` (`object.conditional-overwrite`; If-Match on a
   write needs it, Unsupported refuses locally). `AwsProfile`: Supported;
-  `CephProfile` and `GarageProfile`: Unsupported (it_s3_backend
+  `CephProfile`, `GarageProfile` and `HetznerProfile` (nbg1): Unsupported (it_s3_backend
   `conditionalOverwrite`, expectation `conditionalOverwrite`: RGW 19.2
   compares If-Match on PUT with the unquoted ETag and ignores it on
   Complete; Garage ignores it).
