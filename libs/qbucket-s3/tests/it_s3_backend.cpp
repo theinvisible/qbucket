@@ -1883,38 +1883,10 @@ private Q_SLOTS:
             return await<DeleteObjectResult>([&](auto cb) { m_session->deleteObject(p, &m_ctx, std::move(cb)); });
         };
 
-        // The default retention applies to new versions.
-        const QByteArray withDefault = sampleConfig(BucketConfig::ObjectLock, bucket);
-        const Result<SubresourceWriteResult> w = putConfig(bucket, BucketConfig::ObjectLock, withDefault);
-        QVERIFY(guardIn(bucket));
-        if (!expected("objectLockWrite")) {
-            QVERIFY2(!w, "expected this backend to refuse a default retention");
-        } else {
-            VERIFY_OK(w);
-            defaultSet = true;
-            QVERIFY(waitForConfig(bucket, BucketConfig::ObjectLock, [&](const BucketConfigDocument& d) {
-                        return equivalentBucketConfig(BucketConfig::ObjectLock, withDefault, d.body);
-                    }) >= 0);
-            const QString a = putHere(QStringLiteral("lock/default"));
-            QVERIFY(!a.isEmpty());
-            const Result<ObjectRetention> r = retentionOf(key(QStringLiteral("lock/default")), a);
-            VERIFY_OK(r);
-            QCOMPARE(r->mode, std::optional(ObjectLockMode::Governance));
-            QVERIFY(r->retainUntil > QDateTime::currentDateTimeUtc().addSecs(qint64(20) * 3600));
-            VERIFY_OK(putConfig(bucket, BucketConfig::ObjectLock, buildObjectLockConfiguration(enabledOnly)));
-            defaultSet = false;
-            QVERIFY(waitForConfig(bucket, BucketConfig::ObjectLock, [&](const BucketConfigDocument& d) {
-                        const Result<ObjectLockConfiguration> c = parseObjectLockConfiguration(d.body);
-                        return c && c->enabled && !c->mode;
-                    }) >= 0);
-            QVERIFY(guardIn(bucket));
-        }
-
         // A retention: deleting and shortening need the bypass.
         const QString kb = key(QStringLiteral("lock/retained"));
         const QString b = putHere(QStringLiteral("lock/retained"));
-        QVERIFY(!b.isEmpty());
-        QVERIFY(!retentionOf(kb, b).value().mode);
+        QVERIFY(!b.isEmpty());   // (on Hetzner maybe with an earlier run's default retention, for a moment)
         PutObjectRetentionParams ret;
         ret.bucket = bucket;
         ret.key = kb;
@@ -1959,9 +1931,60 @@ private Q_SLOTS:
             QVERIFY2(!refused, "a version under legal hold was deleted");
             const PutObjectLegalHoldParams off{bucket, kc, c, false};
             VERIFY_OK(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectLegalHold(off, &m_ctx, std::move(cb)); }));
-            VERIFY_OK(deleteVersion(kc, c, false));
+            VERIFY_OK(deleteVersion(kc, c, true));   // the bypass: maybe a stale default retention (Hetzner)
             created.removeIf([&](const auto& e) { return e.second == c; });
         }
+
+        // The default retention applies to new versions. Last: Hetzner still
+        // applies a removed default to writes for a moment.
+        const QByteArray withDefault = sampleConfig(BucketConfig::ObjectLock, bucket);
+        const Result<SubresourceWriteResult> w = putConfig(bucket, BucketConfig::ObjectLock, withDefault);
+        QVERIFY(guardIn(bucket));
+        if (!expected("objectLockWrite")) {
+            QVERIFY2(!w, "expected this backend to refuse a default retention");
+        } else {
+            VERIFY_OK(w);
+            defaultSet = true;
+            QVERIFY(waitForConfig(bucket, BucketConfig::ObjectLock, [&](const BucketConfigDocument& d) {
+                        return equivalentBucketConfig(BucketConfig::ObjectLock, withDefault, d.body);
+                    }) >= 0);
+            // New versions get it — on Hetzner only after a while (a stale
+            // default on some gateways), so write until one does.
+            const auto retainedWrite = [&](bool wantRetention, int maxSecs) {
+                QElapsedTimer t;
+                t.start();
+                for (int n = 0;; ++n) {
+                    const QString name = QStringLiteral("lock/default-%1").arg(n);
+                    const QString v = putHere(name);
+                    const Result<ObjectRetention> r = retentionOf(key(name), v);
+                    if (r && r->mode.has_value() == wantRetention) {
+                        if (wantRetention) {
+                            if (r->mode != ObjectLockMode::Governance
+                                || r->retainUntil <= QDateTime::currentDateTimeUtc().addSecs(qint64(20) * 3600))
+                                return -2;
+                        }
+                        return int(t.elapsed() / 1000);
+                    }
+                    if (t.elapsed() >= qint64(maxSecs) * 1000)
+                        return -1;
+                    QTest::qWait(3000);
+                }
+            };
+            const int applied = retainedWrite(true, 120);
+            qInfo() << "the default retention applied to new versions after" << applied << "s";
+            QVERIFY(applied >= 0);
+            VERIFY_OK(putConfig(bucket, BucketConfig::ObjectLock, buildObjectLockConfiguration(enabledOnly)));
+            defaultSet = false;
+            QVERIFY(waitForConfig(bucket, BucketConfig::ObjectLock, [&](const BucketConfigDocument& d) {
+                        const Result<ObjectLockConfiguration> c = parseObjectLockConfiguration(d.body);
+                        return c && c->enabled && !c->mode;
+                    }) >= 0);
+            const int lifted = retainedWrite(false, 120);
+            qInfo() << "new versions came without a retention again after" << lifted << "s";
+            QVERIFY(lifted >= 0);
+            QVERIFY(guardIn(bucket));
+        }
+
         QVERIFY(guardIn(bucket));
     }
 
@@ -2003,6 +2026,8 @@ private Q_SLOTS:
         mp.key = QStringLiteral("unfinished.bin");
         VERIFY_OK((await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(mp, &m_ctx, std::move(cb)); })));
 
+        // Hetzner judges "empty" by lagging statistics (deleteBucketRightAfterAWrite).
+        QTest::qWait(m_options.profile->bucketEmptinessSettleSecs() * 1000);
         const Result<void> notEmpty = await<void>([&](auto cb) { m_session->deleteBucket(tmp, &m_ctx, std::move(cb)); });
         QVERIFY2(!notEmpty, "a bucket with objects was deleted");
         QCOMPARE(notEmpty.error().category, ErrorCategory::Conflict);
@@ -2026,6 +2051,48 @@ private Q_SLOTS:
                 QTest::qWait(3000);
         }
         QVERIFY(gone);
+    }
+
+    // DeleteBucket right after the first write into an empty bucket. S3
+    // refuses (BucketNotEmpty); Hetzner's proxy decides by statistics that
+    // lag ~10 s and deletes the bucket with the object — asserted, so a
+    // change shows up (ProviderProfile::bucketEmptinessSettleSecs).
+    void deleteBucketRightAfterAWrite()
+    {
+        if (env("QBUCKET_IT_CREATE_BUCKET") != QLatin1String("1") && env("QBUCKET_IT_TEMP_BUCKETS") != QLatin1String("1"))
+            QSKIP("temporary buckets are opt-in (QBUCKET_IT_TEMP_BUCKETS=1)");
+        const QString tmp = QStringLiteral("qbucket-it-tmp-") + m_prefix.mid(3, 16) + QStringLiteral("-w");
+        QVERIFY(safeBucketName(tmp));
+        QVERIFY(!headBucket(tmp));
+        VERIFY_OK(createBucket(tmp, false));
+        bool exists = true;
+        auto drop = qScopeGuard([&] {
+            if (!exists)
+                return;
+            emptyTempBucket(tmp);
+            for (int i = 0; i < 10; ++i) {
+                if (await<void>([&](auto cb) { m_session->deleteBucket(tmp, &m_ctx, std::move(cb)); }))
+                    break;
+                QTest::qWait(3000);
+            }
+        });
+        bool ready = false;
+        for (int i = 0; i < 20 && !ready; ++i) {
+            ready = bool(headBucket(tmp));
+            if (!ready)
+                QTest::qWait(3000);
+        }
+        QVERIFY(ready);
+        VERIFY_OK(putIn(tmp, QStringLiteral("fresh.txt"), "written a moment ago"));
+        const Result<void> del = await<void>([&](auto cb) { m_session->deleteBucket(tmp, &m_ctx, std::move(cb)); });
+        if (expects("deleteBucketRightAfterAWriteSucceeds")) {
+            QVERIFY2(del, "expected the bucket to be deleted with its object (a lagging emptiness check)");
+            exists = false;
+            QVERIFY(m_options.profile->bucketEmptinessSettleSecs() > 0);
+        } else {
+            QVERIFY2(!del, "a bucket with an object was deleted");
+            QCOMPARE(del.error().code, QStringLiteral("BucketNotEmpty"));
+        }
     }
 
     void restrictedUserIsNotPermitted()

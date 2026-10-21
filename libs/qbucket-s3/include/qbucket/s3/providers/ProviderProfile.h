@@ -78,6 +78,13 @@ public:
     [[nodiscard]] virtual int maxPresignExpirySeconds() const { return 7 * 24 * 3600; }
     [[nodiscard]] virtual int maxDeleteBatch() const { return 1000; }
     [[nodiscard]] virtual int maxKeysPerList() const { return 1000; }
+    // How long after the last write a bucket's emptiness can be judged by
+    // the server: a DeleteBucket within this time may remove a bucket whose
+    // newest objects the server's own check hasn't seen yet (Hetzner's proxy
+    // decides by statistics that lag ~10 s). Callers deleting a bucket list
+    // it empty, wait this long and list it again first. 0: the server's
+    // BucketNotEmpty can be trusted.
+    [[nodiscard]] virtual int bucketEmptinessSettleSecs() const { return 0; }
 
     // --- storage classes ---
     // The classes an object can be put into; empty: not known (any value

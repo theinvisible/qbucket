@@ -286,6 +286,15 @@ version bump may break the API.
   `createFillEmptyAndDeleteBucket` (QBUCKET_IT_TEMP_BUCKETS). Expectation
   keys `configWrite.<kind>`, `objectLockWrite`, `retentionWrite`,
   `legalHoldWrite`.
+- `ProviderProfile::bucketEmptinessSettleSecs()`: how long after the last
+  write a server's BucketNotEmpty can be trusted. `HetznerProfile`: 20 —
+  Hetzner's proxy deletes a bucket that looked empty within ~10 s, with the
+  objects just written (`deleteBucketRightAfterAWrite`, expectation
+  `deleteBucketRightAfterAWriteSucceeds`).
+- `HetznerProfile`: the eight configuration / object lock write features
+  Supported (canaries and write/read/remove on guarded scratch buckets,
+  nbg1); a 404 NoSuchBucket with an empty message (one gateway that doesn't
+  know a new bucket yet) is retryable.
 
 ### Changed
 

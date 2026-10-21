@@ -24,3 +24,8 @@ Captured 2026-10-20 from a real project, location **nbg1**, bucket
   retention), `?versioning` (Enabled), and `?retention` / `?legal-hold` on an
   object without either — RGW answers 404 `ObjectLockConfigurationNotFoundError`
   there (AWS: `NoSuchObjectLockConfiguration`).
+- `error-no-such-bucket-stale-gateway.xml` — 2026-10-21: one RGW gateway
+  (`2fa69feb`) answered DELETEs on `qbucket-it-lockcfg`, created about an
+  hour before, with `404 NoSuchBucket` and an empty message, the others
+  normally. `error-no-such-bucket.xml` is the proxy's answer for a bucket
+  that really doesn't exist (with a message).

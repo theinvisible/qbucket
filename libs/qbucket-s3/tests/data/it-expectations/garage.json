@@ -39,5 +39,6 @@
   },
   "objectLockWrite": false,
   "retentionWrite": false,
-  "legalHoldWrite": false
+  "legalHoldWrite": false,
+  "deleteBucketRightAfterAWriteSucceeds": false
 }

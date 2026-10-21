@@ -30,6 +30,7 @@ public:
     [[nodiscard]] CapabilitySet capabilities() const override;
     [[nodiscard]] QStringList storageClasses() const override;
     [[nodiscard]] QStringList cannedObjectAcls() const override;
+    [[nodiscard]] int bucketEmptinessSettleSecs() const override;
     void reviewProbe(Feature feature, CapabilityEntry& entry) const override;
     void mapError(Error& error) const override;
 };

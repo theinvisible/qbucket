@@ -99,7 +99,31 @@ CapabilitySet HetznerProfile::capabilities() const
     // read back at once, the guard intact (nbg1, 2026-10-21; it_s3_backend
     // bucketVersioningWriteOnMissingBucketCreatesNothing, toggleVersioning).
     known(Feature::BucketVersioningWrite, CapabilityState::Supported);
+    // Bucket configurations reach RGW as well: PUT ?policy / ?cors /
+    // ?lifecycle / ?publicAccessBlock / ?acl / ?object-lock on a missing
+    // bucket answer 404 and create nothing; on qbucket-it-versioning (guard
+    // object) each was written, read back at once and removed (DELETE, or
+    // the ACL back to private), bucket and guard intact. Default retention,
+    // retention and legal hold work on qbucket-it-lockcfg (GOVERNANCE only),
+    // the bypass included. (nbg1, 2026-10-21; it_s3_backend
+    // bucketConfigWritesOnMissingBucketCreateNothing,
+    // bucketConfigWriteAndRemove, objectLockAndRetention.)
+    for (const Feature f : {Feature::BucketPolicyWrite, Feature::CorsWrite, Feature::LifecycleWrite,
+                            Feature::ObjectLockWrite, Feature::BucketAclWrite, Feature::PublicAccessBlockWrite,
+                            Feature::RetentionWrite, Feature::LegalHoldWrite}) {
+        known(f, CapabilityState::Supported);
+    }
     return set;
+}
+
+int HetznerProfile::bucketEmptinessSettleSecs() const
+{
+    // The proxy answers DeleteBucket itself and judges "empty" by statistics
+    // that lag: within ~7–10 s of a write into a bucket that looked empty,
+    // DeleteBucket answers 204 and the bucket is gone with the new objects;
+    // from ~12 s on 409 BucketNotEmpty (nbg1, 2026-10-21, it_s3_backend
+    // deleteBucketRightAfterAWrite; docs/providers/hetzner.md).
+    return 20;
 }
 
 void HetznerProfile::reviewProbe(Feature feature, CapabilityEntry& entry) const
@@ -125,6 +149,14 @@ void HetznerProfile::mapError(Error& error) const
         && (error.message.isEmpty() || error.message == QLatin1String("HTTP 403"))) {
         error.retryable = true;
     }
+    // Observed 2026-10-21 on nbg1: for a bucket created an hour before, one
+    // RGW gateway (of ~20) still answered every DELETE with 404 NoSuchBucket
+    // and an empty <Message> (tests/data/hetzner); the proxy's own answer for
+    // a bucket that doesn't exist carries a message. Another attempt reaches
+    // another gateway; a bucket that is really gone fails again.
+    if (error.httpStatus == 404 && error.code == QLatin1String("NoSuchBucket")
+        && (error.message.isEmpty() || error.message == QLatin1String("HTTP 404")))
+        error.retryable = true;
 }
 
 } // namespace qbucket::s3

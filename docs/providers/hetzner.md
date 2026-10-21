@@ -14,9 +14,14 @@ follow Hetzner's documentation and have not been probed. Test buckets:
 |---|---|---|
 | `qbucket-it-test` | console; versioning enabled later (`rclone backend versioning … Enabled`) | `hetzner.json` |
 | `qbucket-it-lock` | `rclone mkdir --s3-bucket-object-lock-enabled` (object lock ⇒ versioning) | `hetzner-lock.json` |
-| `qbucket-it-versioning` | CreateBucket (2026-10-21), versioning switched by `toggleVersioning` — the scratch bucket for bucket-setting writes | — |
+| `qbucket-it-versioning` | CreateBucket (2026-10-21), versioning switched by `toggleVersioning` — the scratch bucket for bucket-setting writes (`QBUCKET_IT_CONFIG_BUCKET`) | — |
+| `qbucket-it-lockcfg` | CreateBucket with object lock (2026-10-21, `QBUCKET_IT_CREATE_LOCKCFG=1`) — the scratch bucket for default retention, retention and legal hold, GOVERNANCE only | — |
 
-All three hold `guard/DO-NOT-DELETE.txt` (see "Writes to unsupported
+Temporary buckets `qbucket-it-tmp-<run>` are created and deleted by
+`createFillEmptyAndDeleteBucket` / `deleteBucketRightAfterAWrite`
+(`QBUCKET_IT_TEMP_BUCKETS=1`).
+
+All four hold `guard/DO-NOT-DELETE.txt` (see "Writes to unsupported
 subresources" below). Versioning and object lock work as documented;
 object lock can only be enabled at creation.
 
@@ -143,7 +148,59 @@ the guard object stayed (`toggleVersioning` with
 `QBUCKET_IT_VERSIONING_BUCKET`). The profile knows `BucketVersioningWrite`
 as Supported.
 
+**Bucket configuration (M6, 2026-10-21):** PUT `?policy`, `?cors`,
+`?lifecycle`, `?publicAccessBlock`, `?acl` and `?object-lock` on a missing
+bucket answer 404 NoSuchBucket and create nothing (the canary
+`bucketConfigWritesOnMissingBucketCreateNothing`); on `qbucket-it-versioning`
+each was written, read back at once and removed again — DELETE for policy,
+CORS, lifecycle and the public access block, the ACL back to `private` —
+with bucket and guard object intact (`bucketConfigWriteAndRemove`). A
+lifecycle rule with a prefix filter and an expiration in days is taken; the
+profile offers no transitions (one storage class). On `qbucket-it-lockcfg`
+a default retention (GOVERNANCE, 1 day), a retention set afterwards, the
+governance bypass for deleting and shortening, and a legal hold that holds
+against the bypass all work (`objectLockAndRetention`). The profile knows
+all eight write features as Supported. COMPLIANCE is never set on Hetzner:
+nobody could remove it before it runs out.
+
 ## Quirks
+
+### DeleteBucket deletes a bucket that looked empty a moment ago
+
+**The proxy answers DeleteBucket itself and decides "empty" by statistics
+that lag about ten seconds.** Measured 2026-10-21 with buckets created for
+it: one object written, then DeleteBucket after 0, 3 and 7 s answered
+**204 — the bucket was gone with the object**; after 12, 20, 45, 75, 110
+and 150 s the proxy answered 409 BucketNotEmpty (32-hex request id). An old
+bucket emptied, left for a minute and given one new object was deleted
+with it just the same. (`it_s3_backend deleteBucketRightAfterAWrite`
+asserts this; expectation `deleteBucketRightAfterAWriteSucceeds`.)
+
+Consequences:
+
+- `HetznerProfile::bucketEmptinessSettleSecs()` is 20: whoever deletes a
+  bucket lists it empty (versions, delete markers, uploads), waits that
+  long, lists it again and only then sends DeleteBucket. The server's
+  BucketNotEmpty alone is no protection on Hetzner.
+- The guard objects keep protecting the scratch buckets against a
+  subresource DELETE run as DeleteBucket — they have been there for days.
+  A bucket that looked empty within the last ~10 s would not be protected.
+
+### A new bucket unknown to one gateway
+
+`qbucket-it-lockcfg`, about an hour old, got `404 NoSuchBucket` with an
+empty message from one RGW gateway (`2fa69feb`, ~5 % of the DELETEs); every
+other gateway, and GETs, worked. Older buckets never showed it. The proxy's
+own NoSuchBucket for a bucket that doesn't exist has a message, so
+`HetznerProfile::mapError` retries the empty-message one (idempotent
+requests). Fixtures in `libs/qbucket-s3/tests/data/hetzner`.
+
+### A default retention reaches writes late
+
+A new default retention read back at once, but new versions got it only
+after 6 s in one run and 87 s in the next; a removed one was still applied
+for a moment. The app says so after changing it; the IT writes until a
+version shows the expected state.
 
 ### Sporadic 403 AccessDenied
 
@@ -203,8 +260,9 @@ Consequences:
   probe. Deep/write probes always run on a bucket that holds a guard object,
   so a misinterpreted DeleteBucket fails with BucketNotEmpty instead of
   deleting the bucket.
-- Which other subresource writes the proxy intercepts is not known yet;
-  find out (with a guarded scratch bucket) before M6 implements them.
+- Policy, CORS, lifecycle, public access block, ACL and object lock
+  configuration writes reach RGW (see above); bucket tagging, website,
+  logging, replication and encryption stay read-only in QBucket.
 
 ## Open
 

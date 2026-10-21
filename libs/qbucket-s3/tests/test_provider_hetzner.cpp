@@ -71,6 +71,28 @@ private Q_SLOTS:
         QVERIFY(!signature.retryable);
     }
 
+    void staleGatewayNoSuchBucketIsRetryable()
+    {
+        QFile stale(QStringLiteral(TEST_DATA_DIR "/hetzner/error-no-such-bucket-stale-gateway.xml"));
+        QVERIFY(stale.open(QIODevice::ReadOnly));
+        Error e = errorFromResponse(404, stale.readAll());
+        HetznerProfile().mapError(e);
+        QCOMPARE(e.category, ErrorCategory::NotFound);
+        QVERIFY(e.retryable);
+
+        QFile gone(QStringLiteral(TEST_DATA_DIR "/hetzner/error-no-such-bucket.xml"));   // the proxy: really missing
+        QVERIFY(gone.open(QIODevice::ReadOnly));
+        Error missing = errorFromResponse(404, gone.readAll());
+        HetznerProfile().mapError(missing);
+        QVERIFY(!missing.retryable);
+        QCOMPARE(HetznerProfile().bucketEmptinessSettleSecs(), 20);
+        const CapabilitySet caps = HetznerProfile().capabilities();
+        for (const Feature f : {Feature::BucketPolicyWrite, Feature::CorsWrite, Feature::LifecycleWrite,
+                                Feature::ObjectLockWrite, Feature::BucketAclWrite, Feature::PublicAccessBlockWrite,
+                                Feature::RetentionWrite, Feature::LegalHoldWrite})
+            QCOMPARE(caps.state(f), CapabilityState::Supported);   // confirmed by the ITs, 2026-10-21
+    }
+
     void encryptionReadProbeDoesNotUnlockWrites()
     {
         CapabilityEntry e{CapabilityState::Supported, CapabilitySource::Probed,
