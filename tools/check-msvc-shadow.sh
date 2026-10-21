@@ -2,7 +2,8 @@
 # MSVC's C4458 ("declaration hides class member") breaks the Windows build
 # under /WX, and GCC says nothing. clang's -Wshadow-all finds the same cases
 # as "shadows a field"; its "uncaptured local" hits (init-captures such as
-# `alive = alive`) are fine on MSVC and ignored here.
+# `alive = alive`, lambda parameters named like a member) are fine on MSVC
+# and ignored here.
 #
 #   tools/check-msvc-shadow.sh BUILD_DIR FILE...
 #
@@ -26,7 +27,9 @@ for f in "$@"; do
         status=1
         continue
     fi
-    hits=$(printf '%s\n' "$out" | grep 'shadows a field' || true)
+    # Lambda parameters and init-captures land in -Wshadow-uncaptured-local,
+    # also when they share a member's name: MSVC accepts those.
+    hits=$(printf '%s\n' "$out" | grep 'shadows a field' | grep -v 'shadow-uncaptured-local' || true)
     if [ -n "$hits" ]; then
         printf '%s\n' "$hits"
         status=1
