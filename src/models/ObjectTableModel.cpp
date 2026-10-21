@@ -22,16 +22,26 @@ namespace qbucket {
 namespace {
 
 // What a sort needs of one row; built on the GUI thread, sorted anywhere.
-// The strings are implicitly shared copies — safe to hand to a worker.
+// Kept cheap to build (a million rows): the key is an implicitly shared
+// copy — no allocation — and the name is cut from it by the sorter.
 struct SortKey {
     quint32 row = 0;
     bool folder = false;
     bool groupVersions = false;   // Versions mode: a key's versions stay in server order
+    quint16 storageClass = 0;     // index into the classes handed to the sorter
     qint64 size = 0;
     qint64 mtime = 0;
-    QString storageClass;
-    QString name;
+    QString key;
 };
+
+// The name shown: the key after the location's prefix, a folder without its "/".
+QStringView nameView(const SortKey& k, qsizetype prefixLen)
+{
+    QStringView name = QStringView(k.key).mid(prefixLen);
+    if (k.folder && name.endsWith(u'/'))
+        name.chop(1);
+    return name;
+}
 
 int compare3(qint64 a, qint64 b)
 {
@@ -84,7 +94,8 @@ int naturalCompare(const QCollator& collator, QStringView a, QStringView b)
 }
 
 // Folders first in both directions; ties keep server order.
-std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::SortOrder order, const QCollator& collator)
+std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::SortOrder order, const QCollator& collator,
+                                 qsizetype prefixLen, const QStringList& classes)
 {
     const bool descending = order == Qt::DescendingOrder;
     std::sort(keys.begin(), keys.end(), [&](const SortKey& a, const SortKey& b) {
@@ -93,7 +104,7 @@ std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::Sort
         int c = 0;
         switch (column) {
         case ObjectTableModel::NameColumn:
-            c = naturalCompare(collator, a.name, b.name);
+            c = naturalCompare(collator, nameView(a, prefixLen), nameView(b, prefixLen));
             break;
         case ObjectTableModel::SizeColumn:
             c = compare3(a.size, b.size);
@@ -102,7 +113,9 @@ std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::Sort
             c = compare3(a.mtime, b.mtime);
             break;
         case ObjectTableModel::StorageClassColumn:
-            c = QString::compare(a.storageClass, b.storageClass, Qt::CaseInsensitive);
+            c = a.storageClass == b.storageClass
+                    ? 0
+                    : QString::compare(classes.at(a.storageClass), classes.at(b.storageClass), Qt::CaseInsensitive);
             break;
         default:
             break;
@@ -617,10 +630,10 @@ void ObjectTableModel::sort(int column, Qt::SortOrder order)
         keys.reserve(m_rows.size());
         for (quint32 i : m_order) {
             const Row& r = m_rows[i];
-            keys.push_back({i, bool(r.flags & Folder), m_mode == Mode::Versions, r.size, r.mtimeMs,
-                            m_storageClasses[r.storageClass], nameOf_(r)});
+            keys.push_back({i, bool(r.flags & Folder), m_mode == Mode::Versions, r.storageClass, r.size, r.mtimeMs, r.key});
         }
-        applyOrder_(sortedOrder(std::move(keys), column, order, m_collator), m_orderVersion);
+        applyOrder_(sortedOrder(std::move(keys), column, order, m_collator, m_prefix.size(), m_storageClasses),
+                    m_orderVersion);
         return;
     }
     runSort_();
@@ -644,16 +657,17 @@ void ObjectTableModel::runSort_()
     keys.reserve(m_order.size());
     for (quint32 i : m_order) {
         const Row& r = m_rows[i];
-        keys.push_back({i, bool(r.flags & Folder), m_mode == Mode::Versions, r.size, r.mtimeMs,
-                        m_storageClasses[r.storageClass], nameOf_(r)});
+        keys.push_back({i, bool(r.flags & Folder), m_mode == Mode::Versions, r.storageClass, r.size, r.mtimeMs, r.key});
     }
     m_sortRunning = true;
     const int column = m_sortColumn;
     const Qt::SortOrder order = m_sortOrder;
     const quint64 version = m_orderVersion;
+    const qsizetype prefixLen = m_prefix.size();
+    const QStringList classes = m_storageClasses;
     const QPointer<ObjectTableModel> self(this);
-    QThreadPool::globalInstance()->start([keys = std::move(keys), column, order, version, self]() mutable {
-        std::vector<quint32> sorted = sortedOrder(std::move(keys), column, order, naturalCollator());
+    QThreadPool::globalInstance()->start([keys = std::move(keys), column, order, version, prefixLen, classes, self]() mutable {
+        std::vector<quint32> sorted = sortedOrder(std::move(keys), column, order, naturalCollator(), prefixLen, classes);
         // Back through the application object, which outlives the model;
         // `self` is only looked at on the GUI thread.
         QMetaObject::invokeMethod(QCoreApplication::instance(),

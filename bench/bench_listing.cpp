@@ -2,8 +2,11 @@
 // build on a real platform for meaningful numbers:
 //
 //   build-release/bench/bench_listing [--keys 100000] [--flat-keys 1000000]
+//                                     [--version-keys 250000]
 //
-// A FakeS3Server on its own thread serves synthetic ListObjectsV2 pages;
+// A FakeS3Server on its own thread serves synthetic ListObjectsV2 pages
+// (and ListObjectVersions from a versioned FakeObjectStore: 4 entries per
+// key, a delete marker on every 8th);
 // the GUI thread runs the real ObjectBrowser (ObjectTableModel, the list
 // view, ObjectRowDelegate). A 1 ms probe timer measures the longest
 // GUI-thread stall of each phase.
@@ -18,6 +21,7 @@
 #include "ui/ObjectBrowser.h"
 #include "ui/ThemeManager.h"
 
+#include <qbucket/s3/testing/FakeObjectStore.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 
 #include <QApplication>
@@ -181,6 +185,52 @@ struct Harness {
     }
 };
 
+// A versioned FakeObjectStore on its own thread: `keys` keys with four
+// entries each (three versions, or two and a delete marker on top).
+class VersionServerThread {
+public:
+    explicit VersionServerThread(int keys)
+    {
+        m_anchor.moveToThread(&m_thread);
+        m_thread.start();
+        QMetaObject::invokeMethod(&m_anchor, [this, keys] {
+            m_server = std::make_unique<FakeS3Server>();
+            m_store = std::make_unique<FakeObjectStore>(m_server.get());
+            const QString b = QStringLiteral("bkt");
+            m_store->createBucket(b);
+            m_store->setVersioning(b, QStringLiteral("Enabled"));
+            for (int i = 0; i < keys; ++i) {
+                const QString key = QStringLiteral("ver/obj-%1.bin").arg(i, 8, 10, QLatin1Char('0'));
+                for (int v = 0; v < 3; ++v)
+                    m_store->putSyntheticObject(b, key, (qint64(i) * 7919 + v) % 100'000'000);
+                if (i % 8 == 0)
+                    m_store->deleteObject(b, key);
+                else
+                    m_store->putSyntheticObject(b, key, i);
+            }
+            m_server->listen();
+            m_url = m_server->endpointUrl();
+        }, Qt::BlockingQueuedConnection);
+    }
+    ~VersionServerThread()
+    {
+        QMetaObject::invokeMethod(&m_anchor, [this] {
+            m_store.reset();
+            m_server.reset();
+        }, Qt::BlockingQueuedConnection);
+        m_thread.quit();
+        m_thread.wait();
+    }
+    [[nodiscard]] QUrl url() const { return m_url; }
+
+private:
+    QThread m_thread;
+    QObject m_anchor;
+    std::unique_ptr<FakeS3Server> m_server;
+    std::unique_ptr<FakeObjectStore> m_store;
+    QUrl m_url;
+};
+
 // Loads every page; returns the longest GUI stall while doing so.
 qint64 loadAll(ObjectTableModel& model, StallProbe& probe, qint64* firstRowsMs)
 {
@@ -214,9 +264,13 @@ int main(int argc, char* argv[])
                     QStringLiteral("100000")});
     args.addOption({QStringLiteral("flat-keys"), QStringLiteral("Keys in the flat listing (0: skip)."),
                     QStringLiteral("n"), QStringLiteral("1000000")});
+    args.addOption({QStringLiteral("version-keys"),
+                    QStringLiteral("Keys with four versions each in the versions view (0: skip)."), QStringLiteral("n"),
+                    QStringLiteral("0")});
     args.process(app);
     const int keys = args.value(QStringLiteral("keys")).toInt();
     const int flatKeys = args.value(QStringLiteral("flat-keys")).toInt();
+    const int versionKeys = args.value(QStringLiteral("version-keys")).toInt();
 
     ThemeManager theme;
     theme.apply(QStringLiteral("dark"));
@@ -309,6 +363,38 @@ int main(int argc, char* argv[])
         }
         std::printf("  scrolling: %.2f ms per step on average\n", sum / kSteps);
         report("Worst scroll step through the flat listing", double(worst), "ms", 16);
+    }
+
+    if (versionKeys > 0) {
+        std::printf("  building %d versions …\n", versionKeys * 4);
+        VersionServerThread server(versionKeys);
+        Harness h(server.url());
+        ObjectBrowser browser(h.accounts.get(), h.sessions.get());
+        browser.resize(1100, 700);
+        browser.show();
+        browser.setMode(ObjectTableModel::Mode::Versions);
+        ObjectTableModel& model = *browser.model();
+        const qint64 before = residentBytes();
+        qint64 firstRows = 0;
+        QElapsedTimer total;
+        total.start();
+        probe.start();
+        browser.navigation()->navigate({h.account, QStringLiteral("bkt"), QStringLiteral("ver/")});
+        const qint64 setStall = probe.stop();
+        const qint64 stall = loadAll(model, probe, &firstRows);
+        const qint64 after = residentBytes();
+        std::printf("  versions: loaded %d rows in %lld ms, %.1f MB\n", model.rowCount(), total.elapsed(),
+                    double(after - before) / (1024.0 * 1024.0));
+        report("Longest GUI stall while paging the versions view", double(std::max(setStall, stall)), "ms", 50);
+        if (before > 0)
+            report("Memory per 100k version rows", double(after - before) / (versionKeys * 4.0) * 100000 / (1024.0 * 1024.0),
+                   "MB", 40);
+        probe.start();
+        bool sorted = false;
+        QObject::connect(&model, &ObjectTableModel::sortFinished, &model, [&] { sorted = true; });
+        model.sort(ObjectTableModel::NameColumn, Qt::DescendingOrder);   // keeps each key's versions together
+        waitFor([&] { return sorted; });
+        report("Longest GUI stall sorting the versions view", double(probe.stop()), "ms", 50);
     }
 
     std::printf("\n%-58s %14s %12s\n", "Metric", "Value", "Budget");
