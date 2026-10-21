@@ -779,6 +779,36 @@ private Q_SLOTS:
         QCOMPARE(got->meta.userMetadata.value(QStringLiteral("origin")), QStringLiteral("it"));
     }
 
+    // An edit of an object above 5 GiB is a multipart copy onto itself with
+    // replaced headers (here with 5 MiB parts): content intact, headers new.
+    void multipartCopyInPlaceWithReplace()
+    {
+        const QByteArray data = QByteArray("edit in parts 0123456789\n").repeated(260000);   // 6.2 MB
+        const QString k = key(QStringLiteral("partedit/obj.bin"));
+        const Result<PutObjectResult> put = this->put(k, data);
+        VERIFY_OK(put);
+        transfer::CopyRequest r;
+        r.sourceBucket = r.bucket = m_bucket;
+        r.sourceKey = r.key = k;
+        r.ifMatch = put->etag;
+        r.partSize = Q_INT64_C(5) * 1024 * 1024;
+        ObjectHeaders h;
+        h.contentType = QStringLiteral("application/x-edited");
+        h.cacheControl = QStringLiteral("max-age=120");
+        h.userMetadata.insert(QStringLiteral("edited"), QStringLiteral("in-parts"));
+        r.replaceHeaders = h;
+        transfer::Copier copier(m_session.get(), r, nullptr);
+        QSignalSpy finished(&copier, &transfer::Copier::finished);
+        copier.start();
+        QVERIFY(finished.wait(120000));
+        VERIFY_OK(copier.result());
+        QCOMPARE(copier.result()->parts, 2);
+        const Result<ObjectData> got = await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(got);
+        QCOMPARE(got->data, data);
+        QCOMPARE(objectHeadersOf(got->meta), h);
+    }
+
     // The safety case (PLAN.md §12, Hetzner's proxy once dropped a query
     // string): a multipart upload and an aborted one on the key of an
     // existing object must leave that object alone — without the query

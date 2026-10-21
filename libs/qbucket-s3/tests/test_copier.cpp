@@ -134,6 +134,66 @@ private Q_SLOTS:
         QCOMPARE(guarded, 5);
     }
 
+    // All of the source's headers travel along (renames above 5 GiB).
+    void headersAreCarriedOrReplaced()
+    {
+        CopyObjectParams seed;
+        seed.sourceBucket = seed.bucket = kBucket;
+        seed.sourceKey = seed.key = QStringLiteral("src");
+        seed.metadataDirective = MetadataDirective::Replace;
+        seed.headers.contentType = QStringLiteral("video/mp4");
+        seed.headers.cacheControl = QStringLiteral("max-age=3600");
+        seed.headers.contentDisposition = QStringLiteral("inline");
+        seed.headers.userMetadata.insert(QStringLiteral("camera"), QStringLiteral("a7"));
+        std::optional<Result<CopyObjectResult>> seeded;
+        m_session->copyObject(seed, this, [&](Result<CopyObjectResult> r) { seeded.emplace(std::move(r)); });
+        QTRY_VERIFY(seeded.has_value());
+        QVERIFY(*seeded);
+
+        Copier carried(m_session.get(), request(QStringLiteral("src"), QStringLiteral("dst/carried")), m_limiter.get());
+        QVERIFY(runToEnd(carried));
+        QVERIFY(carried.result());
+        auto copy = m_store->object(kBucket, QStringLiteral("dst/carried"));
+        QCOMPARE(copy->headers.value(QStringLiteral("cache-control")), QStringLiteral("max-age=3600"));
+        QCOMPARE(copy->headers.value(QStringLiteral("content-disposition")), QStringLiteral("inline"));
+        QCOMPARE(copy->metadata.value(QStringLiteral("camera")), QStringLiteral("a7"));
+        QCOMPARE(copy->acl, QStringLiteral("private"));
+
+        // An edit in place: replaced headers, a canned ACL, the content unchanged.
+        CopyRequest edit = request(QStringLiteral("src"), QStringLiteral("src"));
+        edit.ifMatch = m_store->object(kBucket, QStringLiteral("src"))->etag;
+        ObjectHeaders h;
+        h.contentType = QStringLiteral("video/quicktime");
+        h.cacheControl = QStringLiteral("no-store");
+        edit.replaceHeaders = h;
+        edit.cannedAcl = QStringLiteral("public-read");
+        Copier inPlace(m_session.get(), edit, m_limiter.get());
+        QVERIFY(runToEnd(inPlace));
+        if (!inPlace.result())
+            QFAIL(qPrintable(inPlace.result().error().toString()));
+        copy = m_store->object(kBucket, QStringLiteral("src"));
+        QCOMPARE(copy->data, m_data);
+        QCOMPARE(copy->contentType, QStringLiteral("video/quicktime"));
+        QCOMPARE(copy->headers.value(QStringLiteral("cache-control")), QStringLiteral("no-store"));
+        QVERIFY(!copy->headers.contains(QStringLiteral("content-disposition")));   // not in the replacement
+        QVERIFY(copy->metadata.isEmpty());
+        QCOMPARE(copy->acl, QStringLiteral("public-read"));
+        QVERIFY(m_store->uploadIds(kBucket).isEmpty());
+    }
+
+    // A source that changed before the edit's first part: nothing replaced.
+    void staleEditInPlaceLeavesTheObject()
+    {
+        CopyRequest edit = request(QStringLiteral("src"), QStringLiteral("src"));
+        edit.ifMatch = QStringLiteral("\"0123456789abcdef0123456789abcdef\"");
+        edit.replaceHeaders = ObjectHeaders{};
+        Copier c(m_session.get(), edit, m_limiter.get());
+        QVERIFY(runToEnd(c));
+        QCOMPARE(c.result().error().category, ErrorCategory::PreconditionFailed);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("src"))->contentType, QStringLiteral("video/mp4"));
+        QVERIFY(m_store->uploadIds(kBucket).isEmpty());
+    }
+
     void storageClassIsKeptOrSet()
     {
         CopyRequest r = request(QStringLiteral("src"), QStringLiteral("dst/cold"));

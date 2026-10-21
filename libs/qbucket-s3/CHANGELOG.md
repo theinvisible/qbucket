@@ -178,6 +178,10 @@ version bump may break the API.
   `copyResetsAclUnlessCanned`; `QBUCKET_IT_TRACE_BODIES=1` prints response
   bodies.
 
+- `transfer::CopyRequest::replaceHeaders` (an edit of an object above
+  5 GiB, also onto itself), `serverSideEncryption`, `cannedAcl`; IT
+  `multipartCopyInPlaceWithReplace`.
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced

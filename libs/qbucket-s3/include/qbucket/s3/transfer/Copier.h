@@ -25,6 +25,13 @@ struct CopyRequest {
     // guards every part.
     QString ifMatch;
     QString storageClass;                 // empty: the source's class
+    // Unset: the source's content type, headers and user metadata (COPY
+    // semantics). Set: exactly these — an edit of an object above 5 GiB
+    // (bucket and key may then equal the source's: the object is replaced
+    // only by Complete, and every part is guarded by the source's ETag).
+    std::optional<ObjectHeaders> replaceHeaders;
+    QString serverSideEncryption;         // of the copy ("AES256"); empty: the bucket's default
+    QString cannedAcl;                    // empty: none (the copy gets the default, usually private)
     qint64 partSize = Q_INT64_C(512) * 1024 * 1024;   // grown as needed for 10 000 parts
 };
 
@@ -38,12 +45,14 @@ struct CopyResult {
 
 // Server-side copy of an object of any size with UploadPartCopy (PLAN.md
 // §6 M4: objects above CopyObject's 5 GiB): CreateMultipartUpload with the
-// source's content type, metadata and storage class, the parts as byte
+// source's content type, headers, metadata and storage class (or the
+// request's replacements), the parts as byte
 // ranges in parallel under the account's AdaptiveConcurrency — each with
 // x-amz-copy-source-if-match — then CompleteMultipartUpload. A lost
 // Complete answer is resolved with HEAD. The copy is checked for the
 // source's size; a failure aborts the upload. ACLs and tags are not copied
-// (as with CopyObject).
+// (as with CopyObject): give a cannedAcl, write tags with PutObjectTagging
+// afterwards (x-amz-tagging is unreliable on RGW, see CopyObjectParams::tags).
 //
 // Thread affinity as Uploader.
 class QBUCKET_S3_TRANSFER_EXPORT Copier : public QObject {
