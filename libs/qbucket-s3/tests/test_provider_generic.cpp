@@ -53,8 +53,8 @@ private Q_SLOTS:
         QStringList ids;
         for (const auto& p : r.profiles())
             ids.append(p->id());
-        QCOMPARE(ids, (QStringList{QStringLiteral("hetzner"), QStringLiteral("aws"),
-                                   QStringLiteral("garage"), QStringLiteral("generic")}));
+        QCOMPARE(ids, (QStringList{QStringLiteral("hetzner"), QStringLiteral("aws"), QStringLiteral("garage"),
+                                   QStringLiteral("ceph"), QStringLiteral("generic")}));
 
         ProviderRegistry own;
         own.add(std::make_shared<GenericS3Profile>());

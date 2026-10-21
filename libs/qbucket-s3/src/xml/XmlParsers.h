@@ -89,6 +89,13 @@ QBUCKET_S3_EXPORT Result<TagSet> parseTagging(const QByteArray& body);
 // type from xsi:type).
 QBUCKET_S3_EXPORT Result<AccessControlPolicy> parseAccessControlPolicy(const QByteArray& body);
 
+// <Retention> of GetObjectRetention (Mode, RetainUntilDate); an empty
+// element is no retention. An unknown mode is a Protocol error.
+QBUCKET_S3_EXPORT Result<ObjectRetention> parseRetention(const QByteArray& body);
+
+// <LegalHold><Status>ON|OFF</Status>.
+QBUCKET_S3_EXPORT Result<bool> parseLegalHold(const QByteArray& body);
+
 // Raw LocationConstraint value ("" for us-east-1, legacy "EU", …). Mapping
 // to a signing region is the provider profile's job.
 QBUCKET_S3_EXPORT Result<QString> parseLocationConstraint(const QByteArray& body);

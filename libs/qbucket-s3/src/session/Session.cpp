@@ -586,6 +586,77 @@ RequestId Session::putBucketVersioning(const PutBucketVersioningParams& params, 
                                              });
 }
 
+RequestId Session::getBucketConfig(const QString& bucket, BucketConfig kind, QObject* context,
+                                   Callback<BucketConfigDocument> callback)
+{
+    return d->submit<BucketConfigDocument>(context, std::move(callback), [bucket, kind](S3Client* c, auto done, auto /*progress*/) {
+        return c->getBucketConfig(bucket, kind, std::move(done));
+    });
+}
+
+RequestId Session::putBucketConfig(const PutBucketConfigParams& params, QObject* context,
+                                   Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->putBucketConfig(params, std::move(done));
+    });
+}
+
+RequestId Session::deleteBucketConfig(const QString& bucket, BucketConfig kind, QObject* context,
+                                      Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback), [bucket, kind](S3Client* c, auto done, auto /*progress*/) {
+        return c->deleteBucketConfig(bucket, kind, std::move(done));
+    });
+}
+
+RequestId Session::getObjectRetention(const QString& bucket, const QString& key, const QString& versionId,
+                                      QObject* context, Callback<ObjectRetention> callback)
+{
+    return d->submit<ObjectRetention>(context, std::move(callback), [bucket, key, versionId](S3Client* c, auto done, auto /*progress*/) {
+        return c->getObjectRetention(bucket, key, versionId, std::move(done));
+    });
+}
+
+RequestId Session::putObjectRetention(const PutObjectRetentionParams& params, QObject* context,
+                                      Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->putObjectRetention(params, std::move(done));
+    });
+}
+
+RequestId Session::getObjectLegalHold(const QString& bucket, const QString& key, const QString& versionId,
+                                      QObject* context, Callback<bool> callback)
+{
+    return d->submit<bool>(context, std::move(callback), [bucket, key, versionId](S3Client* c, auto done, auto /*progress*/) {
+        return c->getObjectLegalHold(bucket, key, versionId, std::move(done));
+    });
+}
+
+RequestId Session::putObjectLegalHold(const PutObjectLegalHoldParams& params, QObject* context,
+                                      Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->putObjectLegalHold(params, std::move(done));
+    });
+}
+
+RequestId Session::deleteObject(const DeleteObjectParams& params, QObject* context, Callback<DeleteObjectResult> callback)
+{
+    return d->submit<DeleteObjectResult>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->deleteObject(params, std::move(done));
+    });
+}
+
+RequestId Session::deleteObjects(const DeleteObjectsParams& params, QObject* context,
+                                 Callback<DeleteObjectsResult> callback)
+{
+    return d->submit<DeleteObjectsResult>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->deleteObjects(params, std::move(done));
+    });
+}
+
 RequestId Session::listParts(const ListPartsParams& params, QObject* context, Callback<ListPartsPage> callback)
 {
     return d->submit<ListPartsPage>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {

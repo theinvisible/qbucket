@@ -55,6 +55,11 @@ CapabilitySet AwsProfile::capabilities() const
     set.set(Feature::ObjectTaggingWrite, yes);
     set.set(Feature::ObjectAclWrite, yes);
     set.set(Feature::BucketVersioningWrite, yes);
+    for (const Feature f : {Feature::BucketPolicyWrite, Feature::CorsWrite, Feature::LifecycleWrite,
+                            Feature::ObjectLockWrite, Feature::BucketAclWrite, Feature::PublicAccessBlockWrite,
+                            Feature::RetentionWrite, Feature::LegalHoldWrite}) {
+        set.set(f, yes);
+    }
     return set;
 }
 

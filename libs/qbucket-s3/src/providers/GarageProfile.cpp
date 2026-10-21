@@ -40,6 +40,16 @@ CapabilitySet GarageProfile::capabilities() const
     // No object tags and no object ACLs (the read probes answer 501 too).
     set.set(Feature::ObjectTaggingWrite, no);
     set.set(Feature::ObjectAclWrite, no);
+    // Bucket configurations (it_s3_backend_garage bucketConfigWriteAndRemove):
+    // CORS and lifecycle are written, read back and removed; no policy, no
+    // public access block, no ACL writes (501), no object lock.
+    const CapabilityEntry yes{CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0};
+    set.set(Feature::CorsWrite, yes);
+    set.set(Feature::LifecycleWrite, yes);
+    for (const Feature f : {Feature::BucketPolicyWrite, Feature::PublicAccessBlockWrite, Feature::BucketAclWrite,
+                            Feature::ObjectLockWrite, Feature::RetentionWrite, Feature::LegalHoldWrite}) {
+        set.set(f, no);
+    }
     return set;
 }
 

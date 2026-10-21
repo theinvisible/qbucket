@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicRead",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": ["s3:GetObject"],
+      "Resource": ["arn:aws:s3:::bkt/*"]
+    },
+    {
+      "Sid": "TlsOnly",
+      "Effect": "Deny",
+      "Principal": {"AWS": "*"},
+      "Action": "s3:*",
+      "Resource": ["arn:aws:s3:::bkt", "arn:aws:s3:::bkt/*"],
+      "Condition": {"Bool": {"aws:SecureTransport": "false"}}
+    }
+  ]
+}

@@ -521,6 +521,14 @@ QString CapabilityController::featureName(s3::Feature f)
     case F::ObjectTaggingWrite: return tr("Writing object tags");
     case F::ObjectAclWrite: return tr("Changing object ACLs");
     case F::BucketVersioningWrite: return tr("Switching versioning");
+    case F::BucketPolicyWrite: return tr("Changing the bucket policy");
+    case F::CorsWrite: return tr("Changing CORS rules");
+    case F::LifecycleWrite: return tr("Changing lifecycle rules");
+    case F::ObjectLockWrite: return tr("Changing the default retention");
+    case F::BucketAclWrite: return tr("Changing the bucket ACL");
+    case F::PublicAccessBlockWrite: return tr("Changing the public access block");
+    case F::RetentionWrite: return tr("Changing an object's retention");
+    case F::LegalHoldWrite: return tr("Changing a legal hold");
     }
     return s3::featureId(f);
 }
@@ -573,7 +581,13 @@ QString CapabilityController::reason(s3::Feature f, const s3::CapabilityEntry& e
             return tr("%1 is not confirmed for this server: QBucket only writes tags and ACLs where the "
                       "provider is known to handle them safely.").arg(name);
         }
-        if (f == s3::Feature::BucketVersioningWrite) {
+        if (f == s3::Feature::RetentionWrite || f == s3::Feature::LegalHoldWrite) {
+            return tr("%1 is not confirmed for this server: QBucket only changes object locks where the "
+                      "provider is known to handle the request safely.").arg(name);
+        }
+        if (f == s3::Feature::BucketVersioningWrite || f == s3::Feature::BucketPolicyWrite
+            || f == s3::Feature::CorsWrite || f == s3::Feature::LifecycleWrite || f == s3::Feature::ObjectLockWrite
+            || f == s3::Feature::BucketAclWrite || f == s3::Feature::PublicAccessBlockWrite) {
             return tr("%1 is not confirmed for this server: QBucket only changes a bucket's settings where "
                       "the provider is known to handle the request safely.").arg(name);
         }

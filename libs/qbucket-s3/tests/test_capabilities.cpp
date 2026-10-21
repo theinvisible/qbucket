@@ -32,7 +32,7 @@ private Q_SLOTS:
             ids.insert(id);
             QCOMPARE(featureFromId(id), std::optional(f));
         }
-        QCOMPARE(ids.size(), int(Feature::BucketVersioningWrite) + 1);
+        QCOMPARE(ids.size(), int(Feature::LegalHoldWrite) + 1);
         // Persisted ids must never change.
         QCOMPARE(featureId(Feature::BucketVersioning), QStringLiteral("bucket.versioning"));
         QCOMPARE(featureId(Feature::CrossBucketCopy), QStringLiteral("object.cross-bucket-copy"));

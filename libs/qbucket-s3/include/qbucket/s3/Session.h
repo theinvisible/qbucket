@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Credentials.h>
 #include <qbucket/s3/Endpoint.h>
@@ -94,6 +95,12 @@ public:
     // Feature::BucketVersioning.
     RequestId getBucketVersioning(const QString& bucket, QObject* context, Callback<BucketVersioning> callback);
     RequestId headBucket(const QString& bucket, QObject* context, Callback<void> callback);
+    // A bucket configuration document (BucketConfig.h; the kind's feature).
+    // Nothing set is a document with configured = false, not an error; an
+    // answer of another kind (the server ignored the subresource) is
+    // ErrorCategory::Unsupported.
+    RequestId getBucketConfig(const QString& bucket, BucketConfig kind, QObject* context,
+                              Callback<BucketConfigDocument> callback);
     RequestId getBucketLocation(const QString& bucket, QObject* context, Callback<QString> callback);
     RequestId headObject(const QString& bucket, const QString& key, const QString& versionId,
                          QObject* context, Callback<ObjectMeta> callback);
@@ -101,6 +108,12 @@ public:
     RequestId headObject(const HeadObjectParams& params, QObject* context, Callback<ObjectMeta> callback);
     RequestId getObject(const QString& bucket, const QString& key, const QString& versionId,
                         QObject* context, Callback<ObjectData> callback);
+    // Retention (Feature::Retention) and legal hold (Feature::LegalHold) of
+    // an object (version); none set is an empty retention / false.
+    RequestId getObjectRetention(const QString& bucket, const QString& key, const QString& versionId,
+                                 QObject* context, Callback<ObjectRetention> callback);
+    RequestId getObjectLegalHold(const QString& bucket, const QString& key, const QString& versionId,
+                                 QObject* context, Callback<bool> callback);
     // Tags (Feature::ObjectTagging) and ACL (Feature::ObjectAcl) of an object.
     RequestId getObjectTagging(const QString& bucket, const QString& key, const QString& versionId,
                                QObject* context, Callback<ObjectTagging> callback);
@@ -122,9 +135,13 @@ public:
                         Callback<PutObjectResult> callback, ProgressCallback progress = {});
     RequestId deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                            QObject* context, Callback<DeleteObjectResult> callback);
+    // With the governance bypass (see DeleteObjectParams).
+    RequestId deleteObject(const DeleteObjectParams& params, QObject* context, Callback<DeleteObjectResult> callback);
     // One batch of at most ProviderProfile::maxDeleteBatch() objects.
     RequestId deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
                             QObject* context, Callback<DeleteObjectsResult> callback);
+    RequestId deleteObjects(const DeleteObjectsParams& params, QObject* context,
+                            Callback<DeleteObjectsResult> callback);
     // Replace an object's tags (Feature::ObjectTaggingWrite) / set a canned
     // ACL (Feature::ObjectAclWrite) — write-only features: never trust a
     // read probe for them. An answer that looks like an object upload is a
@@ -139,6 +156,23 @@ public:
     // a proxy dropped ?versioning. MfaDelete is never sent.
     RequestId putBucketVersioning(const PutBucketVersioningParams& params, QObject* context,
                                   Callback<SubresourceWriteResult> callback);
+    // Write / remove a bucket configuration document (the kind's write-only
+    // feature: never from a read probe). An answer that looks like
+    // CreateBucket (PUT: a Location header, 409 BucketAlreadyOwnedByYou) or
+    // like DeleteBucket (DELETE: 409 BucketNotEmpty) is a Protocol error — a
+    // proxy dropped the subresource. A DeleteBucket on an empty bucket would
+    // succeed: check the bucket afterwards. Deleting what isn't set succeeds.
+    RequestId putBucketConfig(const PutBucketConfigParams& params, QObject* context,
+                              Callback<SubresourceWriteResult> callback);
+    RequestId deleteBucketConfig(const QString& bucket, BucketConfig kind, QObject* context,
+                                 Callback<SubresourceWriteResult> callback);
+    // Retention / legal hold of an object (Feature::RetentionWrite /
+    // LegalHoldWrite, write-only). An answer with an ETag is a Protocol
+    // error (stored as the object, see putObjectTagging).
+    RequestId putObjectRetention(const PutObjectRetentionParams& params, QObject* context,
+                                 Callback<SubresourceWriteResult> callback);
+    RequestId putObjectLegalHold(const PutObjectLegalHoldParams& params, QObject* context,
+                                 Callback<SubresourceWriteResult> callback);
     // Server-side copy (≤ 5 GiB). A lost answer is reported with
     // Error::outcomeUnknown and not retried: look the target up.
     RequestId copyObject(const CopyObjectParams& params, QObject* context, Callback<CopyObjectResult> callback);

@@ -27,6 +27,10 @@ private Q_SLOTS:
         QCOMPARE(p->capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Unsupported);
         QCOMPARE(p->capabilities().state(Feature::ObjectAclWrite), CapabilityState::Unsupported);
         QCOMPARE(p->capabilities().state(Feature::BucketVersioningWrite), CapabilityState::Unsupported);
+        QCOMPARE(p->capabilities().state(Feature::CorsWrite), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::LifecycleWrite), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::BucketPolicyWrite), CapabilityState::Unsupported);
+        QCOMPARE(p->capabilities().state(Feature::BucketAclWrite), CapabilityState::Unsupported);
     }
 
     void invalidSignatureIsAuthentication()

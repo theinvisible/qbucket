@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/Types.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 
@@ -26,6 +27,11 @@
 // ListObjectVersions, versionId on GET / HEAD / DELETE / copy sources /
 // tags / ACLs, the "null" version while versioning is off or suspended,
 // x-amz-version-id / x-amz-delete-marker headers, locked versions.
+// Buckets over HTTP (CreateBucket with object lock, DeleteBucket refusing a
+// bucket with versions or uploads), bucket configurations (policy, CORS,
+// lifecycle, object lock, ACL, public access block; the read-only kinds as
+// seeded), retention and legal hold per version with the GOVERNANCE bypass,
+// a bucket's default retention on new versions.
 // Any other object subresource on PUT / POST / DELETE answers 501 — never
 // an upload or a delete. Faults are scripted per operation, before or after
 // the store executed the request.
@@ -99,6 +105,21 @@ public:
     QString deleteObject(const QString& bucket, const QString& key);
     // Object lock on one version: deleting it answers 403 AccessDenied.
     void lockVersion(const QString& bucket, const QString& key, const QString& versionId);
+    // Object lock on a bucket (as if created with it): versioning Enabled.
+    void setObjectLockEnabled(const QString& bucket);
+    // Seeds a configuration document (Acl: the canned ACL's name; a null
+    // document removes it).
+    void setBucketConfig(const QString& bucket, BucketConfig kind, const QByteArray& document);
+    [[nodiscard]] std::optional<QByteArray> bucketConfig(const QString& bucket, BucketConfig kind) const;
+    // GET / PUT / DELETE of this kind answer 501.
+    void setUnsupportedBucketConfig(BucketConfig kind);
+    void setRetention(const QString& bucket, const QString& key, const QString& versionId, ObjectLockMode mode,
+                      const QDateTime& until);
+    void setLegalHold(const QString& bucket, const QString& key, const QString& versionId, bool on);
+    // A proxy that drops bucket subresources (Hetzner's DELETE ?encryption):
+    // PUT ?<config> runs as CreateBucket, DELETE ?<config> as DeleteBucket.
+    void setInterceptSubresourceWrites(bool intercept);
+    [[nodiscard]] bool hasBucket(const QString& bucket) const;
 
     // Bodies are hashed, not kept: uploads of any size. GET answers 501.
     void setDiscardData(bool discard);

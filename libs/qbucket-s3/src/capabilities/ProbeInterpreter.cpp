@@ -2,6 +2,8 @@
 
 #include "xml/XmlParsers.h"
 
+#include <qbucket/s3/BucketConfig.h>
+
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
@@ -13,6 +15,17 @@ namespace {
 ProbeSpec bucket(Feature f, const char* sub, const char* root, QStringList notConfigured = {})
 {
     return ProbeSpec{f, {{sub, {}, true}}, QLatin1StringView(root), false, std::move(notConfigured)};
+}
+
+// GET ?<subresource> of a bucket configuration, as Session::getBucketConfig
+// reads it.
+ProbeSpec config(BucketConfig kind)
+{
+    return ProbeSpec{bucketConfigFeature(kind),
+                     {{bucketConfigSubresource(kind), {}, true}},
+                     bucketConfigRoot(kind),
+                     false,
+                     bucketConfigNotConfiguredCodes(kind)};
 }
 
 ProbeSpec object(Feature f, const char* sub, const char* root, QStringList notConfigured = {})
@@ -52,29 +65,20 @@ const QList<ProbeSpec>& bucketProbes()
 {
     static const QList<ProbeSpec> probes = {
         bucket(Feature::BucketVersioning, "versioning", "VersioningConfiguration"),
-        bucket(Feature::ObjectLock, "object-lock", "ObjectLockConfiguration",
-               {QStringLiteral("ObjectLockConfigurationNotFoundError"),
-                QStringLiteral("NoSuchObjectLockConfiguration")}),
-        bucket(Feature::Lifecycle, "lifecycle", "LifecycleConfiguration",
-               {QStringLiteral("NoSuchLifecycleConfiguration")}),
-        bucket(Feature::Cors, "cors", "CORSConfiguration", {QStringLiteral("NoSuchCORSConfiguration")}),
-        bucket(Feature::BucketPolicy, "policy", "", {QStringLiteral("NoSuchBucketPolicy")}),
-        bucket(Feature::PolicyStatus, "policyStatus", "PolicyStatus", {QStringLiteral("NoSuchBucketPolicy")}),
-        bucket(Feature::BucketAcl, "acl", "AccessControlPolicy"),
-        bucket(Feature::BucketTagging, "tagging", "Tagging",
-               {QStringLiteral("NoSuchTagSet"), QStringLiteral("NoSuchTagSetError")}),
-        bucket(Feature::BucketEncryption, "encryption", "ServerSideEncryptionConfiguration",
-               {QStringLiteral("ServerSideEncryptionConfigurationNotFoundError")}),
-        bucket(Feature::Website, "website", "WebsiteConfiguration",
-               {QStringLiteral("NoSuchWebsiteConfiguration")}),
-        bucket(Feature::Replication, "replication", "ReplicationConfiguration",
-               {QStringLiteral("ReplicationConfigurationNotFoundError")}),
-        bucket(Feature::Logging, "logging", "BucketLoggingStatus"),
-        bucket(Feature::Notifications, "notification", "NotificationConfiguration"),
-        bucket(Feature::PublicAccessBlock, "publicAccessBlock", "PublicAccessBlockConfiguration",
-               {QStringLiteral("NoSuchPublicAccessBlockConfiguration")}),
-        bucket(Feature::OwnershipControls, "ownershipControls", "OwnershipControls",
-               {QStringLiteral("OwnershipControlsNotFoundError")}),
+        config(BucketConfig::ObjectLock),
+        config(BucketConfig::Lifecycle),
+        config(BucketConfig::Cors),
+        config(BucketConfig::Policy),
+        config(BucketConfig::PolicyStatus),
+        config(BucketConfig::Acl),
+        config(BucketConfig::Tagging),
+        config(BucketConfig::Encryption),
+        config(BucketConfig::Website),
+        config(BucketConfig::Replication),
+        config(BucketConfig::Logging),
+        config(BucketConfig::Notifications),
+        config(BucketConfig::PublicAccessBlock),
+        config(BucketConfig::OwnershipControls),
         bucket(Feature::MultipartListing, "uploads", "ListMultipartUploadsResult"),
         ProbeSpec{Feature::ObjectVersionsListing,
                   {{"versions", {}, true}, {"max-keys", "1", false}},

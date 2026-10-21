@@ -60,7 +60,9 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/Result.h
     include/qbucket/s3/Session.h
     include/qbucket/s3/Types.h
+    include/qbucket/s3/BucketConfig.h
     include/qbucket/s3/providers/AwsProfile.h
+    include/qbucket/s3/providers/CephProfile.h
     include/qbucket/s3/providers/GarageProfile.h
     include/qbucket/s3/providers/GenericS3Profile.h
     include/qbucket/s3/providers/HetznerProfile.h
@@ -78,6 +80,7 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/client/RetryPolicy.cpp
     src/client/S3Client.h
     src/client/S3Client.cpp
+    src/config/BucketConfig.cpp
     src/core/Credentials.cpp
     src/core/Endpoint.cpp
     src/core/Error.cpp
@@ -99,6 +102,7 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/logging/Redaction.h
     src/logging/Redaction.cpp
     src/providers/AwsProfile.cpp
+    src/providers/CephProfile.cpp
     src/providers/GarageProfile.cpp
     src/providers/HetznerProfile.cpp
     src/providers/ProviderProfile.cpp

@@ -1,4 +1,5 @@
 #include <qbucket/s3/providers/AwsProfile.h>
+#include <qbucket/s3/providers/CephProfile.h>
 #include <qbucket/s3/providers/GarageProfile.h>
 #include <qbucket/s3/providers/GenericS3Profile.h>
 #include <qbucket/s3/providers/HetznerProfile.h>
@@ -13,6 +14,7 @@ const ProviderRegistry& ProviderRegistry::builtin()
         r.add(std::make_shared<HetznerProfile>());
         r.add(std::make_shared<AwsProfile>());
         r.add(std::make_shared<GarageProfile>());
+        r.add(std::make_shared<CephProfile>());
         r.add(std::make_shared<GenericS3Profile>());
         return r;
     }();

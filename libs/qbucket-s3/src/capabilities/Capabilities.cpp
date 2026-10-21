@@ -11,7 +11,7 @@ namespace qbucket::s3 {
 namespace {
 
 // Stable ids — never change one, only append.
-constexpr std::array<std::pair<Feature, const char*>, 30> kIds = {{
+constexpr std::array<std::pair<Feature, const char*>, 38> kIds = {{
     {Feature::BucketVersioning, "bucket.versioning"},
     {Feature::ObjectLock, "bucket.object-lock"},
     {Feature::LegalHold, "object.legal-hold"},
@@ -42,6 +42,14 @@ constexpr std::array<std::pair<Feature, const char*>, 30> kIds = {{
     {Feature::ObjectTaggingWrite, "object.tagging-write"},
     {Feature::ObjectAclWrite, "object.acl-write"},
     {Feature::BucketVersioningWrite, "bucket.versioning-write"},
+    {Feature::BucketPolicyWrite, "bucket.policy-write"},
+    {Feature::CorsWrite, "bucket.cors-write"},
+    {Feature::LifecycleWrite, "bucket.lifecycle-write"},
+    {Feature::ObjectLockWrite, "bucket.object-lock-write"},
+    {Feature::BucketAclWrite, "bucket.acl-write"},
+    {Feature::PublicAccessBlockWrite, "bucket.public-access-block-write"},
+    {Feature::RetentionWrite, "object.retention-write"},
+    {Feature::LegalHoldWrite, "object.legal-hold-write"},
 }};
 
 bool isDefinitive(CapabilityState s)
@@ -144,6 +152,58 @@ QList<Feature> featuresFor(Operation op)
         return {Feature::BucketVersioning};
     case Operation::PutBucketVersioning:
         return {Feature::BucketVersioningWrite, Feature::BucketVersioning};
+    case Operation::GetBucketPolicy:
+        return {Feature::BucketPolicy};
+    case Operation::PutBucketPolicy:
+    case Operation::DeleteBucketPolicy:
+        return {Feature::BucketPolicyWrite, Feature::BucketPolicy};
+    case Operation::GetBucketPolicyStatus:
+        return {Feature::PolicyStatus};
+    case Operation::GetBucketCors:
+        return {Feature::Cors};
+    case Operation::PutBucketCors:
+    case Operation::DeleteBucketCors:
+        return {Feature::CorsWrite, Feature::Cors};
+    case Operation::GetBucketLifecycle:
+        return {Feature::Lifecycle};
+    case Operation::PutBucketLifecycle:
+    case Operation::DeleteBucketLifecycle:
+        return {Feature::LifecycleWrite, Feature::Lifecycle};
+    case Operation::GetObjectLockConfiguration:
+        return {Feature::ObjectLock};
+    case Operation::PutObjectLockConfiguration:
+        return {Feature::ObjectLockWrite, Feature::ObjectLock};
+    case Operation::GetBucketAcl:
+        return {Feature::BucketAcl};
+    case Operation::PutBucketAcl:
+        return {Feature::BucketAclWrite, Feature::BucketAcl};
+    case Operation::GetPublicAccessBlock:
+        return {Feature::PublicAccessBlock};
+    case Operation::PutPublicAccessBlock:
+    case Operation::DeletePublicAccessBlock:
+        return {Feature::PublicAccessBlockWrite, Feature::PublicAccessBlock};
+    case Operation::GetBucketTagging:
+        return {Feature::BucketTagging};
+    case Operation::GetBucketWebsite:
+        return {Feature::Website};
+    case Operation::GetBucketLogging:
+        return {Feature::Logging};
+    case Operation::GetBucketReplication:
+        return {Feature::Replication};
+    case Operation::GetBucketEncryption:
+        return {Feature::BucketEncryption};
+    case Operation::GetBucketNotification:
+        return {Feature::Notifications};
+    case Operation::GetBucketOwnershipControls:
+        return {Feature::OwnershipControls};
+    case Operation::GetObjectRetention:
+        return {Feature::Retention};
+    case Operation::PutObjectRetention:
+        return {Feature::RetentionWrite, Feature::Retention};
+    case Operation::GetObjectLegalHold:
+        return {Feature::LegalHold};
+    case Operation::PutObjectLegalHold:
+        return {Feature::LegalHoldWrite, Feature::LegalHold};
     default:
         return {};
     }

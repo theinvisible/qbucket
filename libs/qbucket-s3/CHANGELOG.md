@@ -240,6 +240,53 @@ version bump may break the API.
   version ids on CopyObject — a delete marker is only certain from the
   version listing.
 
+- Bucket configuration (`BucketConfig.h`): `BucketConfig` (policy, policy
+  status, CORS, lifecycle, object lock, ACL, public access block; tagging,
+  website, logging, replication, encryption, notifications, ownership
+  controls read-only), `BucketConfigDocument`, `PutBucketConfigParams`;
+  `Session::getBucketConfig` (nothing set is `configured = false`, an
+  answer with another root is Unsupported), `putBucketConfig` (Content-MD5;
+  a canned ACL or a document for the ACL) and `deleteBucketConfig` (what
+  isn't set deletes fine). One `Operation` per kind and verb; the probe
+  shares the kinds' subresources and "not configured" codes.
+- Typed, lossless-or-saying-so views: `CorsConfiguration`,
+  `LifecycleConfiguration` (prefix / tag filters, the legacy `<Prefix>`,
+  expiration, transitions, noncurrent expiration, aborting uploads),
+  `ObjectLockConfiguration`, `PublicAccessBlockConfiguration`; parse / build
+  functions, `corsProblem`, `lifecycleProblem`, `objectLockProblem`,
+  `parsePolicyStatus`, `parseAccessControlPolicyDocument`,
+  `equivalentBucketConfig` (the read-back check), `policyProblems`,
+  `analyzePolicy` (`PolicyFindings`), `bucketNameProblem`.
+- Object lock of an object: `ObjectLockMode`, `ObjectRetention`,
+  `Session::getObjectRetention` / `putObjectRetention` (removing one needs
+  the bypass) and `getObjectLegalHold` / `putObjectLegalHold`.
+- The governance bypass, per call and never implicit:
+  `DeleteObjectParams` / `DeleteObjectsParams` with
+  `bypassGovernanceRetention` (`Session::deleteObject` / `deleteObjects`
+  overloads), `PutObjectRetentionParams::bypassGovernanceRetention`.
+- Write-only features `BucketPolicyWrite`, `CorsWrite`, `LifecycleWrite`,
+  `ObjectLockWrite`, `BucketAclWrite`, `PublicAccessBlockWrite`,
+  `RetentionWrite`, `LegalHoldWrite` (each for PUT and DELETE of its
+  subresource). `AwsProfile`: all Supported; `GarageProfile`: CORS and
+  lifecycle Supported, the rest Unsupported.
+- `CephProfile` ("ceph", self-hosted RGW): the write-only features
+  it_s3_backend_ceph confirms, path-style, STANDARD only. The Docker Ceph
+  backend runs with it.
+- `FakeObjectStore`: CreateBucket / DeleteBucket over HTTP (BucketNotEmpty
+  with versions or uploads left), the bucket configurations, retention and
+  legal hold per version with the bypass, a bucket's default retention on
+  new versions; seeding `setObjectLockEnabled`, `setBucketConfig`,
+  `setRetention`, `setLegalHold`, `setUnsupportedBucketConfig`;
+  `setInterceptSubresourceWrites` plays a proxy that runs PUT ?x as
+  CreateBucket and DELETE ?x as DeleteBucket; `hasBucket`.
+- ITs: the canary `bucketConfigWritesOnMissingBucketCreateNothing`,
+  `bucketConfigWriteAndRemove` (QBUCKET_IT_CONFIG_BUCKET with a guard object;
+  locally `<bucket>-config`), `objectLockAndRetention`
+  (QBUCKET_IT_LOCKCFG_BUCKET, GOVERNANCE only; locally `<bucket>-lock`),
+  `createFillEmptyAndDeleteBucket` (QBUCKET_IT_TEMP_BUCKETS). Expectation
+  keys `configWrite.<kind>`, `objectLockWrite`, `retentionWrite`,
+  `legalHoldWrite`.
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced
@@ -289,6 +336,12 @@ version bump may break the API.
   `error() &&` returns by value.
 
 ### Safety
+
+- A bucket configuration write that comes back like CreateBucket (a
+  `Location` header, 409 BucketAlreadyOwnedByYou / BucketAlreadyExists) or a
+  removal that comes back like DeleteBucket (409 BucketNotEmpty) is a
+  Protocol error — a proxy dropped the subresource. Only a document of the
+  kind's own type (JSON object, the expected XML root) is sent.
 
 - Retries only where safe: transient failures of idempotent requests, and
   non-idempotent ones only when they never reached the server; exponential

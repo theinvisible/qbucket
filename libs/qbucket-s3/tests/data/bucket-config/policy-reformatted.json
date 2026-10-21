@@ -1,0 +1,1 @@
+{"Statement":[{"Action":"s3:GetObject","Effect":"Allow","Principal":"*","Resource":"arn:aws:s3:::bkt/*","Sid":"PublicRead"},{"Action":"s3:*","Condition":{"Bool":{"aws:SecureTransport":"false"}},"Effect":"Deny","Principal":{"AWS":["*"]},"Resource":["arn:aws:s3:::bkt","arn:aws:s3:::bkt/*"],"Sid":"TlsOnly"}],"Version":"2012-10-17"}

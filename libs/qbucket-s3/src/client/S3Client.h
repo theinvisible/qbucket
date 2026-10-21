@@ -2,6 +2,7 @@
 
 #include "client/RequestPipeline.h"
 
+#include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Export.h>
 #include <qbucket/s3/Presigner.h>
@@ -46,6 +47,22 @@ public:
     quint64 listObjectVersions(const ListObjectVersionsParams& params, Done<ListObjectVersionsPage> done);
     quint64 getBucketVersioning(const QString& bucket, Done<BucketVersioning> done);
     quint64 putBucketVersioning(const PutBucketVersioningParams& params, Done<SubresourceWriteResult> done);
+    // Bucket configuration documents (BucketConfig.h). A "not configured"
+    // 404 is a document with configured = false; an answer with another
+    // root (the subresource was ignored) is Unsupported. Writes check that
+    // the answer isn't CreateBucket's (PUT) or DeleteBucket's (DELETE): a
+    // proxy that drops the subresource would have run those.
+    quint64 getBucketConfig(const QString& bucket, BucketConfig kind, Done<BucketConfigDocument> done);
+    quint64 putBucketConfig(const PutBucketConfigParams& params, Done<SubresourceWriteResult> done);
+    quint64 deleteBucketConfig(const QString& bucket, BucketConfig kind, Done<SubresourceWriteResult> done);
+    // Object lock of one object (version). No retention / legal hold set is
+    // an empty value, not an error.
+    quint64 getObjectRetention(const QString& bucket, const QString& key, const QString& versionId,
+                               Done<ObjectRetention> done);
+    quint64 putObjectRetention(const PutObjectRetentionParams& params, Done<SubresourceWriteResult> done);
+    quint64 getObjectLegalHold(const QString& bucket, const QString& key, const QString& versionId,
+                               Done<bool> done);
+    quint64 putObjectLegalHold(const PutObjectLegalHoldParams& params, Done<SubresourceWriteResult> done);
     quint64 headBucket(const QString& bucket, Done<void> done);
     // Region of the bucket, already mapped through the provider profile.
     quint64 getBucketLocation(const QString& bucket, Done<QString> done);
@@ -67,6 +84,7 @@ public:
     quint64 putObject(const PutObjectParams& params, Done<PutObjectResult> done, Progress progress = {});
     quint64 deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                          Done<DeleteObjectResult> done);
+    quint64 deleteObject(const DeleteObjectParams& params, Done<DeleteObjectResult> done);
     // CopyObject (≤ 5 GiB), directive COPY or REPLACE; 200-with-error aware; never
     // retried after a lost answer (outcomeUnknown).
     quint64 copyObject(const CopyObjectParams& params, Done<CopyObjectResult> done);
@@ -84,6 +102,7 @@ public:
     // not report are listed as failed ("NotReported").
     quint64 deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
                           Done<DeleteObjectsResult> done);
+    quint64 deleteObjects(const DeleteObjectsParams& params, Done<DeleteObjectsResult> done);
     // --- multipart uploads (PLAN.md §12.5) ---
     quint64 createMultipartUpload(const CreateMultipartUploadParams& params,
                                   Done<CreateMultipartUploadResult> done);

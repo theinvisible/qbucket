@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Rule>
+    <ID>logs</ID>
+    <Filter>
+      <And>
+        <Prefix>logs/</Prefix>
+        <Tag><Key>keep</Key><Value>no</Value></Tag>
+        <Tag><Key>team</Key><Value>ops &amp; dev</Value></Tag>
+      </And>
+    </Filter>
+    <Status>Enabled</Status>
+    <Transition><Days>30</Days><StorageClass>STANDARD_IA</StorageClass></Transition>
+    <Expiration><Days>365</Days></Expiration>
+    <NoncurrentVersionExpiration><NoncurrentDays>7</NoncurrentDays><NewerNoncurrentVersions>3</NewerNoncurrentVersions></NoncurrentVersionExpiration>
+  </Rule>
+  <Rule>
+    <ID>uploads</ID>
+    <Filter><Prefix></Prefix></Filter>
+    <Status>Disabled</Status>
+    <Expiration><ExpiredObjectDeleteMarker>true</ExpiredObjectDeleteMarker></Expiration>
+    <AbortIncompleteMultipartUpload><DaysAfterInitiation>2</DaysAfterInitiation></AbortIncompleteMultipartUpload>
+  </Rule>
+  <Rule>
+    <ID>tagged</ID>
+    <Filter><Tag><Key>tmp</Key><Value>yes</Value></Tag></Filter>
+    <Status>Enabled</Status>
+    <Expiration><Date>2027-01-01T00:00:00.000Z</Date></Expiration>
+  </Rule>
+</LifecycleConfiguration>

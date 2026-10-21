@@ -74,6 +74,7 @@ qbucket_s3_add_test(test_provider_generic SOURCES test_provider_generic.cpp)
 qbucket_s3_add_test(test_provider_hetzner SOURCES test_provider_hetzner.cpp)
 qbucket_s3_add_test(test_provider_aws     SOURCES test_provider_aws.cpp)
 qbucket_s3_add_test(test_provider_garage  SOURCES test_provider_garage.cpp)
+qbucket_s3_add_test(test_provider_ceph    SOURCES test_provider_ceph.cpp)
 qbucket_s3_add_test(test_capabilities      SOURCES test_capabilities.cpp)
 qbucket_s3_add_test(test_probe_interpreter SOURCES test_probe_interpreter.cpp)
 qbucket_s3_add_test(test_capability_prober
@@ -113,6 +114,11 @@ qbucket_s3_add_test(test_downloader
 qbucket_s3_add_test(test_copier
     SOURCES test_copier.cpp
     LIBS    qbucket::s3_transfer qbucket::s3_testsupport
+)
+qbucket_s3_add_test(test_bucket_config SOURCES test_bucket_config.cpp)
+qbucket_s3_add_test(test_bucket_management
+    SOURCES test_bucket_management.cpp
+    LIBS    qbucket::s3_testsupport
 )
 qbucket_s3_add_test(test_versioning
     SOURCES test_versioning.cpp

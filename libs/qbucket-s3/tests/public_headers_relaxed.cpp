@@ -1,6 +1,7 @@
 // Compiled WITHOUT the library's strictness defines (Qt keywords enabled,
 // implicit ASCII casts allowed) — the way an arbitrary consumer includes us.
 // Keep the include list in sync with test_public_headers.cpp.
+#include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Credentials.h>
 #include <qbucket/s3/Endpoint.h>
@@ -17,6 +18,7 @@
 #include <qbucket/s3/Types.h>
 #include <qbucket/s3/Version.h>
 #include <qbucket/s3/providers/AwsProfile.h>
+#include <qbucket/s3/providers/CephProfile.h>
 #include <qbucket/s3/providers/GarageProfile.h>
 #include <qbucket/s3/providers/GenericS3Profile.h>
 #include <qbucket/s3/providers/HetznerProfile.h>

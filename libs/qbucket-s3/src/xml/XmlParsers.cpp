@@ -610,6 +610,53 @@ Result<BucketVersioning> parseVersioningConfiguration(const QByteArray& body)
     return out;
 }
 
+Result<ObjectRetention> parseRetention(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("Retention")))
+        return *err;
+    ObjectRetention out;
+    QString mode;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Mode"))
+            mode = r.readElementText().trimmed();
+        else if (n == QLatin1String("RetainUntilDate"))
+            out.retainUntil = parseIsoTimestamp(r.readElementText().trimmed());
+        else
+            r.skipCurrentElement();
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (!mode.isEmpty()) {
+        out.mode = objectLockModeFrom(mode);
+        if (!out.mode)
+            return protocolError(QStringLiteral("unknown retention mode: ") + mode);
+        if (!out.retainUntil.isValid())
+            return protocolError(QStringLiteral("a retention without a valid RetainUntilDate"));
+    }
+    return out;
+}
+
+Result<bool> parseLegalHold(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("LegalHold")))
+        return *err;
+    QString status;
+    while (r.readNextStartElement()) {
+        if (r.name() == QLatin1String("Status"))
+            status = r.readElementText().trimmed();
+        else
+            r.skipCurrentElement();
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (status != QLatin1String("ON") && status != QLatin1String("OFF"))
+        return protocolError(QStringLiteral("unknown legal hold status: ") + status);
+    return status == QLatin1String("ON");
+}
+
 Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body)
 {
     QXmlStreamReader r(body);

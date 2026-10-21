@@ -8,8 +8,10 @@
 
 #include <QCryptographicHash>
 #include <QSet>
+#include <QJsonDocument>
 #include <QTimer>
 #include <QUrl>
+#include <QXmlStreamReader>
 
 #include <set>
 
@@ -190,6 +192,72 @@ RequestSpec subresourceSpec(Operation op, const QByteArray& method, const QStrin
 bool validPartNumber(int n)
 {
     return n >= 1 && n <= 10000;
+}
+
+// A PUT on a bucket subresource answered like CreateBucket — a proxy that
+// dropped the subresource: on an existing bucket 409 BucketAlreadyOwnedByYou
+// (or 200 with Location in us-east-1), on a missing one a new bucket.
+Error createBucketAnswer(Error e, const QString& what)
+{
+    if (e.category == ErrorCategory::Conflict
+        && (e.code == QLatin1String("BucketAlreadyOwnedByYou") || e.code == QLatin1String("BucketAlreadyExists"))) {
+        e.category = ErrorCategory::Protocol;
+        e.message = QStringLiteral("server answered %1 like CreateBucket (%2): the subresource was dropped")
+                        .arg(what, e.code);
+    }
+    return e;
+}
+
+std::optional<Error> answeredLikeCreateBucket(const RawResponse& r, const QString& what)
+{
+    if (r.header("location").isEmpty())
+        return std::nullopt;
+    return Error::make(ErrorCategory::Protocol,
+                       QStringLiteral("server answered %1 like CreateBucket (Location header): the subresource "
+                                      "was dropped")
+                           .arg(what));
+}
+
+// A DELETE on a bucket subresource answered like DeleteBucket: 409
+// BucketNotEmpty (Hetzner's proxy ran DELETE ?encryption as DeleteBucket).
+// On an empty bucket DeleteBucket would succeed — the caller checks that
+// the bucket is still there.
+Error deleteBucketAnswer(Error e, const QString& what)
+{
+    if (e.category == ErrorCategory::Conflict && e.code == QLatin1String("BucketNotEmpty")) {
+        e.category = ErrorCategory::Protocol;
+        e.message = QStringLiteral("server answered %1 like DeleteBucket (BucketNotEmpty): the subresource was "
+                                   "dropped — check that the bucket still exists")
+                        .arg(what);
+    }
+    return e;
+}
+
+bool hasChildElements(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    int depth = 0;
+    while (!r.atEnd()) {
+        r.readNext();
+        if (r.isStartElement() && ++depth == 2)
+            return true;
+        if (r.isEndElement())
+            --depth;
+    }
+    return false;
+}
+
+QByteArray isoTimestamp(const QDateTime& t)
+{
+    return t.toUTC().toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss.zzzZ")).toLatin1();
+}
+
+SubresourceWriteResult writeResult(const RawResponse& r)
+{
+    SubresourceWriteResult out;
+    out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
+    out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+    return out;
 }
 
 } // namespace
@@ -1033,32 +1101,241 @@ quint64 S3Client::putBucketVersioning(const PutBucketVersioningParams& params, D
     spec.contentType = "application/xml";
     spec.headers.append({"Content-MD5", contentMd5(spec.body)});
     spec.idempotent = true;   // the same status again
-    // A proxy that drops ?versioning makes this a CreateBucket: on an
-    // existing bucket 409 BucketAlreadyOwnedByYou (or 200 with Location in
-    // us-east-1), on a missing one a new bucket.
+    // A proxy that drops ?versioning makes this a CreateBucket.
     auto guarded = [done = std::move(done)](Result<SubresourceWriteResult> r) mutable {
-        if (!r && r.error().category == ErrorCategory::Conflict
-            && (r.error().code == QLatin1String("BucketAlreadyOwnedByYou")
-                || r.error().code == QLatin1String("BucketAlreadyExists"))) {
-            Error e = r.error();
-            e.category = ErrorCategory::Protocol;
-            e.message = QStringLiteral("server answered PutBucketVersioning like CreateBucket (%1): the "
-                                       "?versioning subresource was dropped")
-                            .arg(e.code);
-            r = e;
-        }
+        if (!r)
+            r = createBucketAnswer(r.error(), QStringLiteral("PutBucketVersioning"));
         done(std::move(r));
     };
     return single(std::move(spec), Done<SubresourceWriteResult>(std::move(guarded)),
                   [](const RawResponse& r) -> Result<SubresourceWriteResult> {
-        if (!r.header("location").isEmpty()) {
-            return Error::make(ErrorCategory::Protocol,
-                               QStringLiteral("server answered PutBucketVersioning like CreateBucket (Location "
-                                              "header): the ?versioning subresource was dropped"));
-        }
+        if (std::optional<Error> e = answeredLikeCreateBucket(r, QStringLiteral("PutBucketVersioning")))
+            return *e;
         SubresourceWriteResult out;
         out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
         return out;
+    });
+}
+
+// --- Bucket configuration -----------------------------------------------------------
+
+quint64 S3Client::getBucketConfig(const QString& bucket, BucketConfig kind, Done<BucketConfigDocument> done)
+{
+    if (bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    RequestSpec spec = subresourceSpec(bucketConfigGetOperation(kind), "GET", bucket, {},
+                                       bucketConfigSubresource(kind), {});
+    auto notConfigured = [kind, done = std::move(done)](Result<BucketConfigDocument> r) mutable {
+        if (!r && r.error().httpStatus == 404
+            && (bucketConfigNotConfiguredCodes(kind).contains(r.error().code)
+                || r.error().category == ErrorCategory::NotConfigured)) {
+            BucketConfigDocument doc;
+            doc.kind = kind;
+            doc.requestId = r.error().requestId;
+            r = doc;
+        }
+        done(std::move(r));
+    };
+    return single(std::move(spec), Done<BucketConfigDocument>(std::move(notConfigured)),
+                  [kind](const RawResponse& r) -> Result<BucketConfigDocument> {
+        BucketConfigDocument doc;
+        doc.kind = kind;
+        doc.body = r.body;
+        doc.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        if (r.status == 204 && r.body.isEmpty())   // Garage: no website
+            return doc;
+        const QLatin1StringView root = bucketConfigRoot(kind);
+        if (root.isEmpty()) {
+            const QJsonDocument json = QJsonDocument::fromJson(r.body);
+            if (!json.isObject()) {
+                Error e = Error::make(ErrorCategory::Unsupported,
+                                      QStringLiteral("the answer to Get%1 is no JSON policy: the server ignored "
+                                                     "?%2")
+                                          .arg(bucketConfigName(kind), QString::fromLatin1(bucketConfigSubresource(kind))));
+                e.code = QStringLiteral("NoJson");
+                return e;
+            }
+            doc.configured = !json.object().isEmpty();
+            return doc;
+        }
+        const QString found = xml::rootElementName(r.body);
+        if (found != root) {
+            Error e = Error::make(ErrorCategory::Unsupported,
+                                  QStringLiteral("the answer to Get%1 has the root <%2>, not <%3>: the server "
+                                                 "ignored ?%4")
+                                      .arg(bucketConfigName(kind), found, QString(root),
+                                           QString::fromLatin1(bucketConfigSubresource(kind))));
+            e.code = QStringLiteral("Root:") + found;
+            return e;
+        }
+        doc.configured = kind == BucketConfig::Acl || kind == BucketConfig::PolicyStatus
+            || hasChildElements(r.body);
+        return doc;
+    });
+}
+
+quint64 S3Client::putBucketConfig(const PutBucketConfigParams& params, Done<SubresourceWriteResult> done)
+{
+    if (params.bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    const std::optional<Operation> op = bucketConfigPutOperation(params.kind);
+    if (!op) {
+        return failLater(std::move(done), invalid(QStringLiteral("%1 is read-only in this library")
+                                                      .arg(bucketConfigName(params.kind))));
+    }
+    if (params.kind == BucketConfig::Acl) {
+        if (params.cannedAcl.isEmpty() == params.body.isEmpty())
+            return failLater(std::move(done), invalid(QStringLiteral("a bucket ACL is a canned ACL or a document")));
+        if (!params.cannedAcl.isEmpty() && !isPrintableAscii(params.cannedAcl))
+            return failLater(std::move(done), invalid(QStringLiteral("invalid canned ACL")));
+    } else if (!params.cannedAcl.isEmpty()) {
+        return failLater(std::move(done), invalid(QStringLiteral("a canned ACL is only for the bucket ACL")));
+    } else if (params.body.isEmpty()) {
+        return failLater(std::move(done), invalid(QStringLiteral("the document is empty")));
+    }
+    // Only what is a document of this kind leaves the machine.
+    if (!params.body.isEmpty()) {
+        const QLatin1StringView root = bucketConfigRoot(params.kind);
+        const bool ok = root.isEmpty() ? QJsonDocument::fromJson(params.body).isObject()
+                                       : xml::rootElementName(params.body) == root;
+        if (!ok) {
+            return failLater(std::move(done),
+                             invalid(root.isEmpty() ? QStringLiteral("the policy is no JSON object")
+                                                    : QStringLiteral("the document's root is not <%1>").arg(QString(root))));
+        }
+    }
+    const QString name = operationName(*op);
+    RequestSpec spec = subresourceSpec(*op, "PUT", params.bucket, {}, bucketConfigSubresource(params.kind), {});
+    if (!params.body.isEmpty()) {
+        spec.body = params.body;
+        spec.contentType = params.kind == BucketConfig::Policy ? "application/json" : "application/xml";
+        spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    } else {
+        spec.headers.append({"x-amz-acl", params.cannedAcl.toLatin1()});
+    }
+    spec.idempotent = true;   // the same document again
+    auto guarded = [name, done = std::move(done)](Result<SubresourceWriteResult> r) mutable {
+        if (!r)
+            r = createBucketAnswer(r.error(), name);
+        done(std::move(r));
+    };
+    return single(std::move(spec), Done<SubresourceWriteResult>(std::move(guarded)),
+                  [name](const RawResponse& r) -> Result<SubresourceWriteResult> {
+        if (std::optional<Error> e = answeredLikeCreateBucket(r, name))
+            return *e;
+        return writeResult(r);
+    });
+}
+
+quint64 S3Client::deleteBucketConfig(const QString& bucket, BucketConfig kind, Done<SubresourceWriteResult> done)
+{
+    if (bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    const std::optional<Operation> op = bucketConfigDeleteOperation(kind);
+    if (!op)
+        return failLater(std::move(done), invalid(QStringLiteral("%1 can't be deleted").arg(bucketConfigName(kind))));
+    const QString name = operationName(*op);
+    RequestSpec spec = subresourceSpec(*op, "DELETE", bucket, {}, bucketConfigSubresource(kind), {});
+    spec.idempotent = true;
+    auto guarded = [kind, name, done = std::move(done)](Result<SubresourceWriteResult> r) mutable {
+        if (!r && r.error().httpStatus == 404 && bucketConfigNotConfiguredCodes(kind).contains(r.error().code)) {
+            SubresourceWriteResult out;   // nothing was set (or a retry after a lost answer)
+            out.requestId = r.error().requestId;
+            r = out;
+        } else if (!r) {
+            r = deleteBucketAnswer(r.error(), name);
+        }
+        done(std::move(r));
+    };
+    return single(std::move(spec), Done<SubresourceWriteResult>(std::move(guarded)),
+                  [](const RawResponse& r) -> Result<SubresourceWriteResult> { return writeResult(r); });
+}
+
+// --- Object lock of an object ------------------------------------------------------------
+
+quint64 S3Client::getObjectRetention(const QString& bucket, const QString& key, const QString& versionId,
+                                     Done<ObjectRetention> done)
+{
+    if (bucket.isEmpty() || key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    RequestSpec spec = subresourceSpec(Operation::GetObjectRetention, "GET", bucket, key, "retention", versionId);
+    auto none = [done = std::move(done)](Result<ObjectRetention> r) mutable {
+        if (!r && r.error().httpStatus == 404
+            && (r.error().code == QLatin1String("NoSuchObjectLockConfiguration")
+                || r.error().code == QLatin1String("ObjectLockConfigurationNotFoundError")))
+            r = ObjectRetention{};
+        done(std::move(r));
+    };
+    return single(std::move(spec), Done<ObjectRetention>(std::move(none)), [](const RawResponse& r) {
+        return xml::parseRetention(r.body);
+    });
+}
+
+quint64 S3Client::putObjectRetention(const PutObjectRetentionParams& params, Done<SubresourceWriteResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (params.mode.has_value() != params.retainUntil.isValid())
+        return failLater(std::move(done), invalid(QStringLiteral("a retention has a mode and a date")));
+    if (!params.mode && !params.bypassGovernanceRetention) {
+        return failLater(std::move(done),
+                         invalid(QStringLiteral("removing a retention needs the governance bypass")));
+    }
+    RequestSpec spec = subresourceSpec(Operation::PutObjectRetention, "PUT", params.bucket, params.key, "retention",
+                                       params.versionId);
+    spec.body = R"(<?xml version="1.0" encoding="UTF-8"?>)"
+                R"(<Retention xmlns="http://s3.amazonaws.com/doc/2006-03-01/">)";
+    if (params.mode) {
+        spec.body += "<Mode>" + objectLockModeName(*params.mode).toLatin1() + "</Mode><RetainUntilDate>"
+                   + isoTimestamp(params.retainUntil) + "</RetainUntilDate>";
+    }
+    spec.body += "</Retention>";
+    spec.contentType = "application/xml";
+    spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    if (params.bypassGovernanceRetention)
+        spec.headers.emplaceBack("x-amz-bypass-governance-retention", "true");
+    spec.idempotent = true;
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<SubresourceWriteResult> {
+        if (std::optional<Error> e = answeredLikeAnUpload(r, QStringLiteral("PutObjectRetention")))
+            return *e;
+        return writeResult(r);
+    });
+}
+
+quint64 S3Client::getObjectLegalHold(const QString& bucket, const QString& key, const QString& versionId,
+                                     Done<bool> done)
+{
+    if (bucket.isEmpty() || key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    RequestSpec spec = subresourceSpec(Operation::GetObjectLegalHold, "GET", bucket, key, "legal-hold", versionId);
+    auto none = [done = std::move(done)](Result<bool> r) mutable {
+        if (!r && r.error().httpStatus == 404
+            && (r.error().code == QLatin1String("NoSuchObjectLockConfiguration")
+                || r.error().code == QLatin1String("ObjectLockConfigurationNotFoundError")))
+            r = false;
+        done(std::move(r));
+    };
+    return single(std::move(spec), Done<bool>(std::move(none)), [](const RawResponse& r) {
+        return xml::parseLegalHold(r.body);
+    });
+}
+
+quint64 S3Client::putObjectLegalHold(const PutObjectLegalHoldParams& params, Done<SubresourceWriteResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    RequestSpec spec = subresourceSpec(Operation::PutObjectLegalHold, "PUT", params.bucket, params.key,
+                                       "legal-hold", params.versionId);
+    spec.body = QByteArray(R"(<?xml version="1.0" encoding="UTF-8"?>)"
+                           R"(<LegalHold xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Status>)")
+              + (params.on ? "ON" : "OFF") + "</Status></LegalHold>";
+    spec.contentType = "application/xml";
+    spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    spec.idempotent = true;
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<SubresourceWriteResult> {
+        if (std::optional<Error> e = answeredLikeAnUpload(r, QStringLiteral("PutObjectLegalHold")))
+            return *e;
+        return writeResult(r);
     });
 }
 
@@ -1136,16 +1413,23 @@ quint64 S3Client::uploadPartCopy(const UploadPartCopyParams& params, Done<Upload
 quint64 S3Client::deleteObject(const QString& bucket, const QString& key, const QString& versionId,
                                Done<DeleteObjectResult> done)
 {
-    if (bucket.isEmpty() || key.isEmpty())
+    return deleteObject(DeleteObjectParams{bucket, key, versionId, false}, std::move(done));
+}
+
+quint64 S3Client::deleteObject(const DeleteObjectParams& params, Done<DeleteObjectResult> done)
+{
+    if (params.bucket.isEmpty() || params.key.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
     RequestSpec spec;
     spec.operation = Operation::DeleteObject;
     spec.method = "DELETE";
-    spec.bucket = bucket;
-    spec.key = key;
-    spec.versionId = versionId;
-    if (!versionId.isEmpty())
-        spec.query.append({"versionId", versionId.toUtf8(), false});
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.versionId = params.versionId;
+    if (!params.versionId.isEmpty())
+        spec.query.append({"versionId", params.versionId.toUtf8(), false});
+    if (params.bypassGovernanceRetention)
+        spec.headers.emplaceBack("x-amz-bypass-governance-retention", "true");
     return single(std::move(spec), std::move(done), [](const RawResponse& r) {
         DeleteObjectResult out;
         out.versionId = QString::fromUtf8(r.header("x-amz-version-id"));
@@ -1158,6 +1442,13 @@ quint64 S3Client::deleteObject(const QString& bucket, const QString& key, const 
 quint64 S3Client::deleteObjects(const QString& bucket, const QList<ObjectIdentifier>& objects,
                                 Done<DeleteObjectsResult> done)
 {
+    return deleteObjects(DeleteObjectsParams{bucket, objects, false}, std::move(done));
+}
+
+quint64 S3Client::deleteObjects(const DeleteObjectsParams& params, Done<DeleteObjectsResult> done)
+{
+    const QString& bucket = params.bucket;
+    const QList<ObjectIdentifier>& objects = params.objects;
     if (bucket.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
     if (objects.isEmpty())
@@ -1184,6 +1475,8 @@ quint64 S3Client::deleteObjects(const QString& bucket, const QList<ObjectIdentif
     spec.contentType = "application/xml";
     spec.headers.append({"Content-MD5", contentMd5(spec.body)});
     spec.mayReturn200Error = true;   // our own XML, never user data
+    if (params.bypassGovernanceRetention)
+        spec.headers.emplaceBack("x-amz-bypass-governance-retention", "true");
 
     return single(std::move(spec), std::move(done), [objects](const RawResponse& r) -> Result<DeleteObjectsResult> {
         Result<DeleteObjectsResult> parsed = xml::parseDeleteResult(r.body);

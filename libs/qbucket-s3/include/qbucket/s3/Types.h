@@ -422,6 +422,63 @@ inline std::optional<QString> cannedAclOf(const AccessControlPolicy& acl)
     return std::nullopt;
 }
 
+// --- Object lock ------------------------------------------------------------------
+
+// GOVERNANCE can be shortened or removed by someone allowed to bypass it
+// (x-amz-bypass-governance-retention); COMPLIANCE can only be extended — by
+// nobody else, not even the account's root, until it runs out.
+enum class ObjectLockMode : quint8 { Governance, Compliance };
+
+inline QString objectLockModeName(ObjectLockMode mode)
+{
+    return mode == ObjectLockMode::Compliance ? QStringLiteral("COMPLIANCE") : QStringLiteral("GOVERNANCE");
+}
+
+inline std::optional<ObjectLockMode> objectLockModeFrom(const QString& name)
+{
+    if (name.compare(QLatin1String("GOVERNANCE"), Qt::CaseInsensitive) == 0)
+        return ObjectLockMode::Governance;
+    if (name.compare(QLatin1String("COMPLIANCE"), Qt::CaseInsensitive) == 0)
+        return ObjectLockMode::Compliance;
+    return std::nullopt;
+}
+
+// An object's (version's) retention (GetObjectRetention). No mode: none set.
+struct ObjectRetention {
+    std::optional<ObjectLockMode> mode;
+    QDateTime retainUntil;                // UTC
+};
+
+struct PutObjectRetentionParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version
+    // Unset mode (and no date): remove the retention — GOVERNANCE only, with
+    // bypassGovernanceRetention.
+    std::optional<ObjectLockMode> mode;
+    QDateTime retainUntil;
+    // Needed to shorten or remove a GOVERNANCE retention. Never implicit:
+    // the caller asked the user for this one operation.
+    bool bypassGovernanceRetention = false;
+};
+
+struct PutObjectLegalHoldParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version
+    bool on = false;
+};
+
+// DeleteObject with options.
+struct DeleteObjectParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version (a delete marker when versioned)
+    // Delete a version under GOVERNANCE retention. Never implicit (see
+    // PutObjectRetentionParams); a legal hold or COMPLIANCE still refuses.
+    bool bypassGovernanceRetention = false;
+};
+
 // HeadObject with options.
 struct HeadObjectParams {
     QString bucket;
@@ -566,6 +623,13 @@ struct CreateBucketParams {
 struct ObjectIdentifier {
     QString key;
     QString versionId;        // empty: current version
+};
+
+// DeleteObjects with options: one batch.
+struct DeleteObjectsParams {
+    QString bucket;
+    QList<ObjectIdentifier> objects;
+    bool bypassGovernanceRetention = false;   // see DeleteObjectParams
 };
 
 struct DeleteObjectsResult {

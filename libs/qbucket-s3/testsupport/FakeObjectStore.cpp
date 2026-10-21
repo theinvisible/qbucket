@@ -1,5 +1,7 @@
 #include <qbucket/s3/testing/FakeObjectStore.h>
 
+#include <qbucket/s3/BucketConfig.h>
+
 #include "core/HttpDate.h"
 #include "http/UriEncoding.h"
 #include "xml/XmlParsers.h"
@@ -167,6 +169,32 @@ TagSet taggingHeader(const RecordedRequest& req)
     return out;
 }
 
+// An <AccessControlPolicy> for a canned ACL.
+QByteArray aclDocument(const QString& acl)
+{
+    QByteArray body = "<AccessControlPolicy><Owner><ID>fake-owner</ID><DisplayName>owner</DisplayName></Owner>"
+                      "<AccessControlList>"
+                      "<Grant><Grantee xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                      "xsi:type=\"CanonicalUser\"><ID>fake-owner</ID></Grantee>"
+                      "<Permission>FULL_CONTROL</Permission></Grant>";
+    const auto group = [&body](const char* name, const char* permission) {
+        body += QByteArray("<Grant><Grantee xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+                           "xsi:type=\"Group\"><URI>http://acs.amazonaws.com/groups/global/")
+              + name + "</URI></Grantee><Permission>" + permission + "</Permission></Grant>";
+    };
+    if (acl == QLatin1String("public-read") || acl == QLatin1String("public-read-write"))
+        group("AllUsers", "READ");
+    if (acl == QLatin1String("public-read-write"))
+        group("AllUsers", "WRITE");
+    if (acl == QLatin1String("authenticated-read"))
+        group("AuthenticatedUsers", "READ");
+    return body + "</AccessControlList></AccessControlPolicy>";
+}
+
+constexpr const char* kLockMode = "x-amz-object-lock-mode";
+constexpr const char* kLockUntil = "x-amz-object-lock-retain-until-date";
+constexpr const char* kLegalHold = "x-amz-object-lock-legal-hold";
+
 QString cannedAcl(const RecordedRequest& req)
 {
     const QByteArray acl = req.header("x-amz-acl");
@@ -180,6 +208,10 @@ struct FakeObjectStore::Impl {
         std::map<QByteArray, std::vector<Version>> keys;   // UTF-8 byte order; newest first
         QString versioning;                                 // "", "Enabled", "Suspended"
         bool mfaDelete = false;
+        std::map<QByteArray, QByteArray> configs;           // subresource → document
+        QString acl = QStringLiteral("private");            // canned, or "custom"
+        bool objectLock = false;                            // only at creation
+        QByteArray lockConfig;                              // PUT ?object-lock, as sent
     };
 
     QPointer<FakeS3Server> server;
@@ -199,6 +231,60 @@ struct FakeObjectStore::Impl {
     bool ignoreMetadataReplace = false;
     bool dropObjectSubresources = false;
     bool dropTagsOnReplace = false;
+    bool interceptSubresourceWrites = false;
+    QList<BucketConfig> unsupportedConfigs;
+
+    static std::optional<BucketConfig> configOf(const RecordedRequest& req)
+    {
+        for (const BucketConfig kind : allBucketConfigs()) {
+            if (req.hasQueryItem(bucketConfigSubresource(kind)))
+                return kind;
+        }
+        return std::nullopt;
+    }
+
+    // Why this version can't be deleted (or its retention shortened); empty
+    // when it can. A legal hold and an active COMPLIANCE retention always
+    // protect it, an active GOVERNANCE retention without the bypass.
+    static QByteArray protectedBy(const Version& v, bool bypass)
+    {
+        if (v.locked)
+            return "object lock";
+        const QMap<QString, QString>& h = v.object.headers;
+        if (h.value(QLatin1String(kLegalHold)) == QLatin1String("ON"))
+            return "a legal hold";
+        const QString mode = h.value(QLatin1String(kLockMode));
+        const QDateTime until = xml::parseIsoTimestamp(h.value(QLatin1String(kLockUntil)));
+        if (mode.isEmpty() || !until.isValid() || until <= QDateTime::currentDateTimeUtc())
+            return {};
+        if (mode == QLatin1String("COMPLIANCE"))
+            return "a COMPLIANCE retention";
+        return bypass ? QByteArray() : QByteArray("a GOVERNANCE retention");
+    }
+
+    // The object lock headers of a new version: what the request asks for,
+    // else the bucket's default retention.
+    void applyLock(const QString& bucket, Object* o, const QMap<QString, QString>& requested)
+    {
+        for (const char* name : {kLockMode, kLockUntil, kLegalHold})
+            o->headers.remove(QLatin1String(name));
+        const BucketData& b = buckets[bucket];
+        if (!b.objectLock)
+            return;
+        for (const char* name : {kLockMode, kLockUntil, kLegalHold}) {
+            if (requested.contains(QLatin1String(name)))
+                o->headers.insert(QLatin1String(name), requested.value(QLatin1String(name)));
+        }
+        if (o->headers.contains(QLatin1String(kLockMode)) || b.lockConfig.isEmpty())
+            return;
+        const Result<ObjectLockConfiguration> config = parseObjectLockConfiguration(b.lockConfig);
+        if (!config || !config->mode)
+            return;
+        QDateTime until = QDateTime::currentDateTimeUtc();
+        until = config->days ? until.addDays(*config->days) : until.addYears(config->years.value_or(0));
+        o->headers.insert(QLatin1String(kLockMode), objectLockModeName(*config->mode));
+        o->headers.insert(QLatin1String(kLockUntil), QString::fromLatin1(iso(until)));
+    }
 
     std::vector<Version>* history(const QString& bucket, const QString& key)
     {
@@ -277,7 +363,8 @@ struct FakeObjectStore::Impl {
         bool marker = false;
     };
 
-    VersionDelete deleteVersion(const QString& bucket, const QString& key, const QString& versionId)
+    VersionDelete deleteVersion(const QString& bucket, const QString& key, const QString& versionId,
+                                bool bypass = false)
     {
         VersionDelete out;
         std::vector<Version>* h = history(bucket, key);
@@ -287,7 +374,7 @@ struct FakeObjectStore::Impl {
         if (it == h->end())
             return out;
         out.found = true;
-        out.locked = it->locked;
+        out.locked = !protectedBy(*it, bypass).isEmpty();
         out.marker = it->deleteMarker;
         if (out.locked)
             return out;
@@ -314,8 +401,31 @@ struct FakeObjectStore::Impl {
                 return QStringLiteral("ListMultipartUploads");
             if (m == "GET" && req.hasQueryItem("versions"))
                 return QStringLiteral("ListObjectVersions");
+            const std::optional<BucketConfig> kind = configOf(req);
+            if (interceptSubresourceWrites && (kind || req.hasQueryItem("versioning"))) {
+                // A proxy that drops the subresource.
+                if (m == "PUT")
+                    return QStringLiteral("CreateBucket");
+                if (m == "DELETE")
+                    return QStringLiteral("DeleteBucket");
+            }
             if (m == "PUT" && req.hasQueryItem("versioning"))
                 return QStringLiteral("PutBucketVersioning");
+            if (m == "PUT" && req.query.isEmpty())
+                return QStringLiteral("CreateBucket");
+            if (m == "DELETE" && req.query.isEmpty())
+                return QStringLiteral("DeleteBucket");
+            if (kind) {
+                const std::optional<Operation> put = bucketConfigPutOperation(*kind);
+                const std::optional<Operation> del = bucketConfigDeleteOperation(*kind);
+                if (m == "GET")
+                    return operationName(bucketConfigGetOperation(*kind));
+                if (m == "PUT" && put)
+                    return operationName(*put);
+                if (m == "DELETE" && del)
+                    return operationName(*del);
+                return QStringLiteral("Unsupported");
+            }
             if (m == "POST" && req.hasQueryItem("delete"))
                 return QStringLiteral("DeleteObjects");
             if (m == "HEAD")
@@ -332,6 +442,10 @@ struct FakeObjectStore::Impl {
             if (req.hasQueryItem("acl") && (m == "GET" || m == "PUT"))
                 return m == "GET" ? QStringLiteral("GetObjectAcl") : QStringLiteral("PutObjectAcl");
         }
+        if (req.hasQueryItem("retention") && (m == "GET" || m == "PUT"))
+            return m == "GET" ? QStringLiteral("GetObjectRetention") : QStringLiteral("PutObjectRetention");
+        if (req.hasQueryItem("legal-hold") && (m == "GET" || m == "PUT"))
+            return m == "GET" ? QStringLiteral("GetObjectLegalHold") : QStringLiteral("PutObjectLegalHold");
         if (m == "POST" && req.hasQueryItem("uploads"))
             return QStringLiteral("CreateMultipartUpload");
         if (m == "POST" && req.hasQueryItem("uploadId"))
@@ -410,8 +524,16 @@ struct FakeObjectStore::Impl {
     {
         if (op == QLatin1String("ListBuckets"))
             return listBuckets();
+        if (op == QLatin1String("CreateBucket"))
+            return createBucketOp(req, bucket);
         if (buckets.find(bucket) == buckets.end())
             return error(404, "NoSuchBucket", "The specified bucket does not exist");
+        if (op == QLatin1String("DeleteBucket"))
+            return deleteBucketOp(bucket);
+        if (const std::optional<BucketConfig> kind = configOf(req); kind && key.isEmpty() && op != QLatin1String("Unsupported"))
+            return bucketConfig(req, bucket, *kind);
+        if (op.endsWith(QLatin1String("ObjectRetention")) || op.endsWith(QLatin1String("ObjectLegalHold")))
+            return objectLock(op, req, bucket, key);
         if (op == QLatin1String("HeadBucket"))
             return FakeResponse::ok();
         if (op == QLatin1String("ListObjectsV2"))
@@ -496,30 +618,203 @@ struct FakeObjectStore::Impl {
             o->tags = *tags;
             return FakeResponse::ok();
         }
-        if (op == QLatin1String("GetObjectAcl")) {
-            QByteArray body = "<AccessControlPolicy><Owner><ID>fake-owner</ID><DisplayName>owner</DisplayName></Owner>"
-                              "<AccessControlList>"
-                              "<Grant><Grantee xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
-                              "xsi:type=\"CanonicalUser\"><ID>fake-owner</ID></Grantee>"
-                              "<Permission>FULL_CONTROL</Permission></Grant>";
-            const auto group = [&body](const char* name, const char* permission) {
-                body += QByteArray("<Grant><Grantee xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
-                                   "xsi:type=\"Group\"><URI>http://acs.amazonaws.com/groups/global/")
-                      + name + "</URI></Grantee><Permission>" + permission + "</Permission></Grant>";
-            };
-            if (o->acl == QLatin1String("public-read") || o->acl == QLatin1String("public-read-write"))
-                group("AllUsers", "READ");
-            if (o->acl == QLatin1String("public-read-write"))
-                group("AllUsers", "WRITE");
-            if (o->acl == QLatin1String("authenticated-read"))
-                group("AuthenticatedUsers", "READ");
-            return xmlResponse(body + "</AccessControlList></AccessControlPolicy>");
-        }
+        if (op == QLatin1String("GetObjectAcl"))
+            return xmlResponse(aclDocument(o->acl));
         // PutObjectAcl (canned only)
         const QByteArray acl = req.header("x-amz-acl");
         if (acl.isEmpty())
             return error(400, "MissingSecurityHeader", "x-amz-acl is required by FakeObjectStore");
         o->acl = QString::fromLatin1(acl);
+        return FakeResponse::ok();
+    }
+
+    FakeResponse createBucketOp(const RecordedRequest& req, const QString& bucket)
+    {
+        if (buckets.find(bucket) != buckets.end())
+            return error(409, "BucketAlreadyOwnedByYou", "Your previous request to create the named bucket succeeded and you already own it.");
+        if (bucketNameProblem(bucket) != BucketNameProblem::None)
+            return error(400, "InvalidBucketName", "The specified bucket is not valid.");
+        BucketData& b = buckets[bucket];
+        if (req.header("x-amz-bucket-object-lock-enabled") == "true") {
+            b.objectLock = true;
+            b.versioning = QStringLiteral("Enabled");
+        }
+        return FakeResponse::ok().withHeader("Location", "/" + bucket.toUtf8());
+    }
+
+    FakeResponse deleteBucketOp(const QString& bucket)
+    {
+        const BucketData& b = buckets[bucket];
+        const bool hasUploads = std::any_of(uploads.begin(), uploads.end(),
+                                            [&](const auto& u) { return u.second.bucket == bucket; });
+        if (!b.keys.empty() || hasUploads)
+            return error(409, "BucketNotEmpty", "The bucket you tried to delete is not empty");
+        buckets.erase(bucket);
+        FakeResponse r;
+        r.status = 204;
+        return r;
+    }
+
+    FakeResponse bucketConfig(const RecordedRequest& req, const QString& bucket, BucketConfig kind)
+    {
+        if (unsupportedConfigs.contains(kind))
+            return error(501, "NotImplemented", "not implemented by FakeObjectStore");
+        BucketData& b = buckets[bucket];
+        const QByteArray sub = bucketConfigSubresource(kind);
+        const QByteArray notConfigured = bucketConfigNotConfiguredCodes(kind).value(0).toLatin1();
+        if (req.method == "GET") {
+            const auto it = b.configs.find(sub);
+            switch (kind) {
+            case BucketConfig::Acl:
+                return xmlResponse(aclDocument(b.acl));
+            case BucketConfig::PolicyStatus: {
+                const auto policy = b.configs.find("policy");
+                if (policy == b.configs.end())
+                    return error(404, "NoSuchBucketPolicy", "The bucket policy does not exist");
+                return xmlResponse("<PolicyStatus><IsPublic>"
+                                   + QByteArray(analyzePolicy(policy->second).publicRead ? "true" : "false")
+                                   + "</IsPublic></PolicyStatus>");
+            }
+            case BucketConfig::ObjectLock:
+                if (!b.objectLock)
+                    return error(404, "ObjectLockConfigurationNotFoundError", "Object Lock configuration does not exist for this bucket");
+                return b.lockConfig.isEmpty()
+                    ? xmlResponse("<ObjectLockConfiguration><ObjectLockEnabled>Enabled</ObjectLockEnabled></ObjectLockConfiguration>")
+                    : FakeResponse::ok(b.lockConfig, "application/xml");
+            case BucketConfig::Logging:
+                return it == b.configs.end() ? xmlResponse("<BucketLoggingStatus/>") : FakeResponse::ok(it->second, "application/xml");
+            case BucketConfig::Notifications:
+                return it == b.configs.end() ? xmlResponse("<NotificationConfiguration/>")
+                                             : FakeResponse::ok(it->second, "application/xml");
+            default:
+                if (it == b.configs.end())
+                    return error(404, notConfigured, "The configuration does not exist");
+                return FakeResponse::ok(it->second, kind == BucketConfig::Policy ? "application/json" : "application/xml");
+            }
+        }
+        if (req.method == "DELETE") {
+            b.configs.erase(sub);
+            FakeResponse r;
+            r.status = 204;
+            return r;
+        }
+        // PUT
+        if (!req.body.isEmpty() && req.header("content-md5").isNull())
+            return error(400, "InvalidRequest", "Missing required header for this request: Content-MD5");
+        if (std::optional<FakeResponse> bad = checkMd5(req))
+            return *bad;
+        switch (kind) {
+        case BucketConfig::Policy:
+            if (!policyProblems(req.body).isEmpty())
+                return error(400, "MalformedPolicy", "Policies must be valid JSON and the first byte must be '{'");
+            break;
+        case BucketConfig::Cors: {
+            const Result<CorsConfiguration> c = parseCorsConfiguration(req.body);
+            if (!c || !corsProblem(*c).isEmpty())
+                return error(400, "MalformedXML", "The XML you provided was not well-formed");
+            break;
+        }
+        case BucketConfig::Lifecycle: {
+            const Result<LifecycleConfiguration> c = parseLifecycleConfiguration(req.body);
+            if (!c || !lifecycleProblem(*c).isEmpty())
+                return error(400, "MalformedXML", "The XML you provided was not well-formed");
+            break;
+        }
+        case BucketConfig::PublicAccessBlock:
+            if (!parsePublicAccessBlock(req.body))
+                return error(400, "MalformedXML", "The XML you provided was not well-formed");
+            break;
+        case BucketConfig::ObjectLock: {
+            const Result<ObjectLockConfiguration> c = parseObjectLockConfiguration(req.body);
+            if (!c || !c->enabled)
+                return error(400, "MalformedXML", "The XML you provided was not well-formed");
+            if (!b.objectLock)
+                return error(409, "InvalidBucketState", "Object Lock configuration cannot be enabled on existing buckets");
+            if (!objectLockProblem(*c).isEmpty())
+                return error(400, "InvalidArgument", "Default retention period must be a positive integer value");
+            b.lockConfig = req.body;
+            return FakeResponse::ok();
+        }
+        case BucketConfig::Acl:
+            if (!req.body.isEmpty()) {
+                const Result<AccessControlPolicy> acl = xml::parseAccessControlPolicy(req.body);
+                if (!acl)
+                    return error(400, "MalformedACLError", "The XML you provided was not well-formed");
+                b.acl = cannedAclOf(*acl).value_or(QStringLiteral("custom"));
+            } else {
+                b.acl = QString::fromLatin1(req.header("x-amz-acl"));
+            }
+            return FakeResponse::ok();
+        default:
+            return error(501, "NotImplemented", "not implemented by FakeObjectStore");
+        }
+        b.configs[sub] = req.body;
+        return FakeResponse::ok();
+    }
+
+    FakeResponse objectLock(const QString& op, const RecordedRequest& req, const QString& bucket, const QString& key)
+    {
+        Version* v = nullptr;
+        if (req.hasQueryItem("versionId")) {
+            v = findVersion(bucket, key, decode(req.queryItem("versionId")));
+            if (!v)
+                return error(404, "NoSuchVersion", "The specified version does not exist.");
+        } else if (std::vector<Version>* h = history(bucket, key)) {
+            v = &h->front();
+        }
+        if (!v || (v->deleteMarker && !req.hasQueryItem("versionId")))
+            return error(404, "NoSuchKey", "The specified key does not exist.");
+        if (v->deleteMarker)
+            return error(405, "MethodNotAllowed", "The specified method is not allowed against this resource.");
+        if (!buckets[bucket].objectLock)
+            return error(400, "InvalidRequest", "Bucket is missing Object Lock Configuration");
+        QMap<QString, QString>& h = v->object.headers;
+        const QString mode = h.value(QLatin1String(kLockMode));
+        const QDateTime until = xml::parseIsoTimestamp(h.value(QLatin1String(kLockUntil)));
+        if (op == QLatin1String("GetObjectRetention")) {
+            if (mode.isEmpty())
+                return error(404, "NoSuchObjectLockConfiguration", "The specified object does not have a ObjectLock configuration");
+            return xmlResponse("<Retention><Mode>" + mode.toLatin1() + "</Mode><RetainUntilDate>" + iso(until)
+                               + "</RetainUntilDate></Retention>");
+        }
+        if (op == QLatin1String("GetObjectLegalHold")) {
+            return xmlResponse("<LegalHold><Status>"
+                               + QByteArray(h.value(QLatin1String(kLegalHold)) == QLatin1String("ON") ? "ON" : "OFF")
+                               + "</Status></LegalHold>");
+        }
+        if (req.header("content-md5").isNull())
+            return error(400, "InvalidRequest", "Missing required header for this request: Content-MD5");
+        if (std::optional<FakeResponse> bad = checkMd5(req))
+            return *bad;
+        if (op == QLatin1String("PutObjectLegalHold")) {
+            const Result<bool> on = xml::parseLegalHold(req.body);
+            if (!on)
+                return error(400, "MalformedXML", "The XML you provided was not well-formed");
+            if (*on)
+                h.insert(QLatin1String(kLegalHold), QStringLiteral("ON"));
+            else
+                h.remove(QLatin1String(kLegalHold));
+            return FakeResponse::ok();
+        }
+        // PutObjectRetention
+        const Result<ObjectRetention> wanted = xml::parseRetention(req.body);
+        if (!wanted)
+            return error(400, "MalformedXML", "The XML you provided was not well-formed");
+        const bool active = !mode.isEmpty() && until.isValid() && until > QDateTime::currentDateTimeUtc();
+        const bool weaker = !wanted->mode || wanted->retainUntil < until;
+        if (active && mode == QLatin1String("COMPLIANCE")
+            && (weaker || wanted->mode != ObjectLockMode::Compliance))
+            return error(403, "AccessDenied", "Access Denied because object protected by object lock.");
+        if (active && mode == QLatin1String("GOVERNANCE") && weaker
+            && req.header("x-amz-bypass-governance-retention") != "true")
+            return error(403, "AccessDenied", "Access Denied because object protected by object lock.");
+        if (const std::optional<ObjectLockMode> newMode = wanted->mode) {
+            h.insert(QLatin1String(kLockMode), objectLockModeName(*newMode));
+            h.insert(QLatin1String(kLockUntil), QString::fromLatin1(iso(wanted->retainUntil)));
+        } else {
+            h.remove(QLatin1String(kLockMode));
+            h.remove(QLatin1String(kLockUntil));
+        }
         return FakeResponse::ok();
     }
 
@@ -580,6 +875,9 @@ struct FakeObjectStore::Impl {
         o.headers = storedHeaders(req);
         o.acl = cannedAcl(req);
         o.tags = taggingHeader(req);
+        if (!buckets[bucket].objectLock && !req.header(kLockMode).isNull())
+            return error(400, "InvalidRequest", "Bucket is missing Object Lock Configuration");
+        applyLock(bucket, &o, storedHeaders(req));
         const QString versionId = store(bucket, key, o);
         return stored(o, bucket, versionId);
     }
@@ -670,6 +968,7 @@ struct FakeObjectStore::Impl {
             copy.headers.insert(QStringLiteral("x-amz-server-side-encryption"), QString::fromLatin1(sse));
         }
         copy.acl = cannedAcl(req);   // never copied
+        applyLock(bucket, &copy, storedHeaders(req));   // retention is never copied either
         if (req.header("x-amz-tagging-directive").compare("REPLACE", Qt::CaseInsensitive) == 0)
             copy.tags = taggingHeader(req);
         const QString versionId = store(bucket, key, copy);
@@ -908,6 +1207,7 @@ struct FakeObjectStore::Impl {
         o.acl = u->acl;
         o.tags = u->tags;
         o.partSizes = sizes;
+        applyLock(bucket, &o, u->headers);
         const QString versionId = store(bucket, key, o);
         uploads.erase(u->id);
         return withVersion(xmlResponse("<CompleteMultipartUploadResult><Location>http://fake/" + xmlEscape(bucket) + '/'
@@ -1094,11 +1394,12 @@ struct FakeObjectStore::Impl {
         }
         if (r.hasError())
             return error(400, "MalformedXML", "The XML you provided was not well-formed");
+        const bool bypass = req.header("x-amz-bypass-governance-retention") == "true";
         QByteArray body = "<DeleteResult>";
         for (const auto& [key, versionId] : std::as_const(objects)) {
             const QByteArray k = "<Key>" + xmlEscape(key) + "</Key>";
             if (versionId) {
-                const VersionDelete del = deleteVersion(bucket, key, *versionId);
+                const VersionDelete del = deleteVersion(bucket, key, *versionId, bypass);
                 const QByteArray v = "<VersionId>" + xmlEscape(*versionId) + "</VersionId>";
                 if (del.locked) {
                     body += "<Error>" + k + v + "<Code>AccessDenied</Code><Message>Access Denied because object "
@@ -1128,7 +1429,8 @@ struct FakeObjectStore::Impl {
         r.status = 204;
         if (req.hasQueryItem("versionId")) {
             const QString versionId = decode(req.queryItem("versionId"));
-            const VersionDelete del = deleteVersion(bucket, key, versionId);
+            const VersionDelete del = deleteVersion(bucket, key, versionId,
+                                                    req.header("x-amz-bypass-governance-retention") == "true");
             if (del.locked)
                 return error(403, "AccessDenied", "Access Denied because object protected by object lock.");
             if (del.found) {
@@ -1339,6 +1641,73 @@ void FakeObjectStore::lockVersion(const QString& bucket, const QString& key, con
 {
     if (Version* v = d->findVersion(bucket, key, versionId))
         v->locked = true;
+}
+
+void FakeObjectStore::setObjectLockEnabled(const QString& bucket)
+{
+    Impl::BucketData& b = d->buckets[bucket];
+    b.objectLock = true;
+    b.versioning = QStringLiteral("Enabled");
+}
+
+void FakeObjectStore::setBucketConfig(const QString& bucket, BucketConfig kind, const QByteArray& document)
+{
+    Impl::BucketData& b = d->buckets[bucket];
+    if (kind == BucketConfig::Acl)
+        b.acl = QString::fromLatin1(document);
+    else if (kind == BucketConfig::ObjectLock)
+        b.lockConfig = document;
+    else if (document.isNull())
+        b.configs.erase(bucketConfigSubresource(kind));
+    else
+        b.configs[bucketConfigSubresource(kind)] = document;
+}
+
+std::optional<QByteArray> FakeObjectStore::bucketConfig(const QString& bucket, BucketConfig kind) const
+{
+    const auto b = d->buckets.find(bucket);
+    if (b == d->buckets.end())
+        return std::nullopt;
+    if (kind == BucketConfig::Acl)
+        return b->second.acl.toLatin1();
+    if (kind == BucketConfig::ObjectLock)
+        return b->second.lockConfig.isEmpty() ? std::nullopt : std::optional<QByteArray>(b->second.lockConfig);
+    const auto it = b->second.configs.find(bucketConfigSubresource(kind));
+    return it == b->second.configs.end() ? std::nullopt : std::optional<QByteArray>(it->second);
+}
+
+void FakeObjectStore::setUnsupportedBucketConfig(BucketConfig kind)
+{
+    d->unsupportedConfigs.append(kind);
+}
+
+void FakeObjectStore::setRetention(const QString& bucket, const QString& key, const QString& versionId,
+                                   ObjectLockMode mode, const QDateTime& until)
+{
+    if (Version* v = d->findVersion(bucket, key, versionId)) {
+        v->object.headers.insert(QLatin1String(kLockMode), objectLockModeName(mode));
+        v->object.headers.insert(QLatin1String(kLockUntil), QString::fromLatin1(iso(until)));
+    }
+}
+
+void FakeObjectStore::setLegalHold(const QString& bucket, const QString& key, const QString& versionId, bool on)
+{
+    if (Version* v = d->findVersion(bucket, key, versionId)) {
+        if (on)
+            v->object.headers.insert(QLatin1String(kLegalHold), QStringLiteral("ON"));
+        else
+            v->object.headers.remove(QLatin1String(kLegalHold));
+    }
+}
+
+void FakeObjectStore::setInterceptSubresourceWrites(bool intercept)
+{
+    d->interceptSubresourceWrites = intercept;
+}
+
+bool FakeObjectStore::hasBucket(const QString& bucket) const
+{
+    return d->buckets.find(bucket) != d->buckets.end();
 }
 
 void FakeObjectStore::setDiscardData(bool discard)

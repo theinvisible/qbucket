@@ -13,7 +13,16 @@
 //             holding guard/DO-NOT-DELETE.txt: toggleVersioning switches its
 //             versioning off and on again),
 //             QBUCKET_IT_RUN (16 hex digits: reuse an earlier run's prefix,
-//             e.g. to clean up after it)
+//             e.g. to clean up after it),
+//             QBUCKET_IT_CONFIG_BUCKET (a qbucket-it-* scratch bucket holding
+//             the guard object: each bucket configuration is written, read
+//             back and removed again; locally <bucket>-config),
+//             QBUCKET_IT_LOCKCFG_BUCKET (a qbucket-it-* bucket created with
+//             object lock, holding the guard object: default retention,
+//             retention and legal hold — GOVERNANCE only, never COMPLIANCE;
+//             QBUCKET_IT_CREATE_LOCKCFG=1 creates it; locally <bucket>-lock),
+//             QBUCKET_IT_TEMP_BUCKETS=1 (create, fill, empty and delete a
+//             qbucket-it-tmp-<run> bucket; always with QBUCKET_IT_CREATE_BUCKET)
 //
 // Known deviations of a backend live in tests/data/it-expectations/
 // <backend>.json. They are asserted, not just skipped — when a backend
@@ -23,6 +32,7 @@
 // it/<run id>/ and only that prefix is cleaned up — every version and delete
 // marker under it, nothing else. The bucket itself is never deleted.
 
+#include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/ListObjectVersionsPager.h>
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/Session.h>
@@ -118,6 +128,10 @@ private:
     QString m_versionBucket;        // versioning enabled; see versionedBucket()
     bool m_versionBucketResolved = false;
     bool m_versionBucketCreated = false;
+    QString m_configBucket;         // see configBucket()
+    bool m_configBucketResolved = false;
+    QString m_lockBucket;           // see lockBucket()
+    bool m_lockBucketResolved = false;
     QObject m_ctx;
     QTemporaryDir m_dir;
 
@@ -236,16 +250,18 @@ private:
         return out;
     }
 
-    void deleteBatch(const QString& bucket, const QList<ObjectIdentifier>& batch)
+    void deleteBatch(const QString& bucket, const QList<ObjectIdentifier>& batch, bool bypass = false)
     {
+        const DeleteObjectsParams params{bucket, batch, bypass};
         const Result<DeleteObjectsResult> r = await<DeleteObjectsResult>(
-            [&](auto cb) { m_session->deleteObjects(bucket, batch, &m_ctx, std::move(cb)); });
+            [&](auto cb) { m_session->deleteObjects(params, &m_ctx, std::move(cb)); });
         if (!r && r.error().category == ErrorCategory::InvalidRequest) {
             // A key XML can't carry (control characters) refuses the whole
             // batch: one by one instead.
             for (const ObjectIdentifier& o : batch) {
+                const DeleteObjectParams single{bucket, o.key, o.versionId, bypass};
                 const Result<DeleteObjectResult> one = await<DeleteObjectResult>(
-                    [&](auto cb) { m_session->deleteObject(bucket, o.key, o.versionId, &m_ctx, std::move(cb)); });
+                    [&](auto cb) { m_session->deleteObject(single, &m_ctx, std::move(cb)); });
                 if (!one)
                     qWarning().noquote() << "cleanup left" << o.key << o.versionId << one.error().toString();
             }
@@ -262,7 +278,8 @@ private:
     // Removes everything under `prefix` for good: every version and delete
     // marker where versions can be listed, else the current objects. Never
     // touches anything outside this run's prefix.
-    void deleteAllUnder(const QString& prefix, const QString& bucketName = {})
+    // `bypass`: GOVERNANCE retention too (the object lock scratch bucket).
+    void deleteAllUnder(const QString& prefix, const QString& bucketName = {}, bool bypass = false)
     {
         const QString bucket = bucketName.isEmpty() ? m_bucket : bucketName;
         if (!prefix.startsWith(m_prefix))
@@ -282,7 +299,7 @@ private:
             return;
         }
         for (qsizetype i = 0; i < all.size(); i += 1000)
-            deleteBatch(bucket, all.mid(i, 1000));
+            deleteBatch(bucket, all.mid(i, 1000), bypass);
     }
 
     std::optional<VersioningStatus> versioningOf(const QString& bucket)
@@ -341,6 +358,216 @@ private:
         }
         qInfo().noquote() << "versioned bucket:" << (m_versionBucket.isEmpty() ? QStringLiteral("none") : m_versionBucket);
         return m_versionBucket;
+    }
+
+    static QString guardKey() { return QStringLiteral("guard/DO-NOT-DELETE.txt"); }
+
+    bool guardIn(const QString& bucket)
+    {
+        return bool(await<ObjectMeta>(
+            [&](auto cb) { m_session->headObject(bucket, guardKey(), {}, &m_ctx, std::move(cb)); }));
+    }
+
+    Result<void> headBucket(const QString& bucket)
+    {
+        return await<void>([&](auto cb) { m_session->headBucket(bucket, &m_ctx, std::move(cb)); });
+    }
+
+    Result<void> createBucket(const QString& bucket, bool objectLock)
+    {
+        CreateBucketParams p;
+        p.bucket = bucket;
+        p.region = m_options.endpoint.region;
+        p.objectLockEnabled = objectLock;
+        return await<void>([&](auto cb) { m_session->createBucket(p, &m_ctx, std::move(cb)); });
+    }
+
+    // A scratch bucket for configuration writes: QBUCKET_IT_CONFIG_BUCKET,
+    // or locally <bucket>-config (created, with a guard object). Empty:
+    // none — or one without its guard object, which is never written to.
+    QString configBucket()
+    {
+        if (m_configBucketResolved)
+            return m_configBucket;
+        m_configBucketResolved = true;
+        QString bucket = env("QBUCKET_IT_CONFIG_BUCKET");
+        if (bucket.isEmpty() && env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1")) {
+            bucket = m_bucket + QStringLiteral("-config");
+            const Result<void> created = createBucket(bucket, false);
+            if (!created && created.error().category != ErrorCategory::Conflict)
+                return {};
+            if (!putIn(bucket, guardKey(), "guard object: a misread write must not delete this bucket"))
+                return {};
+        }
+        if (bucket.isEmpty() || !safeBucketName(bucket) || !guardIn(bucket)) {
+            qWarning().noquote() << "no configuration scratch bucket with a guard object:" << bucket;
+            return {};
+        }
+        m_configBucket = bucket;
+        return m_configBucket;
+    }
+
+    // A scratch bucket with object lock: QBUCKET_IT_LOCKCFG_BUCKET (created
+    // with QBUCKET_IT_CREATE_LOCKCFG=1), or locally <bucket>-lock. Holds the
+    // guard object. Empty: none.
+    QString lockBucket()
+    {
+        if (m_lockBucketResolved)
+            return m_lockBucket;
+        m_lockBucketResolved = true;
+        QString bucket = env("QBUCKET_IT_LOCKCFG_BUCKET");
+        bool create = env("QBUCKET_IT_CREATE_LOCKCFG") == QLatin1String("1");
+        if (bucket.isEmpty() && env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1")
+            && m_expect.value(QLatin1String("objectLockWrite")).toBool(true)
+            && m_expect.value(QLatin1String("capabilities")).toObject().value(QLatin1String("bucket.object-lock"))
+                   != QLatin1String("Unsupported")) {
+            bucket = m_bucket + QStringLiteral("-lock");
+            create = true;
+        }
+        if (bucket.isEmpty() || !safeBucketName(bucket))
+            return {};
+        if (create && !headBucket(bucket)) {
+            const Result<void> created = createBucket(bucket, true);
+            if (!created && created.error().category != ErrorCategory::Conflict) {
+                qWarning().noquote() << "creating the object lock bucket:" << created.error().toString();
+                return {};
+            }
+            for (int i = 0; i < 20 && !putIn(bucket, guardKey(), "guard object: a misread write must not delete this bucket"); ++i)
+                QTest::qWait(3000);   // a fresh bucket may refuse for a while (Hetzner)
+        }
+        if (!guardIn(bucket)) {
+            qWarning().noquote() << "the object lock bucket holds no guard object:" << bucket;
+            return {};
+        }
+        const Result<BucketConfigDocument> lock = getConfig(bucket, BucketConfig::ObjectLock);
+        if (!lock || !lock->configured || !parseObjectLockConfiguration(lock->body).value().enabled) {
+            qWarning().noquote() << "no object lock on" << bucket;
+            return {};
+        }
+        m_lockBucket = bucket;
+        return m_lockBucket;
+    }
+
+    Result<BucketConfigDocument> getConfig(const QString& bucket, BucketConfig kind)
+    {
+        return await<BucketConfigDocument>(
+            [&](auto cb) { m_session->getBucketConfig(bucket, kind, &m_ctx, std::move(cb)); });
+    }
+
+    Result<SubresourceWriteResult> putConfig(const QString& bucket, BucketConfig kind, const QByteArray& body,
+                                             const QString& canned = {})
+    {
+        PutBucketConfigParams p;
+        p.bucket = bucket;
+        p.kind = kind;
+        p.body = body;
+        p.cannedAcl = canned;
+        return await<SubresourceWriteResult>([&](auto cb) { m_session->putBucketConfig(p, &m_ctx, std::move(cb)); });
+    }
+
+    Result<SubresourceWriteResult> deleteConfig(const QString& bucket, BucketConfig kind)
+    {
+        return await<SubresourceWriteResult>(
+            [&](auto cb) { m_session->deleteBucketConfig(bucket, kind, &m_ctx, std::move(cb)); });
+    }
+
+    // Reads a configuration until `ok` holds (gateways answer stale for a
+    // while). The seconds it took, or -1; *last gets the last answer.
+    int waitForConfig(const QString& bucket, BucketConfig kind,
+                      const std::function<bool(const BucketConfigDocument&)>& ok, QString* last = nullptr,
+                      int maxSecs = 60)
+    {
+        QElapsedTimer t;
+        t.start();
+        while (true) {
+            const Result<BucketConfigDocument> doc = getConfig(bucket, kind);
+            if (doc && ok(*doc))
+                return int(t.elapsed() / 1000);
+            if (last)
+                *last = doc ? QString::fromUtf8(doc->body) : doc.error().toString();
+            if (t.elapsed() >= qint64(maxSecs) * 1000)
+                return -1;
+            QTest::qWait(3000);
+        }
+    }
+
+    // A harmless document of each writable kind, scoped to this run.
+    QByteArray sampleConfig(BucketConfig kind, const QString& bucket) const
+    {
+        switch (kind) {
+        case BucketConfig::Policy:
+            // Public read of a prefix nothing lives under.
+            // (No raw string literal: moc misreads quotes in them.)
+            return QStringLiteral("{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"QBucketIt\",\"Effect\":\"Allow\","
+                                  "\"Principal\":\"*\",\"Action\":[\"s3:GetObject\"],"
+                                  "\"Resource\":[\"arn:aws:s3:::%1/%2nothing/*\"]}]}")
+                .arg(bucket, m_prefix)
+                .toUtf8();
+        case BucketConfig::Cors: {
+            CorsConfiguration c;
+            CorsRule r;
+            r.id = QStringLiteral("qbucket-it");
+            r.allowedMethods = {QStringLiteral("GET"), QStringLiteral("HEAD")};
+            r.allowedOrigins = {QStringLiteral("https://qbucket.invalid")};
+            r.allowedHeaders = {QStringLiteral("*")};
+            r.exposeHeaders = {QStringLiteral("ETag")};
+            r.maxAgeSeconds = 60;
+            c.rules = {r};
+            return buildCorsConfiguration(c).value();
+        }
+        case BucketConfig::Lifecycle: {
+            LifecycleConfiguration c;
+            LifecycleRule r;
+            r.id = QStringLiteral("qbucket-it");
+            r.prefix = m_prefix + QStringLiteral("lc/");
+            r.expirationDays = 1;
+            c.rules = {r};
+            return buildLifecycleConfiguration(c).value();
+        }
+        case BucketConfig::PublicAccessBlock: {
+            PublicAccessBlockConfiguration c;
+            c.blockPublicAcls = true;
+            return buildPublicAccessBlock(c);
+        }
+        case BucketConfig::ObjectLock: {
+            ObjectLockConfiguration c;
+            c.enabled = true;
+            c.mode = ObjectLockMode::Governance;
+            c.days = 1;
+            return buildObjectLockConfiguration(c);
+        }
+        default:
+            return {};
+        }
+    }
+
+    // Unfinished uploads of a bucket (all of them: a temporary bucket).
+    QList<MultipartUploadInfo> uploadsIn(const QString& bucket)
+    {
+        ListMultipartUploadsParams p;
+        p.bucket = bucket;
+        const Result<ListMultipartUploadsPage> r = await<ListMultipartUploadsPage>(
+            [&](auto cb) { m_session->listMultipartUploads(p, &m_ctx, std::move(cb)); });
+        return r ? r->uploads : QList<MultipartUploadInfo>{};
+    }
+
+    // Everything in a temporary bucket of this run, for good.
+    void emptyTempBucket(const QString& bucket)
+    {
+        if (!bucket.startsWith(QStringLiteral("qbucket-it-tmp-")))
+            return;
+        for (const MultipartUploadInfo& u : uploadsIn(bucket))
+            (void)await<void>([&](auto cb) { m_session->abortMultipartUpload(bucket, u.key, u.uploadId, &m_ctx, std::move(cb)); });
+        QList<ObjectIdentifier> all;
+        if (const Result<QList<VersionEntry>> versions = listVersions(bucket, {})) {
+            for (const VersionEntry& v : versions.value())
+                all.append({v.key, v.versionId});
+        } else if (const Result<QStringList> keys = listKeys({}, 1000, bucket)) {
+            for (const QString& k : keys.value())
+                all.append({k, {}});
+        }
+        for (qsizetype i = 0; i < all.size(); i += 1000)
+            deleteBatch(bucket, all.mid(i, 1000));
     }
 
     // The current object's version id (empty when there is none).
@@ -421,6 +648,8 @@ private Q_SLOTS:
             deleteAllUnder(m_prefix);
             if (!m_versionBucket.isEmpty() && m_versionBucket != m_bucket)
                 deleteAllUnder(m_prefix, m_versionBucket);
+            if (!m_lockBucket.isEmpty())
+                deleteAllUnder(m_prefix, m_lockBucket, true);
             const QString second = env("QBUCKET_IT_SECOND_BUCKET");   // crossBucketCopy's target
             if (safeBucketName(second) && second != m_bucket)
                 deleteAllUnder(m_prefix, second);
@@ -1509,6 +1738,294 @@ private Q_SLOTS:
         QVERIFY(toEnabled >= 0);
         QVERIFY(guardHere());
         VERIFY_OK((await<void>([&](auto cb) { m_session->headBucket(bucket, &m_ctx, std::move(cb)); })));
+    }
+
+    // The canary for configuration writes: PUT ?<config> on a bucket that
+    // doesn't exist must fail and create nothing — a proxy that drops the
+    // subresource would run CreateBucket.
+    void bucketConfigWritesOnMissingBucketCreateNothing()
+    {
+        for (const BucketConfig kind : {BucketConfig::Policy, BucketConfig::Cors, BucketConfig::Lifecycle,
+                                        BucketConfig::PublicAccessBlock, BucketConfig::Acl, BucketConfig::ObjectLock}) {
+            const QString canary = QStringLiteral("qbucket-it-canary-%1").arg(QRandomGenerator::global()->generate(), 8, 16, QLatin1Char('0'));
+            QVERIFY(safeBucketName(canary));
+            const Result<SubresourceWriteResult> r = kind == BucketConfig::Acl
+                ? putConfig(canary, kind, {}, QStringLiteral("private"))
+                : putConfig(canary, kind, sampleConfig(kind, canary));
+            if (headBucket(canary)) {
+                (void)await<void>([&](auto cb) { m_session->deleteBucket(canary, &m_ctx, std::move(cb)); });
+                QFAIL(qPrintable(QStringLiteral("PUT ?%1 on a missing bucket created it — the proxy dropped the subresource")
+                                     .arg(QString::fromLatin1(bucketConfigSubresource(kind)))));
+            }
+            QVERIFY2(!r, qPrintable(QStringLiteral("PUT ?%1 on a missing bucket succeeded")
+                                        .arg(QString::fromLatin1(bucketConfigSubresource(kind)))));
+            qInfo().noquote() << "canary" << bucketConfigName(kind) << r.error().toString();
+            QVERIFY(r.error().category != ErrorCategory::Protocol);
+        }
+    }
+
+    // Each configuration written to a guarded scratch bucket, read back and
+    // removed: what the server keeps, that the request reached the
+    // subresource (the guard object and the bucket are still there), and
+    // that the removal does (a proxy turning it into DeleteBucket answers
+    // BucketNotEmpty, thanks to the guard).
+    void bucketConfigWriteAndRemove_data()
+    {
+        QTest::addColumn<int>("kind");
+        QTest::newRow("policy") << int(BucketConfig::Policy);
+        QTest::newRow("cors") << int(BucketConfig::Cors);
+        QTest::newRow("lifecycle") << int(BucketConfig::Lifecycle);
+        QTest::newRow("publicAccessBlock") << int(BucketConfig::PublicAccessBlock);
+        QTest::newRow("acl") << int(BucketConfig::Acl);
+    }
+
+    void bucketConfigWriteAndRemove()
+    {
+        QFETCH(int, kind);
+        const auto k = BucketConfig(kind);
+        const QString bucket = configBucket();
+        if (bucket.isEmpty())
+            QSKIP("no scratch bucket for configuration writes (QBUCKET_IT_CONFIG_BUCKET)");
+        const bool supported = m_expect.value(QLatin1String("configWrite")).toObject()
+                                   .value(QString::fromLatin1(QTest::currentDataTag())).toBool(true);
+        const bool acl = k == BucketConfig::Acl;
+        // The ACL is "set" when it is public-read (what this test writes).
+        const auto isSet = [&](const BucketConfigDocument& d) {
+            if (!acl)
+                return d.configured;
+            const Result<AccessControlPolicy> policy = parseAccessControlPolicyDocument(d.body);
+            return policy && cannedAclOf(*policy) == QStringLiteral("public-read");
+        };
+
+        const Result<BucketConfigDocument> before = getConfig(bucket, k);
+        if (supported && before && isSet(*before))
+            QSKIP("refusing to overwrite a configuration the scratch bucket already has");
+        const QByteArray doc = acl ? QByteArray() : sampleConfig(k, bucket);
+        bool written = false;
+        auto restore = qScopeGuard([&] {
+            if (!written)
+                return;
+            if (acl)
+                (void)putConfig(bucket, k, {}, QStringLiteral("private"));
+            else
+                (void)deleteConfig(bucket, k);
+        });
+        const Result<SubresourceWriteResult> w = putConfig(bucket, k, doc, acl ? QStringLiteral("public-read") : QString());
+        written = bool(w);
+        QVERIFY2(guardIn(bucket), "the guard object is gone");
+        VERIFY_OK(headBucket(bucket));
+        if (!supported) {
+            QVERIFY2(!w, "expected this backend to refuse the write");
+            qInfo().noquote() << "refused as expected:" << w.error().toString();
+            QVERIFY(w.error().category != ErrorCategory::Protocol);
+            return;
+        }
+        VERIFY_OK(w);
+
+        QString last;
+        const int toSet = waitForConfig(bucket, k, [&](const BucketConfigDocument& d) {
+            if (acl)
+                return isSet(d);
+            return d.configured && equivalentBucketConfig(k, doc, d.body);
+        }, &last);
+        qInfo().noquote() << "read back after" << toSet << "s";
+        QVERIFY2(toSet >= 0, qPrintable(QStringLiteral("reads back differently: ") + last));
+
+        const Result<SubresourceWriteResult> removed =
+            acl ? putConfig(bucket, k, {}, QStringLiteral("private")) : deleteConfig(bucket, k);
+        VERIFY_OK(removed);
+        written = false;
+        QVERIFY2(guardIn(bucket), "the guard object is gone");
+        VERIFY_OK(headBucket(bucket));
+        const int toGone = waitForConfig(bucket, k, [&](const BucketConfigDocument& d) { return !isSet(d); }, &last);
+        qInfo().noquote() << "removed after" << toGone << "s";
+        QVERIFY2(toGone >= 0, qPrintable(QStringLiteral("still set: ") + last));
+    }
+
+    // Default retention, retention and legal hold on a guarded bucket with
+    // object lock — GOVERNANCE with a day at most, removed with the bypass.
+    void objectLockAndRetention()
+    {
+        const QString bucket = lockBucket();
+        if (bucket.isEmpty())
+            QSKIP("no object lock scratch bucket (QBUCKET_IT_LOCKCFG_BUCKET)");
+        const Result<ObjectLockConfiguration> before = parseObjectLockConfiguration(getConfig(bucket, BucketConfig::ObjectLock)->body);
+        VERIFY_OK(before);
+        if (before->mode)
+            QSKIP("refusing: the bucket has a default retention already");
+        const auto expected = [&](const char* name) { return m_expect.value(QLatin1String(name)).toBool(true); };
+        ObjectLockConfiguration enabledOnly;
+        enabledOnly.enabled = true;
+        bool defaultSet = false;
+        QList<QPair<QString, QString>> created;   // key, version
+        auto cleanup = qScopeGuard([&] {
+            if (defaultSet)
+                (void)putConfig(bucket, BucketConfig::ObjectLock, buildObjectLockConfiguration(enabledOnly));
+            for (const auto& [k, v] : std::as_const(created)) {
+                const PutObjectLegalHoldParams off{bucket, k, v, false};
+                (void)await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectLegalHold(off, &m_ctx, std::move(cb)); });
+                const DeleteObjectParams del{bucket, k, v, true};
+                (void)await<DeleteObjectResult>([&](auto cb) { m_session->deleteObject(del, &m_ctx, std::move(cb)); });
+            }
+        });
+        const auto putHere = [&](const QString& name) -> QString {
+            const Result<PutObjectResult> r = putIn(bucket, key(name), "locked");
+            if (!r)
+                return {};
+            created.append({key(name), r->versionId});
+            return r->versionId;
+        };
+        const auto retentionOf = [&](const QString& k, const QString& v) {
+            return await<ObjectRetention>([&](auto cb) { m_session->getObjectRetention(bucket, k, v, &m_ctx, std::move(cb)); });
+        };
+        const auto deleteVersion = [&](const QString& k, const QString& v, bool bypass) {
+            const DeleteObjectParams p{bucket, k, v, bypass};
+            return await<DeleteObjectResult>([&](auto cb) { m_session->deleteObject(p, &m_ctx, std::move(cb)); });
+        };
+
+        // The default retention applies to new versions.
+        const QByteArray withDefault = sampleConfig(BucketConfig::ObjectLock, bucket);
+        const Result<SubresourceWriteResult> w = putConfig(bucket, BucketConfig::ObjectLock, withDefault);
+        QVERIFY(guardIn(bucket));
+        if (!expected("objectLockWrite")) {
+            QVERIFY2(!w, "expected this backend to refuse a default retention");
+        } else {
+            VERIFY_OK(w);
+            defaultSet = true;
+            QVERIFY(waitForConfig(bucket, BucketConfig::ObjectLock, [&](const BucketConfigDocument& d) {
+                        return equivalentBucketConfig(BucketConfig::ObjectLock, withDefault, d.body);
+                    }) >= 0);
+            const QString a = putHere(QStringLiteral("lock/default"));
+            QVERIFY(!a.isEmpty());
+            const Result<ObjectRetention> r = retentionOf(key(QStringLiteral("lock/default")), a);
+            VERIFY_OK(r);
+            QCOMPARE(r->mode, std::optional(ObjectLockMode::Governance));
+            QVERIFY(r->retainUntil > QDateTime::currentDateTimeUtc().addSecs(qint64(20) * 3600));
+            VERIFY_OK(putConfig(bucket, BucketConfig::ObjectLock, buildObjectLockConfiguration(enabledOnly)));
+            defaultSet = false;
+            QVERIFY(waitForConfig(bucket, BucketConfig::ObjectLock, [&](const BucketConfigDocument& d) {
+                        const Result<ObjectLockConfiguration> c = parseObjectLockConfiguration(d.body);
+                        return c && c->enabled && !c->mode;
+                    }) >= 0);
+            QVERIFY(guardIn(bucket));
+        }
+
+        // A retention: deleting and shortening need the bypass.
+        const QString kb = key(QStringLiteral("lock/retained"));
+        const QString b = putHere(QStringLiteral("lock/retained"));
+        QVERIFY(!b.isEmpty());
+        QVERIFY(!retentionOf(kb, b).value().mode);
+        PutObjectRetentionParams ret;
+        ret.bucket = bucket;
+        ret.key = kb;
+        ret.versionId = b;
+        ret.mode = ObjectLockMode::Governance;
+        ret.retainUntil = QDateTime::currentDateTimeUtc().addDays(1);
+        const Result<SubresourceWriteResult> setRet =
+            await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectRetention(ret, &m_ctx, std::move(cb)); });
+        if (!expected("retentionWrite")) {
+            QVERIFY2(!setRet, "expected this backend to refuse a retention");
+        } else {
+            VERIFY_OK(setRet);
+            const Result<ObjectRetention> got = retentionOf(kb, b);
+            VERIFY_OK(got);
+            QCOMPARE(got->mode, std::optional(ObjectLockMode::Governance));
+            const Result<DeleteObjectResult> refused = deleteVersion(kb, b, false);
+            QVERIFY2(!refused, "a retained version was deleted without the bypass");
+            QCOMPARE(refused.error().category, ErrorCategory::NotPermitted);
+            PutObjectRetentionParams shorter = ret;
+            shorter.retainUntil = QDateTime::currentDateTimeUtc().addSecs(3600);
+            const Result<SubresourceWriteResult> shortened = await<SubresourceWriteResult>(
+                [&](auto cb) { m_session->putObjectRetention(shorter, &m_ctx, std::move(cb)); });
+            QVERIFY2(!shortened, "a GOVERNANCE retention was shortened without the bypass");
+            VERIFY_OK(deleteVersion(kb, b, true));
+            created.removeIf([&](const auto& c) { return c.second == b; });
+        }
+
+        // A legal hold holds against the bypass too.
+        const QString kc = key(QStringLiteral("lock/held"));
+        const QString c = putHere(QStringLiteral("lock/held"));
+        QVERIFY(!c.isEmpty());
+        const PutObjectLegalHoldParams on{bucket, kc, c, true};
+        const Result<SubresourceWriteResult> held =
+            await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectLegalHold(on, &m_ctx, std::move(cb)); });
+        if (!expected("legalHoldWrite")) {
+            QVERIFY2(!held, "expected this backend to refuse a legal hold");
+        } else {
+            VERIFY_OK(held);
+            const Result<bool> isHeld = await<bool>([&](auto cb) { m_session->getObjectLegalHold(bucket, kc, c, &m_ctx, std::move(cb)); });
+            QVERIFY(isHeld && *isHeld);
+            const Result<DeleteObjectResult> refused = deleteVersion(kc, c, true);
+            QVERIFY2(!refused, "a version under legal hold was deleted");
+            const PutObjectLegalHoldParams off{bucket, kc, c, false};
+            VERIFY_OK(await<SubresourceWriteResult>([&](auto cb) { m_session->putObjectLegalHold(off, &m_ctx, std::move(cb)); }));
+            VERIFY_OK(deleteVersion(kc, c, false));
+            created.removeIf([&](const auto& e) { return e.second == c; });
+        }
+        QVERIFY(guardIn(bucket));
+    }
+
+    // A bucket of this run: created, filled (versions, a delete marker, an
+    // unfinished upload), refused while not empty, emptied, deleted.
+    void createFillEmptyAndDeleteBucket()
+    {
+        if (env("QBUCKET_IT_CREATE_BUCKET") != QLatin1String("1") && env("QBUCKET_IT_TEMP_BUCKETS") != QLatin1String("1"))
+            QSKIP("temporary buckets are opt-in (QBUCKET_IT_TEMP_BUCKETS=1)");
+        const QString tmp = QStringLiteral("qbucket-it-tmp-") + m_prefix.mid(3, 16);
+        QVERIFY(safeBucketName(tmp));
+        QVERIFY(!headBucket(tmp));
+        VERIFY_OK(createBucket(tmp, false));
+        bool exists = true;
+        auto drop = qScopeGuard([&] {
+            if (!exists)
+                return;
+            emptyTempBucket(tmp);
+            (void)await<void>([&](auto cb) { m_session->deleteBucket(tmp, &m_ctx, std::move(cb)); });
+        });
+        // A fresh bucket may take a moment everywhere (Hetzner: start-up 403s).
+        bool ready = false;
+        for (int i = 0; i < 20 && !ready; ++i) {
+            ready = bool(headBucket(tmp));
+            if (!ready)
+                QTest::qWait(3000);
+        }
+        QVERIFY(ready);
+        if (expects("bucketVersioningWrite")) {
+            VERIFY_OK(setVersioning(tmp, VersioningStatus::Enabled));
+            QVERIFY(waitForVersioning(tmp, VersioningStatus::Enabled, 60) >= 0);
+        }
+        VERIFY_OK(putIn(tmp, QStringLiteral("a.txt"), "one"));
+        VERIFY_OK(putIn(tmp, QStringLiteral("a.txt"), "two"));
+        VERIFY_OK(putIn(tmp, QStringLiteral("dir/b.txt"), "b"));
+        VERIFY_OK((await<DeleteObjectResult>([&](auto cb) { m_session->deleteObject(tmp, QStringLiteral("dir/b.txt"), {}, &m_ctx, std::move(cb)); })));
+        CreateMultipartUploadParams mp;
+        mp.bucket = tmp;
+        mp.key = QStringLiteral("unfinished.bin");
+        VERIFY_OK((await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(mp, &m_ctx, std::move(cb)); })));
+
+        const Result<void> notEmpty = await<void>([&](auto cb) { m_session->deleteBucket(tmp, &m_ctx, std::move(cb)); });
+        QVERIFY2(!notEmpty, "a bucket with objects was deleted");
+        QCOMPARE(notEmpty.error().category, ErrorCategory::Conflict);
+        QCOMPARE(notEmpty.error().code, QStringLiteral("BucketNotEmpty"));
+
+        emptyTempBucket(tmp);
+        Result<void> deleted = Error::make(ErrorCategory::Internal, QStringLiteral("not tried"));
+        for (int i = 0; i < 20; ++i) {   // listings may lag behind the deletes
+            deleted = await<void>([&](auto cb) { m_session->deleteBucket(tmp, &m_ctx, std::move(cb)); });
+            if (deleted || deleted.error().code != QLatin1String("BucketNotEmpty"))
+                break;
+            QTest::qWait(3000);
+        }
+        VERIFY_OK(deleted);
+        exists = false;
+        bool gone = false;
+        for (int i = 0; i < 20 && !gone; ++i) {
+            const Result<void> head = headBucket(tmp);
+            gone = !head && head.error().category == ErrorCategory::NotFound;
+            if (!gone)
+                QTest::qWait(3000);
+        }
+        QVERIFY(gone);
     }
 
     void restrictedUserIsNotPermitted()

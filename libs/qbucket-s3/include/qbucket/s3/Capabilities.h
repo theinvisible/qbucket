@@ -60,6 +60,18 @@ enum class Feature : quint16 {
     // Switching a bucket's versioning (PutBucketVersioning). Write-only, as
     // above: a proxy that drops ?versioning turns the PUT into CreateBucket.
     BucketVersioningWrite,
+    // Writing (PUT and DELETE) a bucket configuration, an object's
+    // retention or legal hold. Write-only, as above: Hetzner's proxy ran
+    // DELETE ?encryption as DeleteBucket. Profile knowledge after a canary
+    // and a victim test on a guarded scratch bucket only.
+    BucketPolicyWrite,
+    CorsWrite,
+    LifecycleWrite,
+    ObjectLockWrite,          // the bucket's default retention
+    BucketAclWrite,
+    PublicAccessBlockWrite,
+    RetentionWrite,
+    LegalHoldWrite,
 };
 
 QBUCKET_S3_EXPORT QString featureId(Feature feature);   // e.g. "bucket.versioning"

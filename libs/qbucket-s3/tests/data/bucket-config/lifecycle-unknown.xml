@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Rule>
+    <ID>big</ID>
+    <Filter><And><Prefix>media/</Prefix><ObjectSizeGreaterThan>1048576</ObjectSizeGreaterThan></And></Filter>
+    <Status>Enabled</Status>
+    <NoncurrentVersionTransition><NoncurrentDays>30</NoncurrentDays><StorageClass>GLACIER</StorageClass></NoncurrentVersionTransition>
+  </Rule>
+</LifecycleConfiguration>
