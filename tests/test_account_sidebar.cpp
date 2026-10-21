@@ -3,6 +3,7 @@
 #include "controllers/AccountSessions.h"
 #include "models/AccountTreeModel.h"
 #include "support/FakeKeychainBackend.h"
+#include "models/ObjectSelection.h"
 #include "ui/AccountSidebar.h"
 #include "ui/ThemeManager.h"
 
@@ -18,6 +19,8 @@
 #include <QMimeData>
 #include <QUrl>
 #include <QtTest>
+
+#include <tuple>
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
@@ -139,6 +142,50 @@ private slots:
         QCOMPARE(dropped.first().at(0).toUuid(), a.id);
         QCOMPARE(dropped.first().at(1).toString(), QStringLiteral("media"));
         QCOMPARE(dropped.first().at(2).toStringList(), QStringList{QDir::tempPath()});
+    }
+
+    // Objects of the account dropped onto a bucket: copied (Shift: moved) to its root.
+    void objectsDroppedOnABucketGoThere()
+    {
+        Account a = addAccount(true);
+        a.readOnly = false;
+        QVERIFY(m_accounts->save(a));
+        AccountSidebar sidebar(m_accounts.get(), m_secrets.get(), m_sessions.get());
+        sidebar.resize(260, 400);
+        sidebar.show();
+        sidebar.view()->expand(sidebar.model()->accountIndex(a.id));
+        QTRY_VERIFY_WITH_TIMEOUT(sidebar.model()->bucketIndex(a.id, QStringLiteral("media")).isValid(), 10000);
+        QList<std::tuple<QString, ObjectSelection, bool>> dropped;
+        connect(&sidebar, &AccountSidebar::objectsDroppedOnBucket, this,
+                [&](const QUuid&, const QString& bucket, const ObjectSelection& sel, bool move) {
+                    dropped.append({bucket, sel, move});
+                });
+        ObjectSelection sel;
+        sel.account = a.id;
+        sel.bucket = QStringLiteral("other");
+        sel.base = QStringLiteral("docs/");
+        sel.items = {{QStringLiteral("docs/a.txt"), false}};
+        std::unique_ptr<QMimeData> mime(sel.toMimeData());
+        const auto dropAt = [&](const QModelIndex& index, Qt::KeyboardModifiers mods, const QMimeData* data) {
+            const QPoint pos = sidebar.view()->visualRect(index).center();
+            QDragEnterEvent enter(pos, Qt::CopyAction | Qt::MoveAction, data, Qt::LeftButton, mods);
+            QCoreApplication::sendEvent(sidebar.view()->viewport(), &enter);
+            QDropEvent drop(QPointF(pos), Qt::CopyAction | Qt::MoveAction, data, Qt::LeftButton, mods);
+            QCoreApplication::sendEvent(sidebar.view()->viewport(), &drop);
+        };
+        const QModelIndex media = sidebar.model()->bucketIndex(a.id, QStringLiteral("media"));
+        dropAt(media, Qt::NoModifier, mime.get());
+        dropAt(media, Qt::ShiftModifier, mime.get());
+        QCOMPARE(dropped.size(), 2);
+        QCOMPARE(std::get<0>(dropped.first()), QStringLiteral("media"));
+        QCOMPARE(std::get<1>(dropped.first()).items.first().key, QStringLiteral("docs/a.txt"));
+        QVERIFY(!std::get<2>(dropped.first()));
+        QVERIFY(std::get<2>(dropped.last()));
+        // Another account's objects: not here (between accounts comes later).
+        sel.account = QUuid::createUuid();
+        std::unique_ptr<QMimeData> foreign(sel.toMimeData());
+        dropAt(media, Qt::NoModifier, foreign.get());
+        QCOMPARE(dropped.size(), 2);
     }
 
     void asksForAMissingSecretOnce()

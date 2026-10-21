@@ -2,6 +2,7 @@
 #include "controllers/SettingsController.h"
 #include "controllers/TransferJobStore.h"
 #include "support/AccountHarness.h"
+#include "models/ObjectSelection.h"
 #include "support/FakeBucket.h"
 #include "ui/MainWindow.h"
 #include "ui/ObjectBrowser.h"
@@ -17,6 +18,8 @@
 #include <QPushButton>
 #include <QStandardPaths>
 #include <QTableView>
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QtTest>
 
 using namespace qbucket;
@@ -149,6 +152,32 @@ private slots:
         // Two rows selected: one name can't go to both.
         m_browser->view()->selectAll();
         QVERIFY(!rename->isEnabled());
+    }
+
+    // Cut keep.txt, open the folder, paste: a move through the preview; the
+    // clipboard lets go of what was moved.
+    void cutAndPasteMovesAnObject()
+    {
+        m_browser->view()->setFocus();
+        m_browser->view()->selectRow(1);   // keep.txt
+        QTRY_VERIFY(m_browser->cutAction()->isEnabled());
+        m_browser->cutAction()->trigger();
+        QVERIFY(ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData()));
+        m_browser->navigation()->navigate({m_h->account.id, QStringLiteral("bkt"), QStringLiteral("doomed/")});
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->state(), ObjectTableModel::State::Complete, 10000);
+        QTRY_VERIFY(m_browser->pasteAction()->isEnabled());
+        m_browser->pasteAction()->trigger();
+
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<OperationPreviewDialog*>() != nullptr, 10000);
+        auto* dlg = m_window->findChild<OperationPreviewDialog*>();
+        QVERIFY(dlg);
+        dlg->productionCheck()->setChecked(true);   // a move deletes: production asks twice
+        dlg->confirmButton()->click();
+        QTRY_VERIFY_WITH_TIMEOUT(m_bucket.contains(QStringLiteral("doomed/keep.txt")), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!m_bucket.contains(QStringLiteral("keep.txt")), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData()), 10000);
+        // The folder shown is the target: listed afresh.
+        QTRY_VERIFY_WITH_TIMEOUT(m_browser->model()->rowOfKey(QStringLiteral("doomed/keep.txt")) >= 0, 10000);
     }
 
     void aReadOnlyAccountOffersNoChanges()

@@ -97,6 +97,8 @@ target_link_libraries(qbucket_controllers
 
 # --- Models (Qt item models over the controllers' data, no widgets) -------
 add_library(qbucket_models STATIC
+    models/ObjectSelection.h
+    models/ObjectSelection.cpp
     models/AccountTreeModel.h
     models/AccountTreeModel.cpp
     models/MultipartUploadModel.h

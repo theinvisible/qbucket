@@ -186,7 +186,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="203"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="219"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -194,7 +194,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="448"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="494"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -205,7 +205,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="571"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="680"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -217,7 +217,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="573"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="682"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -225,7 +225,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="579"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="688"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>
@@ -236,7 +236,7 @@
 <context>
     <name>qbucket::ObjectTableModel</name>
     <message numerus="yes">
-        <location filename="../../src/models/ObjectTableModel.cpp" line="759"/>
+        <location filename="../../src/models/ObjectTableModel.cpp" line="804"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sorted among the %n row loaded so far; pages still to come are sorted in as they arrive.</numerusform>

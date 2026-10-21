@@ -1,6 +1,7 @@
 #pragma once
 
 #include "domain/Location.h"
+#include "models/ObjectSelection.h"
 #include "models/ObjectTableModel.h"
 
 #include <QWidget>
@@ -11,6 +12,8 @@ class QLabel;
 class QPushButton;
 class QStackedWidget;
 class QTableView;
+
+#include <optional>
 
 namespace qbucket {
 
@@ -50,6 +53,9 @@ public:
     // Actions on the list's selection, for the Edit menu and the context
     // menu; their shortcuts work while the list has the focus.
     [[nodiscard]] QAction* openAction() const { return m_actOpen; }
+    [[nodiscard]] QAction* copyAction() const { return m_actCopy; }
+    [[nodiscard]] QAction* cutAction() const { return m_actCut; }
+    [[nodiscard]] QAction* pasteAction() const { return m_actPaste; }
     [[nodiscard]] QAction* copyKeyAction() const { return m_actCopyKey; }
     [[nodiscard]] QAction* copyUriAction() const { return m_actCopyUri; }
     [[nodiscard]] QAction* renameAction() const { return m_actRename; }
@@ -69,6 +75,8 @@ public:
 
     // Selected rows (column 0), in view order.
     [[nodiscard]] QModelIndexList selectedRows() const;
+    // The selection as objects (keys only) for a copy, a cut or a drag.
+    [[nodiscard]] ObjectSelection selection(ObjectSelection::Intent intent) const;
 
     // "1 204 objects · 38.2 GB loaded · 3 selected" for the status bar.
     [[nodiscard]] QString statusText() const;
@@ -83,6 +91,10 @@ signals:
     // Local files and folders dropped onto the list (prefix: the folder row
     // they were dropped on, or the current one).
     void filesDropped(const QStringList& paths, const QString& prefix);
+    // Objects of this account dropped onto the list (move: with Shift).
+    void objectsDropped(const qbucket::ObjectSelection& selection, const QString& prefix, bool move);
+    // Paste: the clipboard's objects into the current folder (a cut moves).
+    void pasteRequested(const qbucket::ObjectSelection& selection, const QString& prefix);
 
 private:
     void onLocationChanged_(const Location& location);
@@ -97,6 +109,13 @@ private:
     void updateActions_();
     void showContextMenu_(const QPoint& pos);
     void copySelection_(bool asUri);
+    void copyObjects_(ObjectSelection::Intent intent);
+    void paste_();
+    // The clipboard's objects, if they can go into the current location;
+    // otherwise *why (empty: nothing to paste).
+    [[nodiscard]] std::optional<ObjectSelection> pasteable_(QString* why) const;
+    // A drag of objects may land in `prefix` of the current bucket.
+    [[nodiscard]] bool acceptsObjects_(const ObjectSelection& sel, const QString& prefix) const;
     // Drag & drop in: the prefix the files would land in; -1 / "" if none.
     [[nodiscard]] QString dropPrefixAt_(const QPoint& pos, int* row) const;
     void setDropRow_(int row);
@@ -118,6 +137,9 @@ private:
     QString m_currentKey;   // kept across model resets
 
     QAction* m_actOpen = nullptr;
+    QAction* m_actCopy = nullptr;
+    QAction* m_actCut = nullptr;
+    QAction* m_actPaste = nullptr;
     QAction* m_actCopyKey = nullptr;
     QAction* m_actCopyUri = nullptr;
     QAction* m_actRename = nullptr;

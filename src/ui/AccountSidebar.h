@@ -1,5 +1,6 @@
 #pragma once
 
+#include "models/ObjectSelection.h"
 #include <QSet>
 #include <QUuid>
 #include <QWidget>
@@ -41,6 +42,9 @@ signals:
     void statusMessage(const QString& text, int timeoutMs);
     // Local files and folders dropped onto a bucket: upload into its root.
     void filesDroppedOnBucket(const QUuid& account, const QString& bucket, const QStringList& paths);
+    // Objects of the same account dropped onto a bucket (its root; move: with Shift).
+    void objectsDroppedOnBucket(const QUuid& account, const QString& bucket,
+                                const qbucket::ObjectSelection& selection, bool move);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

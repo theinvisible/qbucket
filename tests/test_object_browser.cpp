@@ -2,6 +2,7 @@
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 #include "controllers/BrowseController.h"
+#include "models/ObjectSelection.h"
 #include "support/FakeBucket.h"
 #include "support/FakeKeychainBackend.h"
 #include "ui/ObjectBrowser.h"
@@ -23,6 +24,9 @@
 #include <QTableView>
 #include <QUrl>
 #include <QtTest>
+
+#include <optional>
+#include <tuple>
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
@@ -181,6 +185,111 @@ private slots:
         QVERIFY(ObjectBrowser::localPaths(&web).isEmpty());
     }
 
+    // Ctrl+C / X / V: objects on the clipboard, pasted into the current folder.
+    void copyCutAndPasteObjects()
+    {
+        m_bucket.add(QStringLiteral("docs/a.txt"));
+        m_bucket.add(QStringLiteral("docs/sub/x"));
+        m_bucket.sort();
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.show();
+        browser.navigation()->navigate({m_account, QStringLiteral("bkt"), QStringLiteral("docs/")});
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QList<std::pair<ObjectSelection, QString>> pasted;
+        connect(&browser, &ObjectBrowser::pasteRequested, this,
+                [&](const ObjectSelection& sel, const QString& prefix) { pasted.append({sel, prefix}); });
+        QTableView* view = browser.view();
+        view->setFocus();
+        view->selectAll();
+        QTest::keyClick(view, Qt::Key_C, Qt::ControlModifier);
+        std::optional<ObjectSelection> sel = ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData());
+        QVERIFY(sel);
+        QCOMPARE(sel->intent, ObjectSelection::Intent::Copy);
+        QCOMPARE(sel->base, QStringLiteral("docs/"));
+        QCOMPARE(sel->items.size(), 2);
+        QVERIFY(sel->items.first().folder);   // docs/sub/
+        QVERIFY(QGuiApplication::clipboard()->text().contains(QLatin1String("s3://bkt/docs/a.txt")));
+
+        // Nothing may be written here (yet): Paste is off and says why.
+        QVERIFY(!browser.pasteAction()->isEnabled());
+        browser.setUploadsAllowed(true);
+        browser.setMutationsAllowed(true, QString());   // re-evaluates the actions
+        QVERIFY(browser.pasteAction()->isEnabled());
+        QTest::keyClick(view, Qt::Key_V, Qt::ControlModifier);
+        QCOMPARE(pasted.size(), 1);
+        QCOMPARE(pasted.first().second, QStringLiteral("docs/"));
+
+        QTest::keyClick(view, Qt::Key_X, Qt::ControlModifier);
+        sel = ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData());
+        QVERIFY(sel);
+        QCOMPARE(sel->intent, ObjectSelection::Intent::Cut);
+
+        // Another account's objects are not pasted here (between accounts: later).
+        ObjectSelection other = *sel;
+        other.account = QUuid::createUuid();
+        QGuiApplication::clipboard()->setMimeData(other.toMimeData());
+        QTRY_VERIFY(!browser.pasteAction()->isEnabled());
+        QVERIFY(browser.pasteAction()->toolTip().contains(QLatin1String("between accounts")));
+        // Plain text is nothing to paste.
+        QGuiApplication::clipboard()->setText(QStringLiteral("docs/a.txt"));
+        QTRY_VERIFY(!browser.pasteAction()->isEnabled());
+    }
+
+    // Objects dragged within the list: onto a folder row, copy or (Shift) move.
+    void objectsCanBeDraggedOntoFolders()
+    {
+        m_bucket.add(QStringLiteral("docs/a.txt"), 1);
+        m_bucket.add(QStringLiteral("docs/sub/x"), 1);
+        m_bucket.add(QStringLiteral("docs/zz.txt"), 1);
+        m_bucket.sort();
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.resize(700, 400);
+        browser.show();
+        browser.navigation()->navigate({m_account, QStringLiteral("bkt"), QStringLiteral("docs/")});
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        browser.setUploadsAllowed(true);
+        QList<std::tuple<ObjectSelection, QString, bool>> dropped;
+        connect(&browser, &ObjectBrowser::objectsDropped, this,
+                [&](const ObjectSelection& sel, const QString& prefix, bool move) { dropped.append({sel, prefix, move}); });
+        QWidget* viewport = browser.view()->viewport();
+        const auto dragTo = [&](const QPoint& pos, const QMimeData* mime, Qt::KeyboardModifiers mods) {
+            QDragEnterEvent enter(pos, Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
+            QCoreApplication::sendEvent(viewport, &enter);
+            QDragMoveEvent move(pos, Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
+            QCoreApplication::sendEvent(viewport, &move);
+            const bool accepted = move.isAccepted();
+            QDropEvent drop(QPointF(pos), Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
+            QCoreApplication::sendEvent(viewport, &drop);
+            return accepted;
+        };
+        // What dragging a.txt and zz.txt carries.
+        std::unique_ptr<QMimeData> mime(browser.model()->mimeData({browser.model()->index(1, 0), browser.model()->index(2, 0)}));
+        const std::optional<ObjectSelection> sel = ObjectSelection::fromMimeData(mime.get());
+        QVERIFY(sel);
+        QCOMPARE(sel->items.size(), 2);
+        QCOMPARE(sel->base, QStringLiteral("docs/"));
+
+        const QRect folderRow = browser.view()->visualRect(browser.model()->index(0, 0));   // docs/sub/
+        QVERIFY(dragTo(folderRow.center(), mime.get(), Qt::NoModifier));
+        QCOMPARE(dropped.size(), 1);
+        QCOMPARE(std::get<1>(dropped.last()), QStringLiteral("docs/sub/"));
+        QVERIFY(!std::get<2>(dropped.last()));
+        QVERIFY(dragTo(folderRow.center(), mime.get(), Qt::ShiftModifier));
+        QVERIFY(std::get<2>(dropped.last()));   // Shift: move
+
+        // Back where they are (a file row: the current folder) — a slip, ignored.
+        const QRect fileRow = browser.view()->visualRect(browser.model()->index(1, 0));
+        QVERIFY(!dragTo(fileRow.center(), mime.get(), Qt::NoModifier));
+        // A folder onto itself, and another account's objects: ignored.
+        std::unique_ptr<QMimeData> folder(browser.model()->mimeData({browser.model()->index(0, 0)}));
+        QVERIFY(!dragTo(folderRow.center(), folder.get(), Qt::NoModifier));
+        ObjectSelection foreign = *sel;
+        foreign.account = QUuid::createUuid();
+        std::unique_ptr<QMimeData> foreignMime(foreign.toMimeData());
+        QVERIFY(!dragTo(folderRow.center(), foreignMime.get(), Qt::NoModifier));
+        QCOMPARE(dropped.size(), 2);
+    }
+
     void anEmptyFolderAndAnErrorSayWhatTheyAre()
     {
         m_bucket.add(QStringLiteral("empty/"));
@@ -295,12 +404,16 @@ private slots:
         QVERIFY(!browser.renameAction()->isEnabled());
         QVERIFY(!browser.deleteAction()->isEnabled());
 
-        QTest::keyClick(view, Qt::Key_C, Qt::ControlModifier);
-        QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("docs/sub/\ndocs/a b.txt\ndocs/c.txt"));
+        // Ctrl+Shift+C: the keys; Ctrl+Alt+C: the URIs (Ctrl+C copies the objects).
         QTest::keyClick(view, Qt::Key_C, Qt::ControlModifier | Qt::ShiftModifier);
+        QCOMPARE(QGuiApplication::clipboard()->text(), QStringLiteral("docs/sub/\ndocs/a b.txt\ndocs/c.txt"));
+        QTest::keyClick(view, Qt::Key_C, Qt::ControlModifier | Qt::AltModifier);
         QVERIFY(QGuiApplication::clipboard()->text().startsWith(QLatin1String("s3://bkt/docs/sub/\n")));
 
-        view->setCurrentIndex(browser.model()->index(0, 0));   // the folder alone
+        // The folder alone (explicitly: a synthetic Ctrl+Alt key click can leave
+        // modifiers behind that would make the click a toggle).
+        view->selectionModel()->setCurrentIndex(browser.model()->index(0, 0),
+                                                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
         QVERIFY(browser.openAction()->isEnabled());
         browser.openAction()->trigger();
         QCOMPARE(browser.navigation()->current().prefix, QStringLiteral("docs/sub/"));

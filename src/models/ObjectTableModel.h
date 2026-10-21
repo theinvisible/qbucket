@@ -108,6 +108,11 @@ public:
     [[nodiscard]] int rowCount(const QModelIndex& parent = {}) const override;
     [[nodiscard]] int columnCount(const QModelIndex& parent = {}) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    // Rows can be dragged (ObjectSelection: keys only, nothing loaded).
+    [[nodiscard]] Qt::ItemFlags flags(const QModelIndex& index) const override;
+    [[nodiscard]] QStringList mimeTypes() const override;
+    [[nodiscard]] QMimeData* mimeData(const QModelIndexList& indexes) const override;
+    [[nodiscard]] Qt::DropActions supportedDragActions() const override;
     [[nodiscard]] QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     // column -1: back to server order.
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;

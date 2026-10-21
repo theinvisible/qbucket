@@ -285,11 +285,27 @@ bool AccountSidebar::eventFilter(QObject* watched, QEvent* event)
         return QWidget::eventFilter(watched, event);
     auto* drop = static_cast<QDropEvent*>(event);
     const QModelIndex at = m_tree->indexAt(drop->position().toPoint());
-    const QStringList paths = ObjectBrowser::localPaths(drop->mimeData());
     // Only onto a bucket of an account that may write; the gate checks again.
     const bool bucket = at.isValid()
         && at.data(AccountTreeModel::KindRole).toInt() == int(AccountTreeModel::Kind::Bucket)
         && !at.data(AccountTreeModel::ReadOnlyRole).toBool();
+    if (const std::optional<ObjectSelection> sel = ObjectSelection::fromMimeData(drop->mimeData())) {
+        const QUuid account = at.data(AccountTreeModel::AccountIdRole).toUuid();
+        const QString target = at.data(AccountTreeModel::BucketRole).toString();
+        // Same account only (between accounts: later); not back onto the root it came from.
+        const bool ok = bucket && account == sel->account && !(target == sel->bucket && sel->base.isEmpty());
+        if (t != QEvent::DragEnter && !ok) {
+            drop->ignore();
+            return true;
+        }
+        const bool move = drop->modifiers() & Qt::ShiftModifier;
+        drop->setDropAction(move ? Qt::MoveAction : Qt::CopyAction);
+        drop->accept();
+        if (t == QEvent::Drop && ok)
+            emit objectsDroppedOnBucket(account, target, *sel, move);
+        return true;
+    }
+    const QStringList paths = ObjectBrowser::localPaths(drop->mimeData());
     if (paths.isEmpty() || (t != QEvent::DragEnter && !bucket)) {
         drop->ignore();
         return true;

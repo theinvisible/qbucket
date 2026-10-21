@@ -1,5 +1,10 @@
 #include "models/ObjectTableModel.h"
 
+#include "models/ObjectSelection.h"
+
+#include <QMimeData>
+#include <QSet>
+
 #include "controllers/AccountSessions.h"
 #include "controllers/ConnectionTester.h"
 
@@ -689,6 +694,46 @@ void ObjectTableModel::loadMore()
 {
     if (canLoadMore())
         fetchPage_();
+}
+
+Qt::ItemFlags ObjectTableModel::flags(const QModelIndex& index) const
+{
+    Qt::ItemFlags f = QAbstractTableModel::flags(index);
+    if (index.isValid())
+        f |= Qt::ItemIsDragEnabled;
+    return f;
+}
+
+QStringList ObjectTableModel::mimeTypes() const
+{
+    return {QString::fromLatin1(ObjectSelection::kMimeType)};
+}
+
+QMimeData* ObjectTableModel::mimeData(const QModelIndexList& indexes) const
+{
+    ObjectSelection sel;
+    sel.account = m_account;
+    sel.bucket = m_bucket;
+    sel.base = m_prefix;
+    QSet<int> rows;
+    QList<int> ordered;
+    for (const QModelIndex& i : indexes) {
+        if (i.isValid() && !rows.contains(i.row())) {
+            rows.insert(i.row());
+            ordered.append(i.row());
+        }
+    }
+    std::sort(ordered.begin(), ordered.end());
+    for (const int row : ordered) {
+        const QModelIndex i = index(row, 0);
+        sel.items.append({i.data(KeyRole).toString(), i.data(IsFolderRole).toBool()});
+    }
+    return sel.isEmpty() ? nullptr : sel.toMimeData();
+}
+
+Qt::DropActions ObjectTableModel::supportedDragActions() const
+{
+    return Qt::CopyAction | Qt::MoveAction;
 }
 
 QVariant ObjectTableModel::data(const QModelIndex& index, int role) const

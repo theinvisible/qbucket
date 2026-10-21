@@ -1,5 +1,6 @@
 #pragma once
 
+#include "models/ObjectSelection.h"
 #include <QMainWindow>
 
 class QAction;
@@ -83,6 +84,10 @@ private:
     // Unfinished transfers of the last session: resume or discard them.
     void offerResume_();
     void renameSelection_();
+    // Copy / move objects of the account within it (paste, drops). Between
+    // accounts: later (refused with the reason).
+    void startCopy_(const ObjectSelection& selection, const QUuid& account, const QString& bucket,
+                    const QString& prefix, bool move);
     void restoreWindowState_();
     void saveWindowState_();
 

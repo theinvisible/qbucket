@@ -6,6 +6,7 @@
 #include "controllers/AccountSessions.h"
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
+#include "controllers/CopyJob.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
 #include "controllers/RenameJob.h"
@@ -39,8 +40,10 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QButtonGroup>
+#include <QClipboard>
 #include <QCloseEvent>
 #include <QDockWidget>
+#include <QGuiApplication>
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -180,6 +183,19 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         const Location here = m_browser->navigation()->current();
         startUploadTo_(here.account, here.bucket, prefix, paths, true);
     });
+    // Objects: a paste moves what was cut; drops copy (Shift: move).
+    connect(m_browser, &ObjectBrowser::pasteRequested, this, [this](const ObjectSelection& sel, const QString& prefix) {
+        const Location here = m_browser->navigation()->current();
+        startCopy_(sel, here.account, here.bucket, prefix, sel.intent == ObjectSelection::Intent::Cut);
+    });
+    connect(m_browser, &ObjectBrowser::objectsDropped, this, [this](const ObjectSelection& sel, const QString& prefix, bool move) {
+        const Location here = m_browser->navigation()->current();
+        startCopy_(sel, here.account, here.bucket, prefix, move);
+    });
+    connect(m_sidebar, &AccountSidebar::objectsDroppedOnBucket, this,
+            [this](const QUuid& account, const QString& bucket, const ObjectSelection& sel, bool move) {
+                startCopy_(sel, account, bucket, QString(), move);
+            });
     connect(m_sidebar, &AccountSidebar::accountSelected, this, [this](const QUuid& id) {
         m_browser->navigation()->navigate({id, {}, {}});
     });
@@ -298,6 +314,36 @@ void MainWindow::updateMutationActions_()
     if (m_operations && here.hasBucket())
         read = m_operations->check(here.account, here.bucket, {}, false, false);
     m_browser->setDownloadsAllowed(read.allowed, read.reason);
+}
+
+void MainWindow::startCopy_(const ObjectSelection& sel, const QUuid& accountId, const QString& bucket,
+                            const QString& prefix, bool move)
+{
+    if (!m_operations || sel.isEmpty())
+        return;
+    if (sel.account != accountId) {
+        statusBar()->showMessage(tr("Copying between accounts comes in a later version."), 10000);
+        return;
+    }
+    const std::optional<Account> account = m_accounts ? m_accounts->account(accountId) : std::nullopt;
+    if (!account)
+        return;
+    QList<CopyJob::Item> items;
+    for (const ObjectSelection::Item& i : sel.items)
+        items.append({i.key, i.folder});
+    auto* job = new CopyJob(*account, sel.bucket, items, sel.base, bucket, prefix,
+                            move ? CopyJob::Mode::Move : CopyJob::Mode::Copy, m_operations->planDir());
+    if (move && sel.intent == ObjectSelection::Intent::Cut) {
+        // What was cut is gone once moved: the clipboard lets go of it.
+        connect(job, &Job::finished, this, [job, sel] {
+            if (job->outcome() != Job::Outcome::Succeeded)
+                return;
+            const std::optional<ObjectSelection> now = ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData());
+            if (now && now->intent == ObjectSelection::Intent::Cut && now->bucket == sel.bucket && now->base == sel.base)
+                QGuiApplication::clipboard()->clear();
+        });
+    }
+    m_operations->start(job);
 }
 
 void MainWindow::renameSelection_()
@@ -521,7 +567,12 @@ void MainWindow::connectBrowser_()
         else
             m_browser->refresh();
     });
-    for (QAction* a : {m_browser->openAction(), m_browser->copyKeyAction(), m_browser->copyUriAction()})
+    m_editMenu->addAction(m_browser->openAction());
+    m_editMenu->addSeparator();
+    for (QAction* a : {m_browser->cutAction(), m_browser->copyAction(), m_browser->pasteAction()})
+        m_editMenu->addAction(a);
+    m_editMenu->addSeparator();
+    for (QAction* a : {m_browser->copyKeyAction(), m_browser->copyUriAction()})
         m_editMenu->addAction(a);
     m_editMenu->addSeparator();
     m_actNewFolder = m_editMenu->addAction(tr("&New Folder…"), this, &MainWindow::newFolder_);
