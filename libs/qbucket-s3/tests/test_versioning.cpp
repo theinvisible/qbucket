@@ -9,6 +9,7 @@
 #include <qbucket/s3/testing/FakeObjectStore.h>
 #include <qbucket/s3/testing/FakeS3Server.h>
 
+#include <QSignalSpy>
 #include <QtTest>
 
 #include <optional>
@@ -309,6 +310,85 @@ private Q_SLOTS:
         QCOMPARE(prefixes, QStringList{QStringLiteral("f/sub/")});
         QCOMPARE(all.size(), 7);
         QVERIFY(std::none_of(all.cbegin(), all.cend(), [](const VersionEntry& e) { return e.key.contains(u"sub"); }));
+    }
+
+    void bucketVersioningRoundTrip()
+    {
+        const auto get = [&] {
+            return call<BucketVersioning>([&](auto cb) { m_session->getBucketVersioning(kBucket, &m_context, cb); });
+        };
+        Result<BucketVersioning> v = get();
+        QVERIFY(v);
+        QCOMPARE(v->status, VersioningStatus::Never);
+        QVERIFY(!v->mfaDelete);
+
+        PutBucketVersioningParams p;
+        p.bucket = kBucket;
+        p.status = VersioningStatus::Enabled;
+        QVERIFY(call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); }));
+        const RecordedRequest put = m_server->requests().last();
+        QVERIFY(put.hasQueryItem("versioning"));
+        QVERIFY(!put.header("content-md5").isEmpty());
+        QVERIFY(put.body.contains("<Status>Enabled</Status>"));
+        QVERIFY(!put.body.contains("MfaDelete"));
+        v = get();
+        QCOMPARE(v->status, VersioningStatus::Enabled);
+        QCOMPARE(v->mfaDelete, std::optional(false));
+
+        p.status = VersioningStatus::Suspended;
+        QVERIFY(call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); }));
+        QCOMPARE(get()->status, VersioningStatus::Suspended);
+        QCOMPARE(m_store->versioning(kBucket), QStringLiteral("Suspended"));
+
+        // "Never" can't be sent; refused before anything leaves.
+        p.status = VersioningStatus::Never;
+        const int sent = m_server->requestCount();
+        const auto never = call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); });
+        QCOMPARE(never.error().category, ErrorCategory::InvalidRequest);
+        QCOMPARE(m_server->requestCount(), sent);
+    }
+
+    // A proxy that drops ?versioning turns the PUT into CreateBucket.
+    void versioningWriteAnsweredLikeCreateBucketIsAnError()
+    {
+        PutBucketVersioningParams p;
+        p.bucket = kBucket;
+        m_server->addRoute({"PUT", {}, {"versioning"}, {}},
+                           {FakeResponse::s3Error(409, "BucketAlreadyOwnedByYou", "Your previous request to create "
+                                                                                  "the named bucket succeeded"),
+                            FakeResponse::ok().withHeader("Location", "/bkt")},
+                           2);
+        auto r = call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::Protocol);
+        QVERIFY(r.error().message.contains(QLatin1String("CreateBucket")));
+        r = call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::Protocol);
+        QCOMPARE(m_store->versioning(kBucket), QString());   // nothing reached the store
+    }
+
+    void versioningWriteFeatureIsCheckedAndLearnedSeparately()
+    {
+        CapabilitySet set;
+        set.scope = CapabilityScope::Server;
+        set.set(Feature::BucketVersioningWrite,
+                {CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0});
+        m_session->setCapabilities(set);
+        PutBucketVersioningParams p;
+        p.bucket = kBucket;
+        const int sent = m_server->requestCount();
+        auto r = call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::Unsupported);
+        QCOMPARE(m_server->requestCount(), sent);
+        QVERIFY(call<BucketVersioning>([&](auto cb) { m_session->getBucketVersioning(kBucket, &m_context, cb); }));
+
+        // A 501 on the write teaches the write feature only.
+        m_session->setCapabilities(CapabilitySet());
+        m_server->addRoute({"PUT", {}, {"versioning"}, {}}, {FakeResponse::s3Error(501, "NotImplemented")}, 1);
+        QSignalSpy learned(m_session.get(), &Session::capabilityLearned);
+        r = call<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::Unsupported);
+        QTRY_COMPARE(learned.size(), 1);
+        QCOMPARE(learned.first().at(1).toString(), QStringLiteral("bucket.versioning-write"));
     }
 
     void pagerStopsOnALoop()

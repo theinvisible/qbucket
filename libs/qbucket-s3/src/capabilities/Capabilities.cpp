@@ -11,7 +11,7 @@ namespace qbucket::s3 {
 namespace {
 
 // Stable ids — never change one, only append.
-constexpr std::array<std::pair<Feature, const char*>, 29> kIds = {{
+constexpr std::array<std::pair<Feature, const char*>, 30> kIds = {{
     {Feature::BucketVersioning, "bucket.versioning"},
     {Feature::ObjectLock, "bucket.object-lock"},
     {Feature::LegalHold, "object.legal-hold"},
@@ -41,6 +41,7 @@ constexpr std::array<std::pair<Feature, const char*>, 29> kIds = {{
     {Feature::MultipartUpload, "object.multipart-upload"},
     {Feature::ObjectTaggingWrite, "object.tagging-write"},
     {Feature::ObjectAclWrite, "object.acl-write"},
+    {Feature::BucketVersioningWrite, "bucket.versioning-write"},
 }};
 
 bool isDefinitive(CapabilityState s)
@@ -141,6 +142,8 @@ QList<Feature> featuresFor(Operation op)
         return {Feature::ObjectVersionsListing};
     case Operation::GetBucketVersioning:
         return {Feature::BucketVersioning};
+    case Operation::PutBucketVersioning:
+        return {Feature::BucketVersioningWrite, Feature::BucketVersioning};
     default:
         return {};
     }
@@ -199,6 +202,8 @@ QJsonObject CapabilitySet::toJson() const
     state.insert(QStringLiteral("objectLockEnabled"),
                  bucketState.objectLockEnabled ? QJsonValue(*bucketState.objectLockEnabled)
                                                : QJsonValue(QJsonValue::Null));
+    if (bucketState.mfaDelete)
+        state.insert(QStringLiteral("mfaDelete"), *bucketState.mfaDelete);
 
     QJsonObject root;
     root.insert(QStringLiteral("schema"), 1);
@@ -238,6 +243,8 @@ Result<CapabilitySet> CapabilitySet::fromJson(const QJsonObject& json)
     const QJsonValue lock = state.value(QLatin1String("objectLockEnabled"));
     if (lock.isBool())
         set.bucketState.objectLockEnabled = lock.toBool();
+    if (const QJsonValue mfa = state.value(QLatin1String("mfaDelete")); mfa.isBool())
+        set.bucketState.mfaDelete = mfa.toBool();
 
     const QJsonObject features = json.value(QLatin1String("features")).toObject();
     for (auto it = features.begin(); it != features.end(); ++it) {

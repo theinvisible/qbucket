@@ -91,6 +91,8 @@ public:
     // page that makes no progress is a Protocol error.
     RequestId listObjectVersions(const ListObjectVersionsParams& params, QObject* context,
                                  Callback<ListObjectVersionsPage> callback);
+    // Feature::BucketVersioning.
+    RequestId getBucketVersioning(const QString& bucket, QObject* context, Callback<BucketVersioning> callback);
     RequestId headBucket(const QString& bucket, QObject* context, Callback<void> callback);
     RequestId getBucketLocation(const QString& bucket, QObject* context, Callback<QString> callback);
     RequestId headObject(const QString& bucket, const QString& key, const QString& versionId,
@@ -131,6 +133,12 @@ public:
                                Callback<SubresourceWriteResult> callback);
     RequestId putObjectAcl(const PutObjectAclParams& params, QObject* context,
                            Callback<SubresourceWriteResult> callback);
+    // Enable / suspend versioning (Feature::BucketVersioningWrite — write-
+    // only, never from a read probe). An answer that looks like CreateBucket
+    // (a Location header, 409 BucketAlreadyOwnedByYou) is a Protocol error:
+    // a proxy dropped ?versioning. MfaDelete is never sent.
+    RequestId putBucketVersioning(const PutBucketVersioningParams& params, QObject* context,
+                                  Callback<SubresourceWriteResult> callback);
     // Server-side copy (≤ 5 GiB). A lost answer is reported with
     // Error::outcomeUnknown and not retried: look the target up.
     RequestId copyObject(const CopyObjectParams& params, QObject* context, Callback<CopyObjectResult> callback);

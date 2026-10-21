@@ -27,5 +27,6 @@
     "partNumberReads": true,
     "_objectWrites": "No object tags, no object ACLs: GarageProfile refuses the writes locally.",
     "objectTaggingWrite": false,
-    "objectAclWrite": false
+    "objectAclWrite": false,
+    "bucketVersioningWrite": false
 }

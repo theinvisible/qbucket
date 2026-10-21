@@ -31,5 +31,10 @@
     "replaceDropsUnsentHeaders": false,
     "objectTaggingWrite": true,
     "_objectAclWrite": "PutObjectAcl answers 501 NotImplemented (object ACLs unsupported).",
-    "objectAclWrite": false
+    "objectAclWrite": false,
+    "bucketVersioningWrite": true,
+    "_headReportsDeleteMarker": "HEAD / GET on a deleted key answer a bare 404; only HEAD on the marker's own version id answers 405 with x-amz-delete-marker. A DELETE of a key that doesn't exist creates no marker. Verified 2026-10-21, v1.9.0.",
+    "headReportsDeleteMarker": false,
+    "headOnMarkerVersionReportsDeleteMarker": true,
+    "copyReportsVersionIds": true
 }

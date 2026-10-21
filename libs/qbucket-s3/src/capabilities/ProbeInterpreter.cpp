@@ -156,10 +156,15 @@ CapabilityEntry interpretProbe(const ProbeSpec& spec, const Result<RawResponse>&
     e.state = CapabilityState::Supported;
     e.configured = hasChildElements(r.body);
     if (spec.feature == Feature::BucketVersioning) {
-        const QString status = firstText(r.body, QLatin1StringView("Status"));
-        e.configured = !status.isEmpty();
-        if (state)
-            state->versioning = status;
+        const Result<BucketVersioning> v = xml::parseVersioningConfiguration(r.body);
+        const VersioningStatus status = v ? v->status : VersioningStatus::Never;
+        e.configured = status != VersioningStatus::Never;
+        if (state) {
+            state->versioning = status == VersioningStatus::Enabled     ? QStringLiteral("Enabled")
+                              : status == VersioningStatus::Suspended ? QStringLiteral("Suspended")
+                                                                      : QString();
+            state->mfaDelete = v ? v->mfaDelete : std::nullopt;
+        }
     } else if (spec.feature == Feature::ObjectLock) {
         const bool enabled = firstText(r.body, QLatin1StringView("ObjectLockEnabled")) == QLatin1String("Enabled");
         e.configured = enabled;

@@ -57,6 +57,9 @@ enum class Feature : quint16 {
     // knowledge or a deep probe on a scratch bucket only.
     ObjectTaggingWrite,
     ObjectAclWrite,
+    // Switching a bucket's versioning (PutBucketVersioning). Write-only, as
+    // above: a proxy that drops ?versioning turns the PUT into CreateBucket.
+    BucketVersioningWrite,
 };
 
 QBUCKET_S3_EXPORT QString featureId(Feature feature);   // e.g. "bucket.versioning"
@@ -104,6 +107,7 @@ struct QBUCKET_S3_EXPORT ServerFingerprint {
 struct BucketState {
     QString versioning;                       // "Enabled", "Suspended" or "" (never enabled)
     std::optional<bool> objectLockEnabled;    // unset: unknown
+    std::optional<bool> mfaDelete;            // unset: not reported
 };
 
 enum class CapabilityScope : quint8 { Server, Bucket };

@@ -86,6 +86,14 @@ Result<QByteArray> buildTagging(const TagSet& tags)
     return out;
 }
 
+QByteArray buildVersioningConfiguration(VersioningStatus status)
+{
+    return R"(<?xml version="1.0" encoding="UTF-8"?>)"
+           R"(<VersioningConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">)"
+           "<Status>" + QByteArray(status == VersioningStatus::Suspended ? "Suspended" : "Enabled") + "</Status>"
+           "</VersioningConfiguration>";
+}
+
 QByteArray buildCreateBucketConfiguration(const QString& locationConstraint)
 {
     return R"(<?xml version="1.0" encoding="UTF-8"?>)"

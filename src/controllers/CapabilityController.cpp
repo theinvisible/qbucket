@@ -504,6 +504,7 @@ QString CapabilityController::featureName(s3::Feature f)
     case F::MultipartUpload: return tr("Multipart uploads");
     case F::ObjectTaggingWrite: return tr("Writing object tags");
     case F::ObjectAclWrite: return tr("Changing object ACLs");
+    case F::BucketVersioningWrite: return tr("Switching versioning");
     }
     return s3::featureId(f);
 }
@@ -555,6 +556,10 @@ QString CapabilityController::reason(s3::Feature f, const s3::CapabilityEntry& e
         if (f == s3::Feature::ObjectTaggingWrite || f == s3::Feature::ObjectAclWrite) {
             return tr("%1 is not confirmed for this server: QBucket only writes tags and ACLs where the "
                       "provider is known to handle them safely.").arg(name);
+        }
+        if (f == s3::Feature::BucketVersioningWrite) {
+            return tr("%1 is not confirmed for this server: QBucket only changes a bucket's settings where "
+                      "the provider is known to handle the request safely.").arg(name);
         }
         return destructive ? tr("%1 is not verified on this server; destructive actions need a confirmed "
                                 "capability.").arg(name)

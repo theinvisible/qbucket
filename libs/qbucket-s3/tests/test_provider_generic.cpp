@@ -28,6 +28,7 @@ private Q_SLOTS:
         // A read probe never unlocks these: unknown until a profile says so.
         QCOMPARE(p.capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Unknown);
         QCOMPARE(p.capabilities().state(Feature::ObjectAclWrite), CapabilityState::Unknown);
+        QCOMPARE(p.capabilities().state(Feature::BucketVersioningWrite), CapabilityState::Unknown);
         QVERIFY(p.isArchiveStorageClass(QStringLiteral("GLACIER")));
     }
 

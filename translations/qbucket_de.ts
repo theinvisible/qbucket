@@ -705,77 +705,87 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Objekt-ACLs ändern</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="514"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="507"/>
+        <source>Switching versioning</source>
+        <translation>Versionierung umschalten</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
         <source>Supported</source>
         <translation>Unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="515"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="516"/>
         <source>Not supported</source>
         <translation>Nicht unterstützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="516"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="517"/>
         <source>Not permitted</source>
         <translation>Nicht erlaubt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="517"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="518"/>
         <source>Unknown</source>
         <translation>Unbekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="525"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="526"/>
         <source>Checked</source>
         <translation>Geprüft</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="526"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="527"/>
         <source>Learned from a request</source>
         <translation>Aus einer Anfrage gelernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="527"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="528"/>
         <source>Provider profile</source>
         <translation>Anbieterprofil</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="537"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="538"/>
         <source>known from the provider profile</source>
         <translation>aus dem Anbieterprofil bekannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="542"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="543"/>
         <source>HTTP %1 %2, %3</source>
         <translation>HTTP %1 %2, %3</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="550"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
         <source>%1 is switched off for this provider: its proxy mishandles these requests.</source>
         <translation>%1 ist für diesen Anbieter abgeschaltet: Sein Proxy behandelt diese Anfragen falsch.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="551"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="552"/>
         <source>The server does not support %1 (%2).</source>
         <translation>Der Server unterstützt %1 nicht (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="553"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="554"/>
         <source>These credentials may not use %1 (%2).</source>
         <translation>Diese Zugangsdaten dürfen %1 nicht nutzen (%2).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="556"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="557"/>
         <source>%1 is not confirmed for this server: QBucket only writes tags and ACLs where the provider is known to handle them safely.</source>
         <translation>%1 ist für diesen Server nicht bestätigt: QBucket schreibt Tags und ACLs nur, wo der Provider sie bekanntermaßen sicher behandelt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="559"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="561"/>
+        <source>%1 is not confirmed for this server: QBucket only changes a bucket&apos;s settings where the provider is known to handle the request safely.</source>
+        <translation>%1 ist für diesen Server nicht bestätigt: QBucket ändert Bucket-Einstellungen nur dort, wo der Provider die Anfrage nachweislich sicher behandelt.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CapabilityController.cpp" line="564"/>
         <source>%1 is not verified on this server; destructive actions need a confirmed capability.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt; zerstörende Aktionen brauchen eine bestätigte Fähigkeit.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CapabilityController.cpp" line="561"/>
+        <location filename="../src/controllers/CapabilityController.cpp" line="566"/>
         <source>%1 is not verified on this server.</source>
         <translation>%1 ist auf diesem Server nicht bestätigt.</translation>
     </message>
@@ -1815,85 +1825,85 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="79"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="85"/>
         <source>leave</source>
         <translation>lassen</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="80"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="86"/>
         <source>set to</source>
         <translation>setzen auf</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="81"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="87"/>
         <source>remove</source>
         <translation>entfernen</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="91"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="97"/>
         <source>not set</source>
         <translation>nicht gesetzt</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="100"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="106"/>
         <source>User metadata (x-amz-meta-*) — set, or remove when ticked:</source>
         <translation>User-Metadaten (x-amz-meta-*) — setzen, oder entfernen, wenn angehakt:</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="101"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="107"/>
         <source>User metadata (x-amz-meta-*):</source>
         <translation>User-Metadaten (x-amz-meta-*):</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="104"/>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="105"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="110"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="111"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="104"/>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="105"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="110"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="111"/>
         <source>Value</source>
         <translation>Wert</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="104"/>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="121"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="110"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="127"/>
         <source>Remove</source>
         <translation>Entfernen</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="115"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="121"/>
         <source>Add</source>
         <translation>Hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="141"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="147"/>
         <source>Continue…</source>
         <translation>Weiter…</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="252"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="258"/>
         <source>%1 may only hold plain ASCII characters.</source>
         <translation>%1 darf nur einfache ASCII-Zeichen enthalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="262"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="268"/>
         <source>Metadata names are letters, digits, “.”, “-” and “_”: “%1”.</source>
         <translation>Metadaten-Namen bestehen aus Buchstaben, Ziffern, „.“, „-“ und „_“: „%1“.</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="264"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="270"/>
         <source>The value of “%1” may only hold plain ASCII characters.</source>
         <translation>Der Wert von „%1“ darf nur einfache ASCII-Zeichen enthalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="266"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="272"/>
         <source>“%1” appears twice.</source>
         <translation>„%1“ kommt doppelt vor.</translation>
     </message>
     <message>
-        <location filename="../src/ui/EditMetadataDialog.cpp" line="270"/>
+        <location filename="../src/ui/EditMetadataDialog.cpp" line="276"/>
         <source>Choose what to change.</source>
         <translation>Wähle, was geändert werden soll.</translation>
     </message>
@@ -1901,22 +1911,22 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::EditObjectsJob</name>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="124"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="130"/>
         <source>%1: removed</source>
         <translation>%1: entfernt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="124"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="130"/>
         <source>%1: %2</source>
         <translation>%1: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="136"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="142"/>
         <source>Storage class: %1</source>
         <translation>Storage Class: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="187"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="193"/>
         <source>%n items</source>
         <translation>
             <numerusform>%n Element</numerusform>
@@ -1924,62 +1934,62 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="188"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="194"/>
         <source>Edit the headers of “%1”</source>
         <translation>Header von „%1“ bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="189"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="195"/>
         <source>Change the storage class of “%1”</source>
         <translation>Storage Class von „%1“ ändern</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="204"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="210"/>
         <source>Nothing to change.</source>
         <translation>Nichts zu ändern.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="223"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="229"/>
         <source>These credentials may not read the objects&apos; tags: an edit could lose them. Nothing was changed.</source>
         <translation>Diese Zugangsdaten dürfen die Tags der Objekte nicht lesen: eine Bearbeitung könnte sie verlieren. Nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="227"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="233"/>
         <source>These credentials may not read the objects&apos; permissions: an edit could make public objects private. Nothing was changed.</source>
         <translation>Diese Zugangsdaten dürfen die Berechtigungen der Objekte nicht lesen: eine Bearbeitung könnte öffentliche Objekte privat machen. Nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="249"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="255"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="265"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="271"/>
         <source>Could not look up “%1”: %2</source>
         <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="283"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="289"/>
         <source>Could not list the folder: %1</source>
         <translation>Der Ordner konnte nicht aufgelistet werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="313"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="319"/>
         <source>The plan could not be written: %1</source>
         <translation>Der Plan konnte nicht geschrieben werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="321"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="327"/>
         <source>Edit</source>
         <translation>Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="321"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="327"/>
         <source>Change Class</source>
         <translation>Class ändern</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="323"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="329"/>
         <source>%n items in s3://%1</source>
         <translation>
             <numerusform>%n Element in s3://%1</numerusform>
@@ -1987,180 +1997,180 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="328"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="334"/>
         <source>Each object is copied onto itself with the new headers; its tags and permissions are carried over and everything is checked afterwards.</source>
         <translation>Jedes Objekt wird mit den neuen Headern auf sich selbst kopiert; Tags und Berechtigungen werden übernommen und danach alles geprüft.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="332"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="338"/>
         <source>The bucket keeps versions: each object gets a new version, the previous ones stay.</source>
         <translation>Der Bucket führt Versionen: jedes Objekt bekommt eine neue Version, die früheren bleiben.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="335"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="341"/>
         <source>The objects are rewritten in place: their previous headers are gone and their modification time changes.</source>
         <translation>Die Objekte werden an Ort und Stelle neu geschrieben: ihre bisherigen Header sind weg, und ihre Änderungszeit ändert sich.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="339"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="345"/>
         <source>Objects under retention or a legal hold are skipped: the new version would not be protected.</source>
         <translation>Objekte unter Aufbewahrung oder Legal Hold werden übersprungen: die neue Version wäre nicht geschützt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="343"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="349"/>
         <source>Objects with tags are skipped: writing tags isn&apos;t confirmed for this server.</source>
         <translation>Objekte mit Tags werden übersprungen: das Schreiben von Tags ist für diesen Server nicht bestätigt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="345"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="351"/>
         <source>Public objects are skipped: changing ACLs isn&apos;t confirmed for this server.</source>
         <translation>Öffentliche Objekte werden übersprungen: das Ändern von ACLs ist für diesen Server nicht bestätigt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="348"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="354"/>
         <source>%1 is an archive class: the objects can&apos;t be read until they are restored (hours), and a minimum storage time is charged.</source>
         <translation>%1 ist eine Archiv-Class: die Objekte sind erst nach einer Wiederherstellung (Stunden) lesbar, und eine Mindest-Speicherdauer wird berechnet.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="399"/>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="477"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="405"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="483"/>
         <source>not changed (not connected)</source>
         <translation>nicht geändert (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="406"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="412"/>
         <source>deleted since it was planned</source>
         <translation>seit der Planung gelöscht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="410"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="416"/>
         <source>not changed: its current state could not be read completely (%1)</source>
         <translation>nicht geändert: sein aktueller Zustand ließ sich nicht vollständig lesen (%1)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="423"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="429"/>
         <source>encrypted with a customer key (SSE-C): QBucket has no key to copy it</source>
         <translation>mit einem Kundenschlüssel verschlüsselt (SSE-C): QBucket hat keinen Schlüssel, um es zu kopieren</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="425"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="431"/>
         <source>encrypted with KMS: not carried over by QBucket yet</source>
         <translation>mit KMS verschlüsselt: übernimmt QBucket noch nicht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="427"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="433"/>
         <source>under retention until %1: the new version would not be protected</source>
         <translation>unter Aufbewahrung bis %1: die neue Version wäre nicht geschützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="430"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="436"/>
         <source>under a legal hold: the new version would not be protected</source>
         <translation>unter Legal Hold: die neue Version wäre nicht geschützt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="433"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="439"/>
         <source>in the archive class %1: restore it first</source>
         <translation>in der Archiv-Class %1: zuerst wiederherstellen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="437"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="443"/>
         <source>has permissions for particular accounts that a copy would lose</source>
         <translation>hat Berechtigungen für bestimmte Accounts, die eine Kopie verlieren würde</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="439"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="445"/>
         <source>is %1, and changing ACLs isn&apos;t confirmed for this server</source>
         <translation>ist %1, und das Ändern von ACLs ist für diesen Server nicht bestätigt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="443"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="449"/>
         <source>has tags, and writing tags isn&apos;t confirmed for this server</source>
         <translation>hat Tags, und das Schreiben von Tags ist für diesen Server nicht bestätigt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="445"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="451"/>
         <source>has headers or metadata that aren&apos;t plain ASCII and can&apos;t be sent back unchanged</source>
         <translation>hat Header oder Metadaten, die kein einfaches ASCII sind und nicht unverändert zurückgeschickt werden können</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="454"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="460"/>
         <source>changed since it was planned</source>
         <translation>seit der Planung verändert</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="467"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="473"/>
         <source>already as asked</source>
         <translation>schon wie gewünscht</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="484"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="490"/>
         <source>not changed (no transfer service)</source>
         <translation>nicht geändert (kein Transfer-Dienst)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="513"/>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="548"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="519"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="554"/>
         <source>changed meanwhile — left alone</source>
         <translation>inzwischen verändert — nicht angetastet</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="514"/>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="549"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="520"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="555"/>
         <source>not changed: %1</source>
         <translation>nicht geändert: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="575"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="581"/>
         <source>changed, but its tags could not be checked (not connected)</source>
         <translation>geändert, aber seine Tags ließen sich nicht prüfen (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="585"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="591"/>
         <source>changed, but its tags could not be written back (not connected)</source>
         <translation>geändert, aber seine Tags ließen sich nicht zurückschreiben (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="603"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="609"/>
         <source>changed, but its tags could not be written back (%1): they were %2</source>
         <translation>geändert, aber seine Tags ließen sich nicht zurückschreiben (%1): sie waren %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="619"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="625"/>
         <source>changed, but not checked (not connected)</source>
         <translation>geändert, aber nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="631"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="637"/>
         <source>size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="634"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="640"/>
         <source>content (ETag)</source>
         <translation>Inhalt (ETag)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="637"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="643"/>
         <source>storage class (%1)</source>
         <translation>Storage Class (%1)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="639"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="645"/>
         <source>tags</source>
         <translation>Tags</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="641"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="647"/>
         <source>permissions</source>
         <translation>Berechtigungen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="653"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="659"/>
         <source>changed, but it doesn&apos;t match: %1</source>
         <translation>geändert, aber es stimmt nicht überein: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/EditObjectsJob.cpp" line="724"/>
+        <location filename="../src/controllers/EditObjectsJob.cpp" line="730"/>
         <source>every changed object checked (headers, class, tags, permissions)</source>
         <translation>jedes geänderte Objekt geprüft (Header, Class, Tags, Berechtigungen)</translation>
     </message>

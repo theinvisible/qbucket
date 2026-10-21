@@ -31,6 +31,7 @@ CapabilitySet GarageProfile::capabilities() const
     const CapabilityEntry no{CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0};
     set.set(Feature::BatchDelete, {CapabilityState::Supported, CapabilitySource::Profile, {}, 0, {}, false, 0});
     set.set(Feature::BucketVersioning, no);
+    set.set(Feature::BucketVersioningWrite, no);   // "Unimplemented action: PutBucketVersioning"
     set.set(Feature::ObjectLock, no);
     set.set(Feature::SseC, no);
     // If-None-Match: * is ignored and the write overwrites (Garage 1.x in

@@ -23,6 +23,10 @@ QBUCKET_S3_EXPORT QByteArray buildCompleteMultipartUpload(const QList<CompletedP
 // 1.0 cannot carry.
 QBUCKET_S3_EXPORT Result<QByteArray> buildTagging(const TagSet& tags);
 
+// <VersioningConfiguration> for PutBucketVersioning: Status only (MfaDelete
+// would need the MFA header).
+QBUCKET_S3_EXPORT QByteArray buildVersioningConfiguration(VersioningStatus status);
+
 // <CreateBucketConfiguration> with a LocationConstraint.
 QBUCKET_S3_EXPORT QByteArray buildCreateBucketConfiguration(const QString& locationConstraint);
 

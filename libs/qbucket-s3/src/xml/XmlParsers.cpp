@@ -571,6 +571,33 @@ Result<ListObjectVersionsPage> parseListVersions(const QByteArray& body, bool pl
     return out;
 }
 
+Result<BucketVersioning> parseVersioningConfiguration(const QByteArray& body)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("VersioningConfiguration")))
+        return *err;
+    BucketVersioning out;
+    QString status;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Status"))
+            status = r.readElementText();
+        else if (n == QLatin1String("MfaDelete"))
+            out.mfaDelete = r.readElementText() == QLatin1String("Enabled");
+        else
+            r.skipCurrentElement();
+    }
+    if (auto err = finish(r))
+        return *err;
+    if (status == QLatin1String("Enabled"))
+        out.status = VersioningStatus::Enabled;
+    else if (status == QLatin1String("Suspended"))
+        out.status = VersioningStatus::Suspended;
+    else if (!status.isEmpty())
+        return protocolError(QStringLiteral("unknown versioning status: ") + status);
+    return out;
+}
+
 Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body)
 {
     QXmlStreamReader r(body);

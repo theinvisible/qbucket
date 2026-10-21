@@ -82,6 +82,20 @@ struct ListObjectVersionsParams {
     int maxKeys = 1000;
 };
 
+// A bucket's versioning (GetBucketVersioning). Never → Enabled ↔ Suspended;
+// once enabled it can't go back to Never.
+enum class VersioningStatus : quint8 { Never, Enabled, Suspended };
+
+struct BucketVersioning {
+    VersioningStatus status = VersioningStatus::Never;
+    std::optional<bool> mfaDelete;   // unset: not reported
+};
+
+struct PutBucketVersioningParams {
+    QString bucket;
+    VersioningStatus status = VersioningStatus::Enabled;   // Enabled or Suspended
+};
+
 // One page of ListObjectVersions. Versions and delete markers in the order
 // the server sent them (key, then newest first) — a key's versions may
 // continue on the next page.

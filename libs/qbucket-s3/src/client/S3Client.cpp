@@ -181,6 +181,7 @@ RequestSpec subresourceSpec(Operation op, const QByteArray& method, const QStrin
     spec.bucket = bucket;
     spec.key = key;
     spec.query.append({subresource, {}, true});
+    spec.versionId = versionId;
     if (!versionId.isEmpty())
         spec.query.append({"versionId", versionId.toUtf8(), false});
     return spec;
@@ -1001,6 +1002,63 @@ quint64 S3Client::listObjectVersions(const ListObjectVersionsParams& params, Don
         if (page->bucket.isEmpty())
             page->bucket = params.bucket;
         return page;
+    });
+}
+
+quint64 S3Client::getBucketVersioning(const QString& bucket, Done<BucketVersioning> done)
+{
+    if (bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    RequestSpec spec;
+    spec.operation = Operation::GetBucketVersioning;
+    spec.bucket = bucket;
+    spec.query.append({"versioning", {}, true});
+    return single(std::move(spec), std::move(done), [](const RawResponse& r) -> Result<BucketVersioning> {
+        return xml::parseVersioningConfiguration(r.body);
+    });
+}
+
+quint64 S3Client::putBucketVersioning(const PutBucketVersioningParams& params, Done<SubresourceWriteResult> done)
+{
+    if (params.bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    if (params.status == VersioningStatus::Never)
+        return failLater(std::move(done), invalid(QStringLiteral("versioning can only be enabled or suspended")));
+    RequestSpec spec;
+    spec.operation = Operation::PutBucketVersioning;
+    spec.method = "PUT";
+    spec.bucket = params.bucket;
+    spec.query.append({"versioning", {}, true});
+    spec.body = xml::buildVersioningConfiguration(params.status);
+    spec.contentType = "application/xml";
+    spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    spec.idempotent = true;   // the same status again
+    // A proxy that drops ?versioning makes this a CreateBucket: on an
+    // existing bucket 409 BucketAlreadyOwnedByYou (or 200 with Location in
+    // us-east-1), on a missing one a new bucket.
+    auto guarded = [done = std::move(done)](Result<SubresourceWriteResult> r) mutable {
+        if (!r && r.error().category == ErrorCategory::Conflict
+            && (r.error().code == QLatin1String("BucketAlreadyOwnedByYou")
+                || r.error().code == QLatin1String("BucketAlreadyExists"))) {
+            Error e = r.error();
+            e.category = ErrorCategory::Protocol;
+            e.message = QStringLiteral("server answered PutBucketVersioning like CreateBucket (%1): the "
+                                       "?versioning subresource was dropped")
+                            .arg(e.code);
+            r = e;
+        }
+        done(std::move(r));
+    };
+    return single(std::move(spec), Done<SubresourceWriteResult>(std::move(guarded)),
+                  [](const RawResponse& r) -> Result<SubresourceWriteResult> {
+        if (!r.header("location").isEmpty()) {
+            return Error::make(ErrorCategory::Protocol,
+                               QStringLiteral("server answered PutBucketVersioning like CreateBucket (Location "
+                                              "header): the ?versioning subresource was dropped"));
+        }
+        SubresourceWriteResult out;
+        out.requestId = QString::fromLatin1(r.header("x-amz-request-id"));
+        return out;
     });
 }
 

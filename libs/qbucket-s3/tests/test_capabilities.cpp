@@ -32,7 +32,7 @@ private Q_SLOTS:
             ids.insert(id);
             QCOMPARE(featureFromId(id), std::optional(f));
         }
-        QCOMPARE(ids.size(), int(Feature::ObjectAclWrite) + 1);
+        QCOMPARE(ids.size(), int(Feature::BucketVersioningWrite) + 1);
         // Persisted ids must never change.
         QCOMPARE(featureId(Feature::BucketVersioning), QStringLiteral("bucket.versioning"));
         QCOMPARE(featureId(Feature::CrossBucketCopy), QStringLiteral("object.cross-bucket-copy"));
@@ -49,6 +49,11 @@ private Q_SLOTS:
         QCOMPARE(featuresFor(Operation::PutObjectTagging),
                  (QList<Feature>{Feature::ObjectTaggingWrite, Feature::ObjectTagging}));
         QCOMPARE(featuresFor(Operation::PutObjectAcl), (QList<Feature>{Feature::ObjectAclWrite, Feature::ObjectAcl}));
+        QCOMPARE(featureId(Feature::BucketVersioningWrite), QStringLiteral("bucket.versioning-write"));
+        QCOMPARE(featuresFor(Operation::PutBucketVersioning),
+                 (QList<Feature>{Feature::BucketVersioningWrite, Feature::BucketVersioning}));
+        QCOMPARE(featuresFor(Operation::GetBucketVersioning), QList<Feature>{Feature::BucketVersioning});
+        QCOMPARE(featuresFor(Operation::ListObjectVersions), QList<Feature>{Feature::ObjectVersionsListing});
         QVERIFY(isMutating(Operation::PutObjectTagging));
         QVERIFY(!isMutating(Operation::GetObjectAcl));
     }
@@ -165,6 +170,7 @@ private Q_SLOTS:
                            {QStringLiteral("x-amz-request-id")}, QStringLiteral("rgw-tx")};
         set.bucketState.versioning = QStringLiteral("Enabled");
         set.bucketState.objectLockEnabled = true;
+        set.bucketState.mfaDelete = false;
         CapabilityEntry e = probed(CapabilityState::Supported, 404, 0, set.probedAt);
         e.s3Code = QStringLiteral("NoSuchCORSConfiguration");
         set.set(Feature::Cors, e);
@@ -178,6 +184,7 @@ private Q_SLOTS:
         QCOMPARE(back->fingerprint, set.fingerprint);
         QCOMPARE(back->bucketState.versioning, QStringLiteral("Enabled"));
         QCOMPARE(back->bucketState.objectLockEnabled, std::optional(true));
+        QCOMPARE(back->bucketState.mfaDelete, std::optional(false));
         QCOMPARE(back->entry(Feature::Cors).s3Code, QStringLiteral("NoSuchCORSConfiguration"));
         QCOMPARE(back->entry(Feature::Cors).httpStatus, 404);
         QCOMPARE(back->entry(Feature::Website).unknownAttempts, 2);

@@ -568,6 +568,24 @@ RequestId Session::listObjectVersions(const ListObjectVersionsParams& params, QO
                                              });
 }
 
+RequestId Session::getBucketVersioning(const QString& bucket, QObject* context,
+                                       Callback<BucketVersioning> callback)
+{
+    return d->submit<BucketVersioning>(context, std::move(callback),
+                                       [bucket](S3Client* c, auto done, auto /*progress*/) {
+                                           return c->getBucketVersioning(bucket, std::move(done));
+                                       });
+}
+
+RequestId Session::putBucketVersioning(const PutBucketVersioningParams& params, QObject* context,
+                                       Callback<SubresourceWriteResult> callback)
+{
+    return d->submit<SubresourceWriteResult>(context, std::move(callback),
+                                             [params](S3Client* c, auto done, auto /*progress*/) {
+                                                 return c->putBucketVersioning(params, std::move(done));
+                                             });
+}
+
 RequestId Session::listParts(const ListPartsParams& params, QObject* context, Callback<ListPartsPage> callback)
 {
     return d->submit<ListPartsPage>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {

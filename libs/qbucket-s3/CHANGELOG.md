@@ -211,6 +211,29 @@ version bump may break the API.
   403 on delete). `putObject` / `putSyntheticObject` return the version id;
   `deleteObject`, `versions`, `versionedKeys`, `versioning` for tests.
   `GET ?versions&prefix=` is no longer taken for ListObjectsV2.
+- Bucket versioning: `VersioningStatus`, `BucketVersioning` (with
+  `mfaDelete`), `PutBucketVersioningParams`; `Session::getBucketVersioning`
+  and `Session::putBucketVersioning` (Status only — MfaDelete would need
+  the MFA header). Write-only feature `Feature::BucketVersioningWrite`
+  ("bucket.versioning-write"), never set by a read probe;
+  `featuresFor(PutBucketVersioning)` = {BucketVersioningWrite,
+  BucketVersioning}. Profiles: AWS Supported, Garage Unsupported, generic
+  and Hetzner Unknown. An answer that looks like CreateBucket (Location
+  header, 409 BucketAlreadyOwnedByYou / BucketAlreadyExists) is a Protocol
+  error: a proxy dropped ?versioning.
+- `BucketState::mfaDelete`, read by the versioning probe (now through
+  `xml::parseVersioningConfiguration`) and persisted.
+- ITs: `listVersionsPagesAndMarkers`, `deleteMarkerSemantics`,
+  `getAndCopyAVersion`, `deleteAVersionPermanently`, the canary
+  `bucketVersioningWriteOnMissingBucketCreatesNothing` and
+  `toggleVersioning` (QBUCKET_IT_VERSIONING_BUCKET, a scratch bucket with a
+  guard object; locally `<bucket>-versions`). Cleanup removes every version
+  and delete marker under the run's prefix. Expectation keys
+  `bucketVersioningWrite`, `headReportsDeleteMarker`,
+  `headOnMarkerVersionReportsDeleteMarker`, `copyReportsVersionIds`: Ceph
+  and VersityGW answer HEAD on a deleted key with a bare 404, Ceph sends no
+  version ids on CopyObject — a delete marker is only certain from the
+  version listing.
 
 ### Changed
 

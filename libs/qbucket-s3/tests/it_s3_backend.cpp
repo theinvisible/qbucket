@@ -4,18 +4,24 @@
 //   QBUCKET_IT_ENDPOINT, QBUCKET_IT_REGION, QBUCKET_IT_ACCESS_KEY,
 //   QBUCKET_IT_SECRET_KEY, QBUCKET_IT_BUCKET (must match qbucket-it-*),
 //   QBUCKET_IT_ADDRESSING (path|virtual), QBUCKET_IT_PROVIDER, QBUCKET_IT_BACKEND,
-//   optional: QBUCKET_IT_CREATE_BUCKET=1 (local backends only),
+//   optional: QBUCKET_IT_CREATE_BUCKET=1 (local backends only; with
+//             "bucketVersioningWrite" expected, <bucket>-versions is created
+//             and versioned for the version tests),
 //             QBUCKET_IT_RESTRICTED_ACCESS_KEY / _SECRET_KEY (a user without
-//             access to the bucket, for NotPermitted)
+//             access to the bucket, for NotPermitted),
+//             QBUCKET_IT_VERSIONING_BUCKET (a qbucket-it-* scratch bucket
+//             holding guard/DO-NOT-DELETE.txt: toggleVersioning switches its
+//             versioning off and on again)
 //
 // Known deviations of a backend live in tests/data/it-expectations/
 // <backend>.json. They are asserted, not just skipped — when a backend
 // changes, the test notices.
 //
 // Safety: refuses any bucket not named qbucket-it-*; every key lives under
-// it/<run id>/ and only that prefix is cleaned up. The bucket itself is
-// never deleted.
+// it/<run id>/ and only that prefix is cleaned up — every version and delete
+// marker under it, nothing else. The bucket itself is never deleted.
 
+#include <qbucket/s3/ListObjectVersionsPager.h>
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/Session.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
@@ -29,6 +35,8 @@
 #include <QNetworkReply>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QElapsedTimer>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <qbucket/s3/RequestObserver.h>
@@ -44,6 +52,12 @@ namespace {
 QString env(const char* name)
 {
     return qEnvironmentVariable(name);
+}
+
+bool safeBucketName(const QString& bucket)
+{
+    static const QRegularExpression safeName(QStringLiteral("^qbucket-it-[a-z0-9-]+$"));
+    return safeName.match(bucket).hasMatch();
 }
 
 template <typename T, typename Start>
@@ -99,6 +113,9 @@ private:
     QString m_prefix;      // it/<run id>/
     QString m_backend;
     QJsonObject m_expect;   // known deviations of this backend
+    QString m_versionBucket;        // versioning enabled; see versionedBucket()
+    bool m_versionBucketResolved = false;
+    bool m_versionBucketCreated = false;
     QObject m_ctx;
     QTemporaryDir m_dir;
 
@@ -116,10 +133,12 @@ private:
 
     QString key(const QString& name) const { return m_prefix + name; }
 
-    Result<PutObjectResult> put(const QString& k, const QByteArray& data)
+    Result<PutObjectResult> put(const QString& k, const QByteArray& data) { return putIn(m_bucket, k, data); }
+
+    Result<PutObjectResult> putIn(const QString& bucket, const QString& k, const QByteArray& data)
     {
         PutObjectParams p;
-        p.bucket = m_bucket;
+        p.bucket = bucket;
         p.key = k;
         p.data = data;
         p.contentType = QStringLiteral("text/plain");
@@ -192,23 +211,131 @@ private:
         }
     }
 
-    void deleteAllUnder(const QString& prefix)
+    // Every version and delete marker under `prefix`, walking all pages.
+    Result<QList<VersionEntry>> listVersions(const QString& bucket, const QString& prefix, int maxKeys = 1000,
+                                             const QString& delimiter = {}, QStringList* prefixes = nullptr)
     {
-        const Result<QStringList> keys = listKeys(prefix);
-        if (!keys)
+        ListObjectVersionsParams p;
+        p.bucket = bucket;
+        p.prefix = prefix;
+        p.delimiter = delimiter;
+        p.maxKeys = maxKeys;
+        ListObjectVersionsPager pager(*m_session, p);
+        QList<VersionEntry> out;
+        while (pager.hasMore()) {
+            Result<ListObjectVersionsPage> page =
+                await<ListObjectVersionsPage>([&](auto cb) { pager.fetchNext(&m_ctx, std::move(cb)); });
+            if (!page)
+                return page.error();
+            out += page->entries;
+            if (prefixes)
+                *prefixes += page->commonPrefixes;
+        }
+        return out;
+    }
+
+    void deleteBatch(const QString& bucket, const QList<ObjectIdentifier>& batch)
+    {
+        const Result<DeleteObjectsResult> r = await<DeleteObjectsResult>(
+            [&](auto cb) { m_session->deleteObjects(bucket, batch, &m_ctx, std::move(cb)); });
+        if (!r) {
+            qWarning().noquote() << "cleanup:" << r.error().toString();
             return;
-        QList<ObjectIdentifier> batch;
-        for (const QString& k : keys.value()) {
-            if (!k.startsWith(m_prefix))
-                continue;   // never touch anything outside our run
-            batch.append({k, {}});
-            if (batch.size() == 1000) {
-                (void)await<DeleteObjectsResult>([&](auto cb) { m_session->deleteObjects(m_bucket, batch, &m_ctx, std::move(cb)); });
-                batch.clear();
+        }
+        for (const DeleteObjectsResult::Failed& f : r->failed)
+            qWarning().noquote() << "cleanup left" << f.key << f.versionId << f.code;   // e.g. object lock
+    }
+
+    // Removes everything under `prefix` for good: every version and delete
+    // marker where versions can be listed, else the current objects. Never
+    // touches anything outside this run's prefix.
+    void deleteAllUnder(const QString& prefix, const QString& bucketName = {})
+    {
+        const QString bucket = bucketName.isEmpty() ? m_bucket : bucketName;
+        if (!prefix.startsWith(m_prefix))
+            return;
+        QList<ObjectIdentifier> all;
+        if (const Result<QList<VersionEntry>> versions = listVersions(bucket, prefix)) {
+            for (const VersionEntry& v : versions.value()) {
+                if (v.key.startsWith(m_prefix))
+                    all.append({v.key, v.versionId});
+            }
+        } else if (const Result<QStringList> keys = listKeys(prefix)) {   // no version listing (Garage)
+            for (const QString& k : keys.value()) {
+                if (k.startsWith(m_prefix))
+                    all.append({k, {}});
+            }
+        } else {
+            return;
+        }
+        for (qsizetype i = 0; i < all.size(); i += 1000)
+            deleteBatch(bucket, all.mid(i, 1000));
+    }
+
+    std::optional<VersioningStatus> versioningOf(const QString& bucket)
+    {
+        const Result<BucketVersioning> v =
+            await<BucketVersioning>([&](auto cb) { m_session->getBucketVersioning(bucket, &m_ctx, std::move(cb)); });
+        if (!v)
+            return std::nullopt;
+        return v->status;
+    }
+
+    Result<SubresourceWriteResult> setVersioning(const QString& bucket, VersioningStatus status)
+    {
+        PutBucketVersioningParams p;
+        p.bucket = bucket;
+        p.status = status;
+        return await<SubresourceWriteResult>([&](auto cb) { m_session->putBucketVersioning(p, &m_ctx, std::move(cb)); });
+    }
+
+    // Reads the versioning back until it shows `want` (gateways may answer
+    // stale for a while after a change). Returns the seconds it took, or -1.
+    int waitForVersioning(const QString& bucket, VersioningStatus want, int maxSecs = 120)
+    {
+        QElapsedTimer t;
+        t.start();
+        while (t.elapsed() < qint64(maxSecs) * 1000) {
+            if (versioningOf(bucket) == want)
+                return int(t.elapsed() / 1000);
+            QTest::qWait(3000);
+        }
+        return -1;
+    }
+
+    // A bucket with versioning enabled for the version tests: the test
+    // bucket itself when it is versioned, or — on local backends that can
+    // switch versioning on — <bucket>-versions, created here. Empty: none.
+    QString versionedBucket()
+    {
+        if (m_versionBucketResolved)
+            return m_versionBucket;
+        m_versionBucketResolved = true;
+        if (versioningOf(m_bucket) == VersioningStatus::Enabled) {
+            m_versionBucket = m_bucket;
+        } else if (env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1") && expects("bucketVersioningWrite")) {
+            const QString bucket = m_bucket + QStringLiteral("-versions");
+            CreateBucketParams p;
+            p.bucket = bucket;
+            p.region = m_options.endpoint.region;
+            const Result<void> created = await<void>([&](auto cb) { m_session->createBucket(p, &m_ctx, std::move(cb)); });
+            if ((created || created.error().category == ErrorCategory::Conflict)
+                && setVersioning(bucket, VersioningStatus::Enabled)
+                && waitForVersioning(bucket, VersioningStatus::Enabled, 30) >= 0) {
+                m_versionBucket = bucket;
+                m_versionBucketCreated = true;
             }
         }
-        if (!batch.isEmpty())
-            (void)await<DeleteObjectsResult>([&](auto cb) { m_session->deleteObjects(m_bucket, batch, &m_ctx, std::move(cb)); });
+        qInfo().noquote() << "versioned bucket:" << (m_versionBucket.isEmpty() ? QStringLiteral("none") : m_versionBucket);
+        return m_versionBucket;
+    }
+
+    // The current object's version id (empty when there is none).
+    QString currentVersion(const QString& bucket, const QString& k)
+    {
+        const Result<ObjectMeta> m =
+            await<ObjectMeta>([&](auto cb) { m_session->headObject(bucket, k, {}, &m_ctx, std::move(cb)); });
+        return m ? m->versionId : QString();
     }
 
 private Q_SLOTS:
@@ -218,9 +345,11 @@ private Q_SLOTS:
             QSKIP("QBUCKET_IT_ENDPOINT not set — integration tests are opt-in");
 
         m_bucket = env("QBUCKET_IT_BUCKET");
-        static const QRegularExpression safeName(QStringLiteral("^qbucket-it-[a-z0-9-]+$"));
-        QVERIFY2(safeName.match(m_bucket).hasMatch(),
-                 "refusing to run: QBUCKET_IT_BUCKET must be a dedicated qbucket-it-* bucket");
+        QVERIFY2(safeBucketName(m_bucket), "refusing to run: QBUCKET_IT_BUCKET must be a dedicated qbucket-it-* bucket");
+        if (!env("QBUCKET_IT_VERSIONING_BUCKET").isEmpty()) {
+            QVERIFY2(safeBucketName(env("QBUCKET_IT_VERSIONING_BUCKET")),
+                     "refusing to run: QBUCKET_IT_VERSIONING_BUCKET must be a dedicated qbucket-it-* bucket");
+        }
         m_backend = env("QBUCKET_IT_BACKEND");
         QFile expectations(QStringLiteral(TEST_DATA_DIR "/it-expectations/") + m_backend
                            + QStringLiteral(".json"));
@@ -269,6 +398,8 @@ private Q_SLOTS:
         if (m_session) {
             abortAllUnder(m_prefix);
             deleteAllUnder(m_prefix);
+            if (!m_versionBucket.isEmpty() && m_versionBucket != m_bucket)
+                deleteAllUnder(m_prefix, m_versionBucket);
         }
     }
 
@@ -1132,6 +1263,228 @@ private Q_SLOTS:
                      QStringLiteral("%1=%2").arg(it.key(), it.value().toString()));
         }
         deleteAllUnder(key(QStringLiteral("probe-target")));
+    }
+
+    // --- versions ---------------------------------------------------------
+
+    void listVersionsPagesAndMarkers()
+    {
+        const QString bucket = versionedBucket();
+        if (bucket.isEmpty())
+            QSKIP("no versioned bucket on this backend");
+        const QString base = key(QStringLiteral("versions-list/"));
+        QStringList multiIds;   // newest first
+        for (int i = 0; i < 3; ++i) {
+            const Result<PutObjectResult> r = putIn(bucket, base + QStringLiteral("multi"), QByteArray::number(i));
+            VERIFY_OK(r);
+            QVERIFY(!r->versionId.isEmpty() && r->versionId != QLatin1String("null"));
+            multiIds.prepend(r->versionId);
+        }
+        VERIFY_OK(putIn(bucket, base + QStringLiteral("gone"), "x"));
+        const Result<DeleteObjectResult> del = await<DeleteObjectResult>([&](auto cb) {
+            m_session->deleteObject(bucket, base + QStringLiteral("gone"), {}, &m_ctx, std::move(cb));
+        });
+        VERIFY_OK(del);
+        QVERIFY(del->deleteMarker);
+        VERIFY_OK(putIn(bucket, base + QStringLiteral("sub dir/inner"), "y"));
+
+        const Result<QList<VersionEntry>> flat = listVersions(bucket, base, 2);
+        VERIFY_OK(flat);
+        QCOMPARE(flat->size(), 6);   // 3 + version and marker + 1
+        QStringList seen;
+        for (const VersionEntry& v : flat.value()) {
+            if (v.key == base + QLatin1String("multi"))
+                seen.append(v.versionId);
+            if (v.key == base + QLatin1String("gone") && v.isLatest) {
+                QVERIFY(v.isDeleteMarker);
+                QCOMPARE(v.versionId, del->versionId);
+            }
+        }
+        QCOMPARE(seen, multiIds);   // newest first, across 2-entry pages
+
+        QStringList prefixes;
+        const Result<QList<VersionEntry>> folders = listVersions(bucket, base, 1000, QStringLiteral("/"), &prefixes);
+        VERIFY_OK(folders);
+        QCOMPARE(prefixes, QStringList{base + QStringLiteral("sub dir/")});
+        QCOMPARE(folders->size(), 5);
+        deleteAllUnder(base, bucket);
+        const Result<QList<VersionEntry>> after = listVersions(bucket, base);
+        VERIFY_OK(after);
+        QVERIFY(after->isEmpty());
+    }
+
+    void deleteMarkerSemantics()
+    {
+        const QString bucket = versionedBucket();
+        if (bucket.isEmpty())
+            QSKIP("no versioned bucket on this backend");
+        const QString k = key(QStringLiteral("versions-marker/doc.txt"));
+        const Result<PutObjectResult> put = putIn(bucket, k, "keep me");
+        VERIFY_OK(put);
+        const Result<DeleteObjectResult> del = await<DeleteObjectResult>(
+            [&](auto cb) { m_session->deleteObject(bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(del);
+        QVERIFY(del->deleteMarker);
+        const QString marker = del->versionId;
+        QVERIFY(!marker.isEmpty());
+
+        // AWS answers with x-amz-delete-marker; RGW and VersityGW with a bare
+        // 404 — a marker is only certain from the version listing.
+        const auto expectedOr = [&](const char* quirk) {
+            return !m_expect.contains(QLatin1String(quirk)) || expects(quirk);
+        };
+        Result<ObjectMeta> head = await<ObjectMeta>([&](auto cb) { m_session->headObject(bucket, k, {}, &m_ctx, std::move(cb)); });
+        QCOMPARE(head.error().category, ErrorCategory::NotFound);
+        QCOMPARE(head.error().deleteMarker, expectedOr("headReportsDeleteMarker"));
+        head = await<ObjectMeta>([&](auto cb) { m_session->headObject(bucket, k, marker, &m_ctx, std::move(cb)); });
+        QVERIFY(!head);
+        qInfo().noquote() << "HEAD on the marker version:" << head.error().toString();
+        QCOMPARE(head.error().category, ErrorCategory::NotFound);
+        QCOMPARE(head.error().deleteMarker, expectedOr("headOnMarkerVersionReportsDeleteMarker"));
+
+        // Removing the marker brings the object back.
+        const Result<DeleteObjectResult> undelete = await<DeleteObjectResult>(
+            [&](auto cb) { m_session->deleteObject(bucket, k, marker, &m_ctx, std::move(cb)); });
+        VERIFY_OK(undelete);
+        QCOMPARE(currentVersion(bucket, k), put->versionId);
+        deleteAllUnder(key(QStringLiteral("versions-marker/")), bucket);
+    }
+
+    void getAndCopyAVersion()
+    {
+        const QString bucket = versionedBucket();
+        if (bucket.isEmpty())
+            QSKIP("no versioned bucket on this backend");
+        const QString k = key(QStringLiteral("versions-restore/doc.txt"));
+        const Result<PutObjectResult> first = putIn(bucket, k, "first version");
+        VERIFY_OK(first);
+        VERIFY_OK(putIn(bucket, k, "second version"));
+
+        const Result<ObjectData> old = await<ObjectData>(
+            [&](auto cb) { m_session->getObject(bucket, k, first->versionId, &m_ctx, std::move(cb)); });
+        VERIFY_OK(old);
+        QCOMPARE(old->data, QByteArray("first version"));
+        QCOMPARE(old->meta.versionId, first->versionId);
+
+        // Restore: the old version copied over the current one.
+        CopyObjectParams p;
+        p.sourceBucket = p.bucket = bucket;
+        p.sourceKey = p.key = k;
+        p.sourceVersionId = first->versionId;
+        const Result<CopyObjectResult> copied =
+            await<CopyObjectResult>([&](auto cb) { m_session->copyObject(p, &m_ctx, std::move(cb)); });
+        VERIFY_OK(copied);
+        // RGW sends neither x-amz-copy-source-version-id nor x-amz-version-id.
+        if (!m_expect.contains(QLatin1String("copyReportsVersionIds")) || expects("copyReportsVersionIds")) {
+            QCOMPARE(copied->sourceVersionId, first->versionId);
+            QVERIFY(!copied->versionId.isEmpty() && copied->versionId != first->versionId);
+        }
+        const Result<ObjectData> now = await<ObjectData>([&](auto cb) { m_session->getObject(bucket, k, {}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(now);
+        QCOMPARE(now->data, QByteArray("first version"));
+        const Result<QList<VersionEntry>> all = listVersions(bucket, k);
+        VERIFY_OK(all);
+        QCOMPARE(all->size(), 3);
+        deleteAllUnder(key(QStringLiteral("versions-restore/")), bucket);
+    }
+
+    void deleteAVersionPermanently()
+    {
+        const QString bucket = versionedBucket();
+        if (bucket.isEmpty())
+            QSKIP("no versioned bucket on this backend");
+        const QString k = key(QStringLiteral("versions-delete/doc.txt"));
+        const Result<PutObjectResult> v1 = putIn(bucket, k, "one");
+        VERIFY_OK(v1);
+        const Result<PutObjectResult> v2 = putIn(bucket, k, "two");
+        VERIFY_OK(v2);
+
+        // The current version gone: the previous one is current again.
+        const Result<DeleteObjectResult> del = await<DeleteObjectResult>(
+            [&](auto cb) { m_session->deleteObject(bucket, k, v2->versionId, &m_ctx, std::move(cb)); });
+        VERIFY_OK(del);
+        QVERIFY(!del->deleteMarker);
+        QCOMPARE(currentVersion(bucket, k), v1->versionId);
+        const Result<ObjectMeta> gone = await<ObjectMeta>(
+            [&](auto cb) { m_session->headObject(bucket, k, v2->versionId, &m_ctx, std::move(cb)); });
+        QCOMPARE(gone.error().category, ErrorCategory::NotFound);
+
+        // The last one in a batch: nothing left of the key.
+        const Result<DeleteObjectsResult> batch = await<DeleteObjectsResult>(
+            [&](auto cb) { m_session->deleteObjects(bucket, {{k, v1->versionId}}, &m_ctx, std::move(cb)); });
+        VERIFY_OK(batch);
+        QCOMPARE(batch->failed.size(), 0);
+        QCOMPARE(batch->deleted.size(), 1);
+        QCOMPARE(batch->deleted.first().versionId, v1->versionId);
+        const Result<QList<VersionEntry>> left = listVersions(bucket, k);
+        VERIFY_OK(left);
+        QVERIFY(left->isEmpty());
+    }
+
+    // The canary for PUT ?versioning: a proxy that drops the subresource
+    // would execute CreateBucket. On a bucket that doesn't exist, a correct
+    // server fails — and no bucket appears.
+    void bucketVersioningWriteOnMissingBucketCreatesNothing()
+    {
+        const QString canary = QStringLiteral("qbucket-it-canary-%1").arg(QRandomGenerator::global()->generate(), 8, 16, QLatin1Char('0'));
+        QVERIFY(safeBucketName(canary));
+        const Result<SubresourceWriteResult> r = setVersioning(canary, VersioningStatus::Enabled);
+        const Result<void> head = await<void>([&](auto cb) { m_session->headBucket(canary, &m_ctx, std::move(cb)); });
+        if (head) {
+            (void)await<void>([&](auto cb) { m_session->deleteBucket(canary, &m_ctx, std::move(cb)); });
+            QFAIL("PUT ?versioning on a missing bucket created it — the proxy dropped ?versioning");
+        }
+        QVERIFY2(!r, "PUT ?versioning on a missing bucket succeeded");
+        qInfo().noquote() << "canary answer:" << r.error().toString();
+        QVERIFY(r.error().category != ErrorCategory::Protocol);
+        QCOMPARE(head.error().category, ErrorCategory::NotFound);
+    }
+
+    // Suspends and re-enables versioning — only on a scratch bucket with a
+    // guard object (QBUCKET_IT_VERSIONING_BUCKET), or the local versions
+    // bucket created by this test. Always ends Enabled.
+    void toggleVersioning()
+    {
+        QString bucket = env("QBUCKET_IT_VERSIONING_BUCKET");
+        const QString guard = QStringLiteral("guard/DO-NOT-DELETE.txt");
+        if (bucket.isEmpty() && !versionedBucket().isEmpty() && m_versionBucketCreated) {
+            bucket = m_versionBucket;
+            VERIFY_OK(putIn(bucket, guard, "guard object: a misread write must not delete this bucket"));
+        }
+        if (bucket.isEmpty())
+            QSKIP("no scratch bucket for versioning writes (QBUCKET_IT_VERSIONING_BUCKET)");
+        QVERIFY(safeBucketName(bucket));
+        const auto guardHere = [&] {
+            return bool(await<ObjectMeta>([&](auto cb) { m_session->headObject(bucket, guard, {}, &m_ctx, std::move(cb)); }));
+        };
+        QVERIFY2(guardHere(), "refusing: the scratch bucket holds no guard object");
+
+        const std::optional<VersioningStatus> before = versioningOf(bucket);
+        QVERIFY(before.has_value());
+        bool suspended = false;
+        auto reenable = qScopeGuard([&] {
+            if (suspended)
+                (void)setVersioning(bucket, VersioningStatus::Enabled);
+        });
+        if (*before != VersioningStatus::Enabled) {
+            VERIFY_OK(setVersioning(bucket, VersioningStatus::Enabled));
+            QVERIFY(waitForVersioning(bucket, VersioningStatus::Enabled) >= 0);
+        }
+
+        suspended = true;
+        VERIFY_OK(setVersioning(bucket, VersioningStatus::Suspended));
+        const int toSuspended = waitForVersioning(bucket, VersioningStatus::Suspended);
+        qInfo() << "read back Suspended after" << toSuspended << "s";
+        QVERIFY(toSuspended >= 0);
+        QVERIFY(guardHere());
+
+        VERIFY_OK(setVersioning(bucket, VersioningStatus::Enabled));
+        suspended = false;
+        const int toEnabled = waitForVersioning(bucket, VersioningStatus::Enabled);
+        qInfo() << "read back Enabled after" << toEnabled << "s";
+        QVERIFY(toEnabled >= 0);
+        QVERIFY(guardHere());
+        VERIFY_OK((await<void>([&](auto cb) { m_session->headBucket(bucket, &m_ctx, std::move(cb)); })));
     }
 
     void restrictedUserIsNotPermitted()

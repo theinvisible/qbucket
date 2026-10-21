@@ -54,6 +54,7 @@ CapabilitySet AwsProfile::capabilities() const
     set.set(Feature::CrossBucketCopy, yes);
     set.set(Feature::ObjectTaggingWrite, yes);
     set.set(Feature::ObjectAclWrite, yes);
+    set.set(Feature::BucketVersioningWrite, yes);
     return set;
 }
 

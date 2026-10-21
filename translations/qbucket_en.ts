@@ -194,7 +194,7 @@
 <context>
     <name>qbucket::EditObjectsJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/EditObjectsJob.cpp" line="187"/>
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="193"/>
         <source>%n items</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -202,7 +202,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/EditObjectsJob.cpp" line="323"/>
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="329"/>
         <source>%n items in s3://%1</source>
         <translation>
             <numerusform>%n item in s3://%1</numerusform>

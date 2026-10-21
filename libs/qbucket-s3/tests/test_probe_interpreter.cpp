@@ -121,6 +121,10 @@ private Q_SLOTS:
                              ok(200, "<VersioningConfiguration><Status>Suspended</Status></VersioningConfiguration>"),
                              QDateTime::currentDateTimeUtc(), &s);
         QCOMPARE(s.versioning, QStringLiteral("Suspended"));
+        QVERIFY(!s.mfaDelete);   // not reported
+        (void)interpretProbe(specFor(Feature::BucketVersioning), ok(200, "<VersioningConfiguration/>"),
+                             QDateTime::currentDateTimeUtc(), &s);
+        QVERIFY(s.versioning.isEmpty());   // never enabled
         (void)interpretProbe(specFor(Feature::ObjectLock),
                              ok(200, "<ObjectLockConfiguration><ObjectLockEnabled>Enabled</ObjectLockEnabled></ObjectLockConfiguration>"),
                              QDateTime::currentDateTimeUtc(), &s);
@@ -143,6 +147,7 @@ private Q_SLOTS:
         QCOMPARE(s.objectLockEnabled, std::optional(true));
         e = interpretProbe(specFor(Feature::BucketVersioning), ok(200, fixture("lock-versioning-200.xml")), now, &s);
         QCOMPARE(s.versioning, QStringLiteral("Enabled"));
+        QCOMPARE(s.mfaDelete, std::optional(false));
         e = interpretProbe(specFor(Feature::LegalHold),
                            errorFromResponse(404, fixture("lock-object-legal-hold-404.xml")), now, &s);
         QCOMPARE(e.state, CapabilityState::Supported);

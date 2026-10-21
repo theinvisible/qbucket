@@ -73,6 +73,10 @@ QBUCKET_S3_EXPORT Result<ListMultipartUploadsPage> parseListMultipartUploads(con
 // truncated page without NextKeyMarker continues after its last entry.
 QBUCKET_S3_EXPORT Result<ListObjectVersionsPage> parseListVersions(const QByteArray& body, bool plusIsSpace);
 
+// <VersioningConfiguration> of GetBucketVersioning: no Status = never
+// enabled; another Status is a Protocol error.
+QBUCKET_S3_EXPORT Result<BucketVersioning> parseVersioningConfiguration(const QByteArray& body);
+
 // <CopyPartResult> of UploadPartCopy (ETag, LastModified).
 QBUCKET_S3_EXPORT Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body);
 
