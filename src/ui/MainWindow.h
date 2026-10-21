@@ -67,6 +67,7 @@ private:
     void updateNavigation_();
     void updateStatus_();
     void showCapabilities_();
+    void showBucketProperties_(const QUuid& account, const QString& bucket);
     void showIncompleteUploads_();
     void connectOperations_();
     void updateJobStatus_();

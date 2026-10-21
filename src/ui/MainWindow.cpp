@@ -21,6 +21,7 @@
 #include "controllers/TransferService.h"
 #include "controllers/UploadJob.h"
 #include "ui/AccountSidebar.h"
+#include "ui/BucketPropertiesDialog.h"
 #include "ui/CapabilitiesDialog.h"
 #include "ui/EditMetadataDialog.h"
 #include "ui/IncompleteUploadsDialog.h"
@@ -199,6 +200,7 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         const Location here = m_browser->navigation()->current();
         startCopy_(sel, here.account, here.bucket, prefix, move);
     });
+    connect(m_sidebar, &AccountSidebar::bucketPropertiesRequested, this, &MainWindow::showBucketProperties_);
     connect(m_sidebar, &AccountSidebar::objectsDroppedOnBucket, this,
             [this](const QUuid& account, const QString& bucket, const ObjectSelection& sel, bool move) {
                 startCopy_(sel, account, bucket, QString(), move);
@@ -824,6 +826,23 @@ void MainWindow::showCapabilities_()
         return;
     auto* dlg = new CapabilitiesDialog(m_capabilities, account->id, account->name, here.bucket, this);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->show();
+}
+
+void MainWindow::showBucketProperties_(const QUuid& accountId, const QString& bucket)
+{
+    const std::optional<Account> account = m_accounts ? m_accounts->account(accountId) : std::nullopt;
+    if (!account)
+        return;
+    auto* dlg = new BucketPropertiesDialog(accountId, bucket, m_sessions, m_operations, m_capabilities, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &BucketPropertiesDialog::capabilitiesRequested, this, [this, accountId, bucket, name = account->name] {
+        if (!m_capabilities)
+            return;
+        auto* caps = new CapabilitiesDialog(m_capabilities, accountId, name, bucket, this);
+        caps->setAttribute(Qt::WA_DeleteOnClose);
+        caps->show();
+    });
     dlg->show();
 }
 

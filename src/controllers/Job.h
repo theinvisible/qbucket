@@ -40,7 +40,7 @@ public:
     struct Preview {
         QString action;          // the verb for title and button, e.g. "Delete"
         QString scope;           // e.g. "s3://bucket/photos/"
-        qint64 objects = 0;
+        qint64 objects = 0;      // -1: a bucket setting, no objects
         qint64 bytes = -1;       // -1: not known
         QStringList samples;     // a few affected keys
         QStringList details;     // further lines (target name, …)

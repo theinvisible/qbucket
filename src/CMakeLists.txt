@@ -74,6 +74,8 @@ add_library(qbucket_controllers STATIC
     controllers/ObjectCopyRunner.cpp
     controllers/RestoreVersionsJob.h
     controllers/RestoreVersionsJob.cpp
+    controllers/SetBucketVersioningJob.h
+    controllers/SetBucketVersioningJob.cpp
     controllers/VersionWalk.h
     controllers/VersionWalk.cpp
     controllers/CopyJob.h
@@ -161,6 +163,8 @@ add_library(qbucket_app_ui STATIC
     ui/AccountSidebar.cpp
     ui/AccountTreeDelegate.h
     ui/AccountTreeDelegate.cpp
+    ui/BucketPropertiesDialog.h
+    ui/BucketPropertiesDialog.cpp
     ui/CapabilitiesDialog.h
     ui/CapabilitiesDialog.cpp
     ui/DetailPane.h

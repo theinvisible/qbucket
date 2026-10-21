@@ -339,7 +339,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="226"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="228"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -347,7 +347,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="622"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="624"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -435,7 +435,7 @@
 <context>
     <name>qbucket::OperationPreviewDialog</name>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="55"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="56"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n object</numerusform>
@@ -443,8 +443,8 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="69"/>
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="85"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="71"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="87"/>
         <source>… and %n more</source>
         <translation>
             <numerusform>… and %n more</numerusform>
@@ -452,7 +452,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="78"/>
+        <location filename="../../src/ui/OperationPreviewDialog.cpp" line="80"/>
         <source>%n of them exist already:</source>
         <translation>
             <numerusform>%n of them exists already:</numerusform>

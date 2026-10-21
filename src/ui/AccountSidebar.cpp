@@ -158,6 +158,10 @@ void AccountSidebar::showContextMenu_(const QPoint& pos)
     const QUuid id = index.data(AccountTreeModel::AccountIdRole).toUuid();
     const AccountTreeModel::Kind kind = kindOf(index);
     menu.addAction(tr("Refresh"), this, [this, index] { m_model->refresh(index); });
+    if (kind == AccountTreeModel::Kind::Bucket) {
+        const QString bucket = index.data(AccountTreeModel::BucketRole).toString();
+        menu.addAction(tr("Properties…"), this, [this, id, bucket] { emit bucketPropertiesRequested(id, bucket); });
+    }
     if (kind == AccountTreeModel::Kind::Bucket && index.data(AccountTreeModel::ExternalRole).toBool()) {
         const QString bucket = index.data(AccountTreeModel::BucketRole).toString();
         menu.addAction(tr("Remove “%1” from the List").arg(bucket), this,

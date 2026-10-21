@@ -11,6 +11,7 @@
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "controllers/RestoreVersionsJob.h"
+#include "controllers/SetBucketVersioningJob.h"
 #include "controllers/TransferService.h"
 #include "support/AccountHarness.h"
 
@@ -53,26 +54,28 @@ private:
 
     // As when the bucket is opened: its capabilities are probed first.
     // (Unknown never unlocks a destructive job.)
-    bool probed()
+    bool probed(const QString& bucket = kBucket)
     {
         if (!m_h->sessions->session(m_h->account.id))
             return false;
         if (!QTest::qWaitFor([this] { return m_caps->isLoaded(m_h->account.id); }, 10000))
             return false;
-        m_caps->bucketOpened(m_h->account.id, kBucket);
-        return QTest::qWaitFor([this] {
-            return !m_caps->isProbing(m_h->account.id, kBucket) && m_caps->bucketSet(m_h->account.id, kBucket);
+        m_caps->bucketOpened(m_h->account.id, bucket);
+        return QTest::qWaitFor([this, bucket] {
+            return !m_caps->isProbing(m_h->account.id, bucket) && m_caps->bucketSet(m_h->account.id, bucket);
         }, 10000);
     }
 
     bool run(Job* job)
     {
-        if (!probed())
+        if (!probed(job->bucket()))
             return false;
         if (auto* v = qobject_cast<DeleteVersionsJob*>(job))
             v->setRecheckDelayForTesting(10);
         if (auto* r = qobject_cast<RestoreVersionsJob*>(job))
             r->setRecheckDelayForTesting(10);
+        if (auto* s = qobject_cast<SetBucketVersioningJob*>(job))
+            s->setReadBackDelayForTesting(10);
         QSignalSpy done(job, &Job::finished);
         m_ops->start(job);
         return done.wait(30000) || done.size() == 1;
@@ -331,6 +334,52 @@ private slots:
         QVERIFY(m_previews.first().permanent);
         QCOMPARE(m_objects->object(kBucket, k)->data, QByteArray("keep"));
         QCOMPARE(versionIds(k).size(), 2);   // the null version was replaced
+    }
+
+    void versioningIsEnabledAndSuspended()
+    {
+        const QString fresh = QStringLiteral("fresh");
+        m_objects->createBucket(fresh);
+        auto* job = new SetBucketVersioningJob(m_h->account, fresh, s3::VersioningStatus::Enabled);
+        QVERIFY(job->isDestructive());   // Unknown must not unlock it
+        QCOMPARE(job->requiredFeatures(), QList<s3::Feature>{s3::Feature::BucketVersioningWrite});
+        QVERIFY(run(job));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        QCOMPARE(m_objects->versioning(fresh), QStringLiteral("Enabled"));
+        QCOMPARE(m_previews.last().objects, -1);   // a setting, no objects
+        QCOMPARE(m_previews.last().action, QStringLiteral("Enable Versioning"));
+        QVERIFY(journal().contains("PutBucketVersioning"));
+
+        auto* suspend = new SetBucketVersioningJob(m_h->account, fresh, s3::VersioningStatus::Suspended);
+        QVERIFY(run(suspend));
+        QCOMPARE(suspend->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(m_objects->versioning(fresh), QStringLiteral("Suspended"));
+        QVERIFY(m_previews.last().warnings.join(u' ').contains(QLatin1String("permanent")));
+        // The capability controller learns the new state.
+        QTRY_COMPARE_WITH_TIMEOUT(m_caps->versioningOf(m_h->account.id, fresh).status, s3::VersioningStatus::Suspended,
+                                  10000);
+    }
+
+    void versioningWritesNeedConfirmedSupport()
+    {
+        useProvider(QStringLiteral("generic"));   // BucketVersioningWrite Unknown
+        auto* job = new SetBucketVersioningJob(m_h->account, kBucket, s3::VersioningStatus::Suspended);
+        QVERIFY(run(job));
+        QCOMPARE(job->outcome(), Job::Outcome::Refused);
+        QVERIFY(job->errorText().contains(QLatin1String("not confirmed")));
+        QCOMPARE(m_objects->versioning(kBucket), QStringLiteral("Enabled"));
+        QCOMPARE(m_objects->count(QStringLiteral("PutBucketVersioning")), 0);
+    }
+
+    void versioningWithMfaDeleteIsLeftAlone()
+    {
+        m_objects->setMfaDelete(kBucket, true);
+        auto* job = new SetBucketVersioningJob(m_h->account, kBucket, s3::VersioningStatus::Suspended);
+        QVERIFY(run(job));
+        QCOMPARE(job->outcome(), Job::Outcome::Failed);
+        QVERIFY(job->errorText().contains(QLatin1String("MFA")));
+        QCOMPARE(m_objects->versioning(kBucket), QStringLiteral("Enabled"));
     }
 
     void withoutBatchDeleteOneByOne()

@@ -126,6 +126,12 @@ qbucket_add_test(test_detail_pane
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_bucket_properties_dialog
+    test_bucket_properties_dialog.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_capabilities_dialog
     test_capabilities_dialog.cpp
     qbucket_app_ui

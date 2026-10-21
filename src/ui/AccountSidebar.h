@@ -45,6 +45,8 @@ signals:
     // Objects of the same account dropped onto a bucket (its root; move: with Shift).
     void objectsDroppedOnBucket(const QUuid& account, const QString& bucket,
                                 const qbucket::ObjectSelection& selection, bool move);
+    // "Properties…" of a bucket.
+    void bucketPropertiesRequested(const QUuid& account, const QString& bucket);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

@@ -52,10 +52,12 @@ OperationPreviewDialog::OperationPreviewDialog(Job* job, QWidget* parent)
 
     // How much.
     const QLocale locale;
-    QString amount = tr("%n object(s)", nullptr, int(p.objects));
-    if (p.bytes >= 0)
-        amount = tr("%1, %2").arg(amount, locale.formattedDataSize(p.bytes));
-    lay->addWidget(new QLabel(amount));
+    if (p.objects >= 0) {   // -1: a setting, no objects
+        QString amount = tr("%n object(s)", nullptr, int(p.objects));
+        if (p.bytes >= 0)
+            amount = tr("%1, %2").arg(amount, locale.formattedDataSize(p.bytes));
+        lay->addWidget(new QLabel(amount));
+    }
     for (const QString& d : p.details) {
         auto* line = new QLabel(d);
         line->setWordWrap(true);
