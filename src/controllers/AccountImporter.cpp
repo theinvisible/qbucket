@@ -203,12 +203,13 @@ Account AccountImporter::accountFor(const ImportCandidate& c, Environment enviro
     return a;
 }
 
-void AccountImporter::read(Source source, const QStringList& files)
+int AccountImporter::read(Source source, const QStringList& files)
 {
+    const int request = ++m_requests;
     auto* relay = new QObject;
     relay->moveToThread(thread());
     const QPointer<AccountImporter> self(this);
-    QThreadPool::globalInstance()->start([relay, self, source, files] {
+    QThreadPool::globalInstance()->start([relay, self, source, files, request] {
         QString problem;
         QByteArray credentials;
         QByteArray config;
@@ -237,7 +238,7 @@ void AccountImporter::read(Source source, const QStringList& files)
                 problem = tr("The rclone configuration is encrypted. Decrypt it first "
                              "(rclone config encryption remove), or set the accounts up by hand.");
         }
-        QMetaObject::invokeMethod(relay, [relay, self, source, aws, rclone, problem] {
+        QMetaObject::invokeMethod(relay, [relay, self, source, aws, rclone, problem, request] {
             if (self) {
                 const QList<Account> existing = self->m_accounts->accounts();
                 QList<ImportCandidate> out;
@@ -246,11 +247,12 @@ void AccountImporter::read(Source source, const QStringList& files)
                 const QString none = problem.isEmpty() && out.isEmpty()
                     ? (source == Source::Aws ? tr("The files hold no profiles.") : tr("The file holds no S3 remotes."))
                     : problem;
-                emit self->candidatesReady(out, none);
+                emit self->candidatesReady(out, none, request);
             }
             relay->deleteLater();
         }, Qt::QueuedConnection);
     });
+    return request;
 }
 
 void AccountImporter::save(const QList<ImportCandidate>& chosen, Environment environment, bool readOnly)

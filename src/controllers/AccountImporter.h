@@ -56,8 +56,9 @@ public:
     [[nodiscard]] static QStringList defaultFiles(Source source);
 
     // Reads `files` (AWS: a file named like "config" is the config file,
-    // any other the credentials file) and emits candidatesReady.
-    void read(Source source, const QStringList& files);
+    // any other the credentials file) and emits candidatesReady with the
+    // returned number — reads may finish in any order.
+    int read(Source source, const QStringList& files);
 
     // Pure: what the files offer, against the accounts that exist.
     [[nodiscard]] static QList<ImportCandidate> fromAws(const QList<s3::AwsProfileEntry>& profiles,
@@ -73,7 +74,7 @@ public:
 
 signals:
     // `problem`: why nothing could be read (translated), else empty.
-    void candidatesReady(const QList<qbucket::ImportCandidate>& candidates, const QString& problem);
+    void candidatesReady(const QList<qbucket::ImportCandidate>& candidates, const QString& problem, int request);
     void saveFinished(int saved, bool sessionOnly, const QStringList& errors);
 
 private:
@@ -82,6 +83,7 @@ private:
     AccountStore* m_accounts;
     SecretStore* m_secrets;
     bool m_saving = false;
+    int m_requests = 0;
     QList<ImportCandidate> m_queue;
     Environment m_environment = Environment::Production;
     bool m_readOnly = true;

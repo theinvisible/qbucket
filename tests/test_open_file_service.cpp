@@ -22,6 +22,8 @@
 #include <QSignalSpy>
 #include <QtTest>
 
+#include <optional>
+
 using namespace qbucket;
 using namespace qbucket::s3::testing;
 using qbucket::testing::AccountHarness;
@@ -70,9 +72,11 @@ private:
         return QFile::rename(temp, path);
     }
 
-    static const OpenFileService::Entry* only(const OpenFileService& s)
+    // A copy: entries() returns the list by value.
+    static std::optional<OpenFileService::Entry> only(const OpenFileService& s)
     {
-        return s.entries().size() == 1 ? &s.entries().first() : nullptr;
+        const QList<OpenFileService::Entry> all = s.entries();
+        return all.size() == 1 ? std::optional(all.first()) : std::nullopt;
     }
 
 private slots:

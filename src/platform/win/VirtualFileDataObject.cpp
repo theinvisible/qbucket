@@ -149,15 +149,16 @@ HRESULT VirtualFileDataObject::descriptor_(STGMEDIUM* medium)
     for (size_t i = 0; i < count; ++i) {
         const VirtualFileSource::File& f = m_files[i];
         FILEDESCRIPTORW& d = group->fgd[i];
-        d.dwFlags = FD_ATTRIBUTES | FD_UNICODE | FD_PROGRESSUI;
+        // FD_UNICODE is defined as a negative int.
+        d.dwFlags = DWORD(FD_ATTRIBUTES) | DWORD(FD_UNICODE) | DWORD(FD_PROGRESSUI);
         d.dwFileAttributes = f.folder ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
         if (!f.folder) {
-            d.dwFlags |= FD_FILESIZE;
+            d.dwFlags |= DWORD(FD_FILESIZE);
             d.nFileSizeLow = DWORD(ULONGLONG(f.size) & 0xFFFFFFFFULL);
             d.nFileSizeHigh = DWORD(ULONGLONG(f.size) >> 32);
         }
         if (f.modifiedMsecs > 0) {
-            d.dwFlags |= FD_WRITESTIME;
+            d.dwFlags |= DWORD(FD_WRITESTIME);
             d.ftLastWriteTime = fileTimeOf(f.modifiedMsecs);
         }
         if (f.path.size() >= MAX_PATH)

@@ -46,7 +46,7 @@ signals:
     void imported(int count, bool sessionOnly);
 
 private:
-    void showCandidates_(const QList<ImportCandidate>& candidates, const QString& problem);
+    void showCandidates_(const QList<ImportCandidate>& candidates, const QString& problem, int request);
     void chooseFiles_();
     [[nodiscard]] QList<ImportCandidate> chosen_() const;
     [[nodiscard]] ImportCandidate candidateAt_(int row) const;
@@ -72,6 +72,7 @@ private:
     QPushButton* m_import = nullptr;
     QList<int> m_testQueue;
     int m_testing = -1;
+    int m_request = 0;   // the read whose answer counts
 };
 
 } // namespace qbucket

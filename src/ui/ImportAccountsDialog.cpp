@@ -164,7 +164,7 @@ void ImportAccountsDialog::load(AccountImporter::Source source, const QStringLis
     m_status->setText(tr("Reading…"));
     m_status->setProperty("error", false);
     updateButtons_();
-    m_importer->read(source, read);
+    m_request = m_importer->read(source, read);
 }
 
 void ImportAccountsDialog::chooseFiles_()
@@ -178,8 +178,11 @@ void ImportAccountsDialog::chooseFiles_()
     dlg->open();
 }
 
-void ImportAccountsDialog::showCandidates_(const QList<ImportCandidate>& candidates, const QString& problem)
+void ImportAccountsDialog::showCandidates_(const QList<ImportCandidate>& candidates, const QString& problem,
+                                           int request)
 {
+    if (request != m_request)
+        return;   // an earlier load, overtaken
     m_candidates = candidates;
     const QSignalBlocker block(m_table);
     m_table->setRowCount(int(candidates.size()));
