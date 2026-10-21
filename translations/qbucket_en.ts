@@ -398,7 +398,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="238"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="258"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -406,7 +406,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="636"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="734"/>
         <source>%n folder(s) of s3://%1</source>
         <translation>
             <numerusform>%n folder of s3://%1</numerusform>
@@ -414,7 +414,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="779"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="877"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>

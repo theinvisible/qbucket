@@ -33,6 +33,7 @@ class AccountSidebar;
 class DetailPane;
 class ObjectBrowser;
 class AccountStore;
+class LocationStore;
 class SecretStore;
 class SettingsController;
 class ThemeManager;
@@ -54,6 +55,10 @@ public:
     [[nodiscard]] QAction* newBucketAction() const { return m_actNewBucket; }
     [[nodiscard]] QAction* bucketPropertiesAction() const { return m_actBucketProperties; }
     [[nodiscard]] QAction* deleteBucketAction() const { return m_actDeleteBucket; }
+    // Bookmarks (tests).
+    [[nodiscard]] QAction* addBookmarkAction() const { return m_actAddBookmark; }
+    [[nodiscard]] QMenu* bookmarksMenu() const { return m_bookmarksMenu; }
+    [[nodiscard]] LocationStore* locations() const { return m_locations; }
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -120,6 +125,11 @@ private:
     void showSettingsDialog_();
     void showAddAccountDialog_();
     void showAbout_();
+    // Bookmarks and recent locations.
+    void addBookmark_();
+    void fillBookmarksMenu_();
+    void manageBookmarks_();
+    void pruneLocations_();
 
     SettingsController* m_settings;
     ThemeManager*       m_theme;
@@ -134,6 +144,7 @@ private:
     PresignService* m_presign = nullptr;
     TransferService* m_transfers = nullptr;
     TransferModel* m_transferModel = nullptr;
+    LocationStore* m_locations = nullptr;
     QTabWidget* m_dockTabs = nullptr;
 
     // Menu actions
@@ -159,6 +170,10 @@ private:
     QAction*      m_actNewBucket = nullptr;
     QAction*      m_actBucketProperties = nullptr;
     QAction*      m_actDeleteBucket = nullptr;
+    QMenu*        m_bookmarksMenu = nullptr;
+    QMenu*        m_recentMenu = nullptr;
+    QAction*      m_actAddBookmark = nullptr;
+    QAction*      m_actManageBookmarks = nullptr;
     QAction*      m_actNewFolder    = nullptr;
     QAction*      m_actUploadFiles  = nullptr;
     QAction*      m_actUploadFolder = nullptr;

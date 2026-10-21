@@ -18,6 +18,7 @@ constexpr auto kKeyMainSplitter   = "ui/main_splitter_state";
 constexpr auto kKeyDownloadDir    = "transfers/download_directory";
 constexpr auto kKeyParallelParts  = "transfers/parallel_parts";
 constexpr auto kKeyThreads        = "transfers/threads";
+constexpr auto kKeyBookmarksOpen  = "ui/bookmarks_expanded";
 
 QString systemDownloadDirectory()
 {
@@ -83,6 +84,14 @@ void SettingsController::load_()
                                  kMinParallelParts, kMaxParallelParts);
     m_transferThreads = std::clamp(m_store->value(QLatin1String(kKeyThreads), 4).toInt(),
                                    kMinTransferThreads, kMaxTransferThreads);
+    m_bookmarksExpanded = m_store->value(QLatin1String(kKeyBookmarksOpen), true).toBool();
+}
+
+void SettingsController::setBookmarksExpanded(bool expanded)
+{
+    if (m_bookmarksExpanded == expanded) return;
+    m_bookmarksExpanded = expanded;
+    write_(QString::fromLatin1(kKeyBookmarksOpen), m_bookmarksExpanded);
 }
 
 void SettingsController::write_(const QString& key, const QVariant& value)

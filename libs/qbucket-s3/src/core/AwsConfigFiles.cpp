@@ -28,10 +28,7 @@ QList<AwsIniSection> parseAwsIni(const QByteArray& content, bool configSpelling)
             if (first == QLatin1String("profile") && !rest.isEmpty()) {
                 s.kind = QStringLiteral("profile");
                 s.name = rest;
-            } else if (!configSpelling) {
-                s.kind = QStringLiteral("profile");
-                s.name = header;
-            } else if (header == QLatin1String("default")) {
+            } else if (!configSpelling || header == QLatin1String("default")) {
                 s.kind = QStringLiteral("profile");
                 s.name = header;
             } else if (!rest.isEmpty()) {

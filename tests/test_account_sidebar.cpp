@@ -1,4 +1,5 @@
 #include "accounts/AccountStore.h"
+#include "accounts/LocationStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 #include "models/AccountTreeModel.h"
@@ -13,6 +14,8 @@
 #include <QDir>
 #include <QInputDialog>
 #include <QLabel>
+#include <QListView>
+#include <QToolButton>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTreeView>
@@ -186,6 +189,67 @@ private slots:
         std::unique_ptr<QMimeData> foreign(sel.toMimeData());
         dropAt(media, Qt::NoModifier, foreign.get());
         QCOMPARE(dropped.size(), 2);
+    }
+
+    void bookmarksSectionOpensPlaces()
+    {
+        const Account a = addAccount(true);
+        LocationStore store(m_dir.filePath(QStringLiteral("locations-%1.json").arg(m_run)));
+        AccountSidebar sidebar(m_accounts.get(), m_secrets.get(), m_sessions.get());
+        sidebar.resize(260, 500);
+        sidebar.show();
+        auto* toggle = sidebar.findChild<QToolButton*>(QStringLiteral("sectionToggle"));
+        QVERIFY(toggle);
+        QVERIFY(toggle->isHidden());   // no store: no section
+        sidebar.setLocationStore(&store);
+        QVERIFY(!toggle->isHidden());
+        auto* hint = sidebar.findChild<QLabel*>(QStringLiteral("sectionHint"));
+        QVERIFY(!hint->isHidden());   // none yet
+        QVERIFY(sidebar.bookmarkView()->isHidden());
+
+        store.addBookmark(QStringLiteral("Photos"), Location{a.id, QStringLiteral("media"), QStringLiteral("photos/")});
+        QVERIFY(!sidebar.bookmarkView()->isHidden());
+        QVERIFY(hint->isHidden());
+        const QModelIndex first = sidebar.bookmarkView()->model()->index(0, 0);
+        QCOMPARE(first.data().toString(), QStringLiteral("Photos"));
+        QVERIFY(first.data(Qt::ToolTipRole).toString().startsWith(a.name));
+
+        QList<Location> opened;
+        connect(&sidebar, &AccountSidebar::bookmarkActivated, this, [&](const Location& l) { opened.append(l); });
+        emit sidebar.bookmarkView()->clicked(first);
+        QCOMPARE(opened.size(), 1);
+        QCOMPARE(opened.first(), (Location{a.id, QStringLiteral("media"), QStringLiteral("photos/")}));
+
+        QSignalSpy expanded(&sidebar, &AccountSidebar::bookmarksExpandedChanged);
+        toggle->click();
+        QVERIFY(!sidebar.bookmarksExpanded());
+        QVERIFY(sidebar.bookmarkView()->isHidden());
+        QCOMPARE(expanded.size(), 1);
+        QCOMPARE(expanded.first().first().toBool(), false);
+        toggle->click();
+        QVERIFY(!sidebar.bookmarkView()->isHidden());
+    }
+
+    void followsTheBrowserWithoutEchoing()
+    {
+        const Account a = addAccount(true);
+        AccountSidebar sidebar(m_accounts.get(), m_secrets.get(), m_sessions.get());
+        sidebar.resize(260, 400);
+        sidebar.show();
+        QSignalSpy buckets(&sidebar, &AccountSidebar::bucketSelected);
+        QSignalSpy accounts(&sidebar, &AccountSidebar::accountSelected);
+        sidebar.setCurrentLocation(Location{a.id, QStringLiteral("media"), QStringLiteral("x/")});
+        // The buckets aren't listed yet: the account is marked.
+        QCOMPARE(sidebar.view()->currentIndex(), sidebar.model()->accountIndex(a.id));
+        sidebar.view()->expand(sidebar.model()->accountIndex(a.id));
+        QTRY_VERIFY_WITH_TIMEOUT(sidebar.model()->bucketIndex(a.id, QStringLiteral("media")).isValid(), 10000);
+        sidebar.setCurrentLocation(Location{a.id, QStringLiteral("media"), QString()});
+        QCOMPARE(sidebar.view()->currentIndex(), sidebar.model()->bucketIndex(a.id, QStringLiteral("media")));
+        QCOMPARE(buckets.size(), 0);
+        QCOMPARE(accounts.size(), 0);
+        // A click still reports.
+        sidebar.view()->setCurrentIndex(sidebar.model()->accountIndex(a.id));
+        QCOMPARE(accounts.size(), 1);
     }
 
     void asksForAMissingSecretOnce()

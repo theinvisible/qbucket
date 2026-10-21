@@ -57,6 +57,10 @@ qbucket_add_test(test_account_store
     test_account_store.cpp
     qbucket_accounts
 )
+qbucket_add_test(test_location_store
+    test_location_store.cpp
+    qbucket_accounts
+)
 
 qbucket_add_test(test_secret_store
     test_secret_store.cpp

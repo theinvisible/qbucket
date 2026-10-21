@@ -1,3 +1,4 @@
+#include "accounts/LocationStore.h"
 #include "controllers/BrowseController.h"
 #include "controllers/SettingsController.h"
 #include "controllers/TransferJobStore.h"
@@ -15,6 +16,7 @@
 #include <QDir>
 #include <QFile>
 #include <QInputDialog>
+#include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QStandardPaths>
@@ -105,6 +107,46 @@ private slots:
         // Listed afresh afterwards.
         QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->rowCount(), 1, 10000);
         QCOMPARE(m_browser->model()->index(0, 0).data().toString(), QStringLiteral("keep.txt"));
+    }
+
+    void bookmarkTheFolderAndComeBack()
+    {
+        LocationStore* store = m_window->locations();
+        QVERIFY(store);
+        for (const Bookmark& b : store->bookmarks())
+            store->removeBookmark(b.id);
+        const Location doomed{m_h->account.id, QStringLiteral("bkt"), QStringLiteral("doomed/")};
+        m_browser->navigation()->navigate(doomed);
+        QTRY_VERIFY(m_window->addBookmarkAction()->isEnabled());
+        QCOMPARE(m_window->addBookmarkAction()->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_B));
+        m_window->addBookmarkAction()->trigger();
+        QTRY_VERIFY(m_window->findChild<QInputDialog*>() != nullptr);
+        auto* ask = m_window->findChild<QInputDialog*>();
+        QVERIFY(ask);
+        QCOMPARE(ask->textValue(), QStringLiteral("doomed"));
+        ask->setTextValue(QStringLiteral("Doomed"));
+        ask->accept();
+        QCOMPARE(store->bookmarks().size(), 1);
+        QCOMPARE(store->bookmarks().first().location, doomed);
+        QVERIFY(store->recent().contains(doomed));
+
+        m_browser->navigation()->navigate({m_h->account.id, QStringLiteral("bkt"), {}});
+        emit m_window->bookmarksMenu()->aboutToShow();
+        QAction* entry = nullptr;
+        for (QAction* a : m_window->bookmarksMenu()->actions()) {
+            if (a->text() == QLatin1String("Doomed"))
+                entry = a;
+        }
+        QVERIFY(entry);
+        if (!entry)
+            return;
+        entry->trigger();
+        QCOMPARE(m_browser->navigation()->current(), doomed);
+
+        // The account goes, its places too.
+        QVERIFY(m_h->accounts->remove(m_h->account.id));
+        QVERIFY(store->bookmarks().isEmpty());
+        QVERIFY(!store->recent().contains(doomed));
     }
 
     void newFolderFromTheMenu()

@@ -54,6 +54,10 @@ public:
     void setDownloadDirectory(const QString& dir);
     void setTransferParallelParts(int parts);
     void setTransferThreads(int threads);
+    // The sidebar's bookmarks section is open. Persisted only.
+    bool bookmarksExpanded() const { return m_bookmarksExpanded; }
+    void setBookmarksExpanded(bool expanded);
+
     void setWindowGeometry(const QString& base64);
     void setWindowState(const QString& base64);
     void setMainSplitterState(const QString& base64);
@@ -82,6 +86,7 @@ private:
     QString    m_downloadDirectory;
     int        m_parallelParts = 16;
     int        m_transferThreads = 4;
+    bool       m_bookmarksExpanded = true;
 };
 
 } // namespace qbucket

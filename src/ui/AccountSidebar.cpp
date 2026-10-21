@@ -3,9 +3,11 @@
 #include "ui/ObjectBrowser.h"
 
 #include "accounts/AccountStore.h"
+#include "accounts/LocationStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 #include "models/AccountTreeModel.h"
+#include "models/BookmarkModel.h"
 #include "ui/AccountDialog.h"
 #include "ui/AccountTreeDelegate.h"
 
@@ -15,12 +17,16 @@
 #include <QDropEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListView>
 #include <QMenu>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QRegularExpression>
+#include <QToolButton>
 #include <QTreeView>
 #include <QVBoxLayout>
+
+#include <algorithm>
 
 namespace qbucket {
 
@@ -74,6 +80,28 @@ AccountSidebar::AccountSidebar(AccountStore* accounts, SecretStore* secrets, Acc
     m_empty = makeEmptyState(tr("No accounts yet."));
     lay->addWidget(m_empty, 1);
 
+    m_bookmarkToggle = new QToolButton;
+    m_bookmarkToggle->setObjectName(QStringLiteral("sectionToggle"));
+    m_bookmarkToggle->setText(tr("BOOKMARKS"));
+    m_bookmarkToggle->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_bookmarkToggle->setArrowType(Qt::DownArrow);
+    m_bookmarkToggle->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_bookmarkToggle->setVisible(false);
+    lay->addWidget(m_bookmarkToggle);
+    m_bookmarkList = new QListView;
+    m_bookmarkList->setObjectName(QStringLiteral("bookmarkList"));
+    m_bookmarkList->setUniformItemSizes(true);
+    m_bookmarkList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_bookmarkList->setContextMenuPolicy(Qt::CustomContextMenu);
+    m_bookmarkList->setVisible(false);
+    lay->addWidget(m_bookmarkList);
+    m_bookmarkHint = new QLabel(tr("Ctrl+B bookmarks the folder you are in."));
+    m_bookmarkHint->setObjectName(QStringLiteral("sectionHint"));
+    m_bookmarkHint->setWordWrap(true);
+    m_bookmarkHint->setVisible(false);
+    lay->addWidget(m_bookmarkHint);
+    connect(m_bookmarkToggle, &QToolButton::clicked, this, [this] { setBookmarksExpanded(!m_bookmarksExpanded); });
+
     m_addButton = new QPushButton(tr("Add Account…"));
     m_addButton->setObjectName(QStringLiteral("ghost"));
     auto* btnRow = new QHBoxLayout;
@@ -118,6 +146,97 @@ void AccountSidebar::refreshIcons()
     m_tree->viewport()->update();
 }
 
+void AccountSidebar::setLocationStore(LocationStore* store)
+{
+    if (m_locations || !store)
+        return;
+    m_locations = store;
+    m_bookmarkModel = new BookmarkModel(store, m_accounts, this);
+    m_bookmarkList->setModel(m_bookmarkModel);
+    connect(m_bookmarkModel, &QAbstractItemModel::modelReset, this, &AccountSidebar::updateBookmarks_);
+    connect(m_bookmarkList, &QListView::activated, this, [this](const QModelIndex& index) {
+        emit bookmarkActivated(m_bookmarkModel->bookmarkAt(index.row()).location);
+    });
+    // A single click opens a bookmark, as in a file manager's places.
+    connect(m_bookmarkList, &QListView::clicked, this, [this](const QModelIndex& index) {
+        emit bookmarkActivated(m_bookmarkModel->bookmarkAt(index.row()).location);
+    });
+    connect(m_bookmarkList, &QWidget::customContextMenuRequested, this, &AccountSidebar::showBookmarkMenu_);
+    m_bookmarkToggle->setVisible(true);
+    updateBookmarks_();
+}
+
+void AccountSidebar::setBookmarksExpanded(bool expanded)
+{
+    if (m_bookmarksExpanded == expanded)
+        return;
+    m_bookmarksExpanded = expanded;
+    updateBookmarks_();
+    emit bookmarksExpandedChanged(expanded);
+}
+
+void AccountSidebar::updateBookmarks_()
+{
+    if (!m_locations)
+        return;
+    constexpr int kVisibleRows = 8;
+    const int rows = m_bookmarkModel->rowCount();
+    m_bookmarkToggle->setArrowType(m_bookmarksExpanded ? Qt::DownArrow : Qt::RightArrow);
+    m_bookmarkList->setVisible(m_bookmarksExpanded && rows > 0);
+    m_bookmarkHint->setVisible(m_bookmarksExpanded && rows == 0);
+    if (rows > 0) {
+        const int rowHeight = std::max(m_bookmarkList->sizeHintForRow(0), fontMetrics().height() + 6);
+        m_bookmarkList->setFixedHeight(std::min(rows, kVisibleRows) * rowHeight + 2 * m_bookmarkList->frameWidth() + 4);
+    }
+}
+
+void AccountSidebar::showBookmarkMenu_(const QPoint& pos)
+{
+    const QModelIndex index = m_bookmarkList->indexAt(pos);
+    if (!index.isValid())
+        return;
+    const Bookmark b = m_bookmarkModel->bookmarkAt(index.row());
+    QMenu menu(this);
+    menu.addAction(tr("Open"), this, [this, b] { emit bookmarkActivated(b.location); });
+    menu.addAction(tr("Rename…"), this, [this, id = b.id] { renameBookmark_(id); });
+    menu.addSeparator();
+    menu.addAction(tr("Remove Bookmark"), this, [this, id = b.id] { m_locations->removeBookmark(id); });
+    menu.exec(m_bookmarkList->viewport()->mapToGlobal(pos));
+}
+
+void AccountSidebar::renameBookmark_(const QUuid& id)
+{
+    const std::optional<Bookmark> b = m_locations->bookmark(id);
+    if (!b)
+        return;
+    auto* dlg = new QInputDialog(this);
+    dlg->setWindowTitle(tr("Rename Bookmark"));
+    dlg->setLabelText(tr("Name:"));
+    dlg->setTextValue(b->name);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QInputDialog::textValueSelected, this, [this, id](const QString& name) {
+        m_locations->renameBookmark(id, name);
+    });
+    dlg->open();
+}
+
+void AccountSidebar::setCurrentLocation(const Location& location)
+{
+    if (!m_model || !location.isValid())
+        return;
+    QModelIndex target = location.hasBucket() ? m_model->bucketIndex(location.account, location.bucket) : QModelIndex();
+    if (!target.isValid())
+        target = m_model->accountIndex(location.account);
+    if (!target.isValid() || target == m_tree->currentIndex())
+        return;
+    m_following = true;
+    if (target.parent().isValid())
+        m_tree->expand(target.parent());
+    m_tree->setCurrentIndex(target);
+    m_tree->scrollTo(target);
+    m_following = false;
+}
+
 void AccountSidebar::updateEmptyState_()
 {
     const bool any = m_accounts && !m_accounts->accounts().isEmpty();
@@ -127,7 +246,7 @@ void AccountSidebar::updateEmptyState_()
 
 void AccountSidebar::onCurrentChanged_(const QModelIndex& current)
 {
-    if (!current.isValid())
+    if (!current.isValid() || m_following)
         return;
     const QUuid id = current.data(AccountTreeModel::AccountIdRole).toUuid();
     if (kindOf(current) == AccountTreeModel::Kind::Bucket)

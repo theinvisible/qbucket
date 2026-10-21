@@ -143,6 +143,10 @@ QTableCornerButton::section { background: @panel2@; border: none; border-bottom:
 QWidget#sidebar { background: @panel2@; }
 QWidget#sidebar QTreeView { background: @panel2@; }
 QLabel#sectionHeader { color: @text3@; font-weight: 600; padding: 10px 12px 4px 12px; }
+QWidget#sidebar QListView { background: @panel2@; }
+QToolButton#sectionToggle { color: @text3@; font-weight: 600; background: transparent; border: none; border-top: 1px solid @border@; padding: 8px 8px 4px 8px; text-align: left; }
+QToolButton#sectionToggle:hover { color: @text@; }
+QLabel#sectionHint { color: @text3@; padding: 2px 12px 6px 12px; }
 QWidget#pathBar { background: @panel@; border-bottom: 1px solid @border@; }
 QLabel#pathText { color: @text2@; padding: 7px 12px; }
 QToolButton#crumb, QToolButton#crumbCurrent { background: transparent; border: none; border-radius: 5px; padding: 3px 6px; color: @text2@; }

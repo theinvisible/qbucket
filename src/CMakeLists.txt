@@ -14,6 +14,7 @@ target_link_libraries(qbucket_diagnostics
 # --- Domain: plain app-level value types -------------------------------------
 add_library(qbucket_domain INTERFACE
     domain/Account.h
+    domain/Bookmark.h
     domain/Location.h
 )
 target_include_directories(qbucket_domain INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -28,6 +29,8 @@ add_library(qbucket_accounts STATIC
     accounts/KeychainBackend.h
     accounts/KeychainCredentialsProvider.h
     accounts/KeychainCredentialsProvider.cpp
+    accounts/LocationStore.h
+    accounts/LocationStore.cpp
     accounts/QtKeychain.h
     accounts/QtKeychainBackend.h
     accounts/QtKeychainBackend.cpp
@@ -131,6 +134,8 @@ add_library(qbucket_models STATIC
     models/ObjectSelection.cpp
     models/AccountTreeModel.h
     models/AccountTreeModel.cpp
+    models/BookmarkModel.h
+    models/BookmarkModel.cpp
     models/MultipartUploadModel.h
     models/MultipartUploadModel.cpp
     models/ObjectTableModel.h
@@ -225,6 +230,8 @@ add_library(qbucket_app_ui STATIC
     ui/TransferPanel.cpp
     ui/IncompleteUploadsDialog.h
     ui/IncompleteUploadsDialog.cpp
+    ui/ManageBookmarksDialog.h
+    ui/ManageBookmarksDialog.cpp
 )
 target_include_directories(qbucket_app_ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(qbucket_app_ui PRIVATE

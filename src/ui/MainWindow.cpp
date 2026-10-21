@@ -31,6 +31,7 @@
 #include "ui/CapabilitiesDialog.h"
 #include "ui/EditMetadataDialog.h"
 #include "ui/IncompleteUploadsDialog.h"
+#include "ui/ManageBookmarksDialog.h"
 #include "ui/LogPanel.h"
 #include "ui/OperationPreviewDialog.h"
 #include "ui/PresignDialog.h"
@@ -42,7 +43,9 @@
 #include "ui/IconFactory.h"
 #include "ui/SettingsDialog.h"
 #include "ui/TransferPanel.h"
+#include "models/BookmarkModel.h"
 #include "models/TransferModel.h"
+#include "accounts/LocationStore.h"
 #include "ui/Theme.h"
 #include "ui/ThemeManager.h"
 #include "ui/UndeleteDialog.h"
@@ -63,6 +66,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QSet>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
@@ -157,6 +161,7 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_transfers = new TransferService(this);
         m_operations->setTransfers(m_transfers);
         m_presign = new PresignService(m_operations, this);
+        m_locations = new LocationStore(this);
         const auto applyTransferSettings = [this] {
             m_sessions->setTransferLanes(m_settings->transferThreads());
             m_transfers->setMaxParallelParts(m_settings->transferParallelParts());
@@ -218,6 +223,21 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     connect(m_sidebar, &AccountSidebar::accountSelected, this, [this](const QUuid& id) {
         m_browser->navigation()->navigate({id, {}, {}});
     });
+    // The sidebar shows where the browser is; visits feed "Recent".
+    connect(m_browser->navigation(), &BrowseController::locationChanged, this, [this](const Location& here) {
+        m_sidebar->setCurrentLocation(here);
+        if (m_locations)
+            m_locations->visited(here);
+    });
+    if (m_locations) {
+        m_sidebar->setLocationStore(m_locations);
+        m_sidebar->setBookmarksExpanded(m_settings->bookmarksExpanded());
+        connect(m_sidebar, &AccountSidebar::bookmarksExpandedChanged, m_settings, &SettingsController::setBookmarksExpanded);
+        connect(m_sidebar, &AccountSidebar::bookmarkActivated, this,
+                [this](const Location& to) { m_browser->navigation()->navigate(to); });
+        connect(m_accounts, &AccountStore::accountsChanged, this, &MainWindow::pruneLocations_);
+        pruneLocations_();
+    }
     connectBrowser_();
     connectOperations_();
     if (m_transfers)
@@ -295,6 +315,8 @@ void MainWindow::connectOperations_()
         const bool deleted = qobject_cast<DeleteBucketJob*>(job) != nullptr;
         if ((created || deleted) && job->outcome() != Job::Outcome::Refused) {
             m_sidebar->model()->refresh(m_sidebar->model()->accountIndex(job->account().id));
+            if (deleted && job->outcome() == Job::Outcome::Succeeded && m_locations)
+                m_locations->forgetBucket(job->account().id, job->bucket());
             if (deleted && here.account == job->account().id && here.bucket == job->bucket()
                 && job->outcome() == Job::Outcome::Succeeded)
                 m_browser->navigation()->navigate({job->account().id, {}, {}});
@@ -311,6 +333,82 @@ void MainWindow::connectOperations_()
     connect(m_journal, &Journal::writeFailed, this, [this](const QString& message) {
         m_activity->add(ActivityLog::Level::Error, tr("The operation journal could not be written: %1").arg(message));
     });
+}
+
+// ---------------------------------------------------------------------------
+// Bookmarks and recent locations
+// ---------------------------------------------------------------------------
+void MainWindow::fillBookmarksMenu_()
+{
+    m_bookmarksMenu->clear();
+    m_bookmarksMenu->addAction(m_actAddBookmark);
+    m_bookmarksMenu->addAction(m_actManageBookmarks);
+    if (!m_locations)
+        return;
+    m_actManageBookmarks->setEnabled(!m_locations->bookmarks().isEmpty());
+    const QList<Bookmark> marks = m_locations->bookmarks();
+    if (!marks.isEmpty())
+        m_bookmarksMenu->addSeparator();
+    for (const Bookmark& b : marks) {
+        QAction* a = m_bookmarksMenu->addAction(b.name, this, [this, to = b.location] {
+            m_browser->navigation()->navigate(to);
+        });
+        a->setToolTip(BookmarkModel::placeText(b.location, m_accounts));
+    }
+    m_bookmarksMenu->addSeparator();
+    // One submenu for good: QMenu::clear() leaves submenus alive.
+    if (!m_recentMenu)
+        m_recentMenu = new QMenu(tr("&Recent Locations"), this);
+    QMenu* recent = m_recentMenu;
+    recent->clear();
+    m_bookmarksMenu->addMenu(recent);
+    const QList<Location> places = m_locations->recent();
+    recent->setEnabled(!places.isEmpty());
+    for (const Location& l : places)
+        recent->addAction(BookmarkModel::placeText(l, m_accounts), this, [this, l] { m_browser->navigation()->navigate(l); });
+    if (!places.isEmpty()) {
+        recent->addSeparator();
+        recent->addAction(tr("&Clear Recent Locations"), m_locations, &LocationStore::clearRecent);
+    }
+}
+
+void MainWindow::addBookmark_()
+{
+    const Location here = m_browser->navigation()->current();
+    if (!m_locations || !here.hasBucket())
+        return;
+    auto* dlg = new QInputDialog(this);
+    dlg->setWindowTitle(tr("Add Bookmark"));
+    dlg->setLabelText(tr("Name for %1:").arg(BookmarkModel::placeText(here, m_accounts)));
+    dlg->setTextValue(LocationStore::defaultName(here));
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QInputDialog::textValueSelected, this, [this, here](const QString& name) {
+        const Bookmark b = m_locations->addBookmark(name, here);
+        statusBar()->showMessage(tr("Bookmark “%1” added.").arg(b.name), 5000);
+    });
+    dlg->open();
+}
+
+void MainWindow::manageBookmarks_()
+{
+    if (!m_locations)
+        return;
+    auto* dlg = new ManageBookmarksDialog(m_locations, m_accounts, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->open();
+}
+
+void MainWindow::pruneLocations_()
+{
+    QSet<QUuid> gone;
+    for (const Bookmark& b : m_locations->bookmarks())
+        gone.insert(b.location.account);
+    for (const Location& l : m_locations->recent())
+        gone.insert(l.account);
+    for (const QUuid& id : std::as_const(gone)) {
+        if (!m_accounts->account(id))
+            m_locations->forgetAccount(id);
+    }
 }
 
 void MainWindow::updateMutationActions_()
@@ -989,6 +1087,7 @@ void MainWindow::updateNavigation_()
     m_actUp->setEnabled(nav->canGoUp());
     m_actRefresh->setEnabled(here || m_sessions);
     m_actEditPath->setEnabled(nav->current().isValid());
+    m_actAddBookmark->setEnabled(m_locations && nav->current().hasBucket());
     m_actCapabilities->setEnabled(m_capabilities && nav->current().isValid());
     if (m_actNewBucket) {
         const Location loc = nav->current();
@@ -1205,6 +1304,19 @@ void MainWindow::buildMenuBar_()
     // The transfer-panel toggle is appended once the dock exists
     // (buildTransferDock_).
     view->addSeparator();
+
+    m_bookmarksMenu = mb->addMenu(tr("Book&marks"));
+    m_actAddBookmark = new QAction(tr("&Add Bookmark…"), this);
+    m_actAddBookmark->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
+    m_actAddBookmark->setEnabled(false);
+    connect(m_actAddBookmark, &QAction::triggered, this, &MainWindow::addBookmark_);
+    m_actManageBookmarks = new QAction(tr("&Manage Bookmarks…"), this);
+    m_actManageBookmarks->setEnabled(false);
+    connect(m_actManageBookmarks, &QAction::triggered, this, &MainWindow::manageBookmarks_);
+    // The shortcut works with the menu closed too.
+    addAction(m_actAddBookmark);
+    connect(m_bookmarksMenu, &QMenu::aboutToShow, this, &MainWindow::fillBookmarksMenu_);
+    fillBookmarksMenu_();
 
     auto* bucketMenu = mb->addMenu(tr("&Bucket"));
     m_actNewBucket = bucketMenu->addAction(tr("&New Bucket…"), this, [this] {
@@ -1601,6 +1713,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
     if (m_sessions && !m_sessions->isShutDown()) {
         event->ignore();
         saveWindowState_();
+        if (m_locations)
+            m_locations->flush();
         // Transfers stop but keep everything to continue next time; the
         // other jobs are cancelled.
         if (m_operations) {

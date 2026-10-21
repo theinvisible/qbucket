@@ -1,12 +1,15 @@
 #pragma once
 
+#include "domain/Location.h"
 #include "models/ObjectSelection.h"
 #include <QSet>
 #include <QUuid>
 #include <QWidget>
 
 class QLabel;
+class QListView;
 class QPushButton;
+class QToolButton;
 class QTreeView;
 
 namespace qbucket {
@@ -14,12 +17,15 @@ namespace qbucket {
 class AccountSessions;
 class AccountStore;
 class AccountTreeModel;
+class BookmarkModel;
+class LocationStore;
 class SecretStore;
 
 // The left column of the main window: "ACCOUNTS", the account → bucket
-// tree, "Add Account…". Owns the account context menu (edit, external
-// buckets, remove) and asks for a secret the keychain doesn't have.
-// Without stores (tests) it shows the empty state, disabled.
+// tree, the collapsible "BOOKMARKS" section, "Add Account…". Owns the
+// account context menu (edit, external buckets, remove) and asks for a
+// secret the keychain doesn't have. Without stores (tests) it shows the
+// empty state, disabled.
 class AccountSidebar : public QWidget {
     Q_OBJECT
 
@@ -33,6 +39,16 @@ public:
     // Lists the current account's buckets again.
     void refreshCurrent();
     void refreshIcons();
+
+    // The bookmarks section (hidden without a store).
+    void setLocationStore(LocationStore* store);
+    [[nodiscard]] QListView* bookmarkView() const { return m_bookmarkList; }
+    [[nodiscard]] bool bookmarksExpanded() const { return m_bookmarksExpanded; }
+    void setBookmarksExpanded(bool expanded);
+
+    // Marks where the browser is (its bucket, else its account) without
+    // emitting bucketSelected / accountSelected.
+    void setCurrentLocation(const Location& location);
 
 signals:
     void addAccountRequested();
@@ -50,6 +66,9 @@ signals:
     // "New Bucket…" of an account, "Delete Bucket…" of a bucket.
     void createBucketRequested(const QUuid& account);
     void deleteBucketRequested(const QUuid& account, const QString& bucket);
+    // A bookmark was activated (click / Enter).
+    void bookmarkActivated(const qbucket::Location& location);
+    void bookmarksExpandedChanged(bool expanded);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -64,6 +83,9 @@ private:
     void removeExternalBucket_(const QUuid& id, const QString& bucket);
     void askForSecret_(const QUuid& id);
     void updateEmptyState_();
+    void updateBookmarks_();
+    void showBookmarkMenu_(const QPoint& pos);
+    void renameBookmark_(const QUuid& id);
 
     AccountStore* m_accounts;
     SecretStore* m_secrets;
@@ -73,6 +95,13 @@ private:
     QLabel* m_empty = nullptr;
     QPushButton* m_addButton = nullptr;
     QSet<QUuid> m_askingSecret;   // one prompt per account at a time
+    LocationStore* m_locations = nullptr;
+    BookmarkModel* m_bookmarkModel = nullptr;
+    QToolButton* m_bookmarkToggle = nullptr;
+    QListView* m_bookmarkList = nullptr;
+    QLabel* m_bookmarkHint = nullptr;
+    bool m_bookmarksExpanded = true;
+    bool m_following = false;     // setCurrentLocation() moves the current row
 };
 
 } // namespace qbucket
