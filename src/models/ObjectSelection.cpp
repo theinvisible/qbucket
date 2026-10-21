@@ -54,7 +54,7 @@ std::optional<ObjectSelection> ObjectSelection::fromMimeData(const QMimeData* mi
     s.bucket = o.value(QStringLiteral("bucket")).toString();
     s.base = o.value(QStringLiteral("base")).toString();
     s.intent = o.value(QStringLiteral("intent")).toString() == QLatin1String("cut") ? Intent::Cut : Intent::Copy;
-    for (const QJsonValue& v : o.value(QStringLiteral("items")).toArray()) {
+    for (const auto& v : o.value(QStringLiteral("items")).toArray()) {
         const QJsonObject i = v.toObject();
         const QString key = i.value(QStringLiteral("key")).toString();
         if (key.isEmpty() || !key.startsWith(s.base))

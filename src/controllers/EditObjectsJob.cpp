@@ -107,8 +107,8 @@ s3::ObjectHeaders EditObjectsJob::ChangeSpec::applyTo(const s3::ObjectHeaders& h
     set(h.expires, expires);
     set(h.websiteRedirectLocation, websiteRedirectLocation);
     for (auto it = metadata.cbegin(); it != metadata.cend(); ++it) {
-        if (it.value())
-            h.userMetadata.insert(it.key().toLower(), *it.value());
+        if (const std::optional<QString>& value = it.value())
+            h.userMetadata.insert(it.key().toLower(), *value);
         else
             h.userMetadata.remove(it.key().toLower());
     }
@@ -467,8 +467,8 @@ void EditObjectsJob::snapshotTaken_(const std::shared_ptr<Active>& a)
         skipped_(a->entry.key, tr("already as asked"));
         return;
     }
-    if (a->snap.acl) {
-        const QString canned = s3::cannedAclOf(*a->snap.acl).value_or(QString());
+    if (const std::optional<s3::AccessControlPolicy>& acl = a->snap.acl) {
+        const QString canned = s3::cannedAclOf(*acl).value_or(QString());
         if (canned != QLatin1String("private"))
             a->canned = canned;
     }
@@ -559,7 +559,7 @@ void EditObjectsJob::snapshotTaken_(const std::shared_ptr<Active>& a)
 
 void EditObjectsJob::copied_(const std::shared_ptr<Active>& a)
 {
-    if (a->snap.tags && !a->snap.tags->isEmpty()) {
+    if (!a->snap.tags.value_or(s3::TagSet()).isEmpty()) {
         restoreTags_(a);
         return;
     }
@@ -619,7 +619,7 @@ void EditObjectsJob::check_(const std::shared_ptr<Active>& a)
         done_(a, tr("changed, but not checked (not connected)"));
         return;
     }
-    const bool tags = a->snap.tags && !a->snap.tags->isEmpty();
+    const bool tags = !a->snap.tags.value_or(s3::TagSet()).isEmpty();
     const bool acl = !a->canned.isEmpty();
     ObjectSnapshot::read(session, bucket(), a->entry.key, tags, acl, m_run.get(), [this, a, tags, acl](s3::Result<ObjectSnapshot> now) {
         QStringList wrong;
