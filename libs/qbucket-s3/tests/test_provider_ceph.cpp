@@ -7,6 +7,8 @@
 #include <QFile>
 #include <QtTest>
 
+#include <algorithm>
+
 using namespace qbucket::s3;
 
 namespace {
@@ -19,13 +21,13 @@ QByteArray fixture(const char* name)
     return f.readAll();
 }
 
+// The bucket probe of `f` (the first probe if there is none: the test's
+// comparisons fail then).
 const ProbeSpec& probeFor(Feature f)
 {
-    for (const ProbeSpec& s : bucketProbes()) {
-        if (s.feature == f)
-            return s;
-    }
-    qFatal("no probe");
+    const QList<ProbeSpec>& probes = bucketProbes();
+    const auto it = std::find_if(probes.cbegin(), probes.cend(), [f](const ProbeSpec& s) { return s.feature == f; });
+    return it != probes.cend() ? *it : probes.front();
 }
 
 } // namespace

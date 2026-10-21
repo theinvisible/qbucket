@@ -33,6 +33,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # A Debug build with ASan links ~90 test binaries of ~170 MB each: more
+      # than the runner's free space. Toolchains this job never uses go.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost /usr/local/.ghcup
+          df -h /
+
       - name: System packages
         run: |
           sudo apt-get update
