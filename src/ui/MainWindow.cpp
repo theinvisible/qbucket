@@ -991,9 +991,18 @@ void MainWindow::updateNavigation_()
     m_actEditPath->setEnabled(nav->current().isValid());
     m_actCapabilities->setEnabled(m_capabilities && nav->current().isValid());
     if (m_actNewBucket) {
-        m_actNewBucket->setEnabled(m_operations && nav->current().isValid());
-        m_actBucketProperties->setEnabled(m_operations && nav->current().hasBucket());
-        m_actDeleteBucket->setEnabled(m_operations && nav->current().hasBucket());
+        const Location loc = nav->current();
+        OperationController::Check create{false, tr("Open an account first.")};
+        OperationController::Check remove{false, tr("Open a bucket first.")};
+        if (m_operations && loc.isValid())
+            create = m_operations->check(loc.account, QString(), {}, false);
+        if (m_operations && loc.hasBucket())
+            remove = m_operations->check(loc.account, loc.bucket, {}, true);
+        m_actNewBucket->setEnabled(create.allowed);
+        m_actNewBucket->setToolTip(create.allowed ? QString() : create.reason);
+        m_actBucketProperties->setEnabled(m_operations && loc.hasBucket());
+        m_actDeleteBucket->setEnabled(remove.allowed);
+        m_actDeleteBucket->setToolTip(remove.allowed ? QString() : remove.reason);
     }
     if (m_actIncompleteUploads) {
         OperationController::Check list{false, tr("Open a bucket first.")};

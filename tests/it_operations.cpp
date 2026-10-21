@@ -1,7 +1,9 @@
 // The app's mutation jobs against a real S3 server — opt-in, like
 // libs/qbucket-s3/tests/it_s3_backend: runs when QBUCKET_IT_ENDPOINT is set
 // (QBUCKET_IT_REGION, _ACCESS_KEY, _SECRET_KEY, _BUCKET, _ADDRESSING,
-// _PROVIDER, _BACKEND; optional _CREATE_BUCKET=1 for local backends).
+// _PROVIDER, _BACKEND; optional _CREATE_BUCKET=1 for local backends;
+// _CONFIG_BUCKET / _LOCKCFG_BUCKET: guarded scratch buckets for bucket
+// settings and object lock; _TEMP_BUCKETS=1: a bucket created and deleted).
 //
 // Safety: refuses any bucket not named qbucket-it-*; every key lives under
 // it/<run id>/ and only that is cleaned up. The account is "Development",
@@ -11,6 +13,10 @@
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
 #include "controllers/CopyJob.h"
+#include "controllers/CreateBucketJob.h"
+#include "controllers/DeleteBucketJob.h"
+#include "controllers/ObjectLockJob.h"
+#include "controllers/SetBucketConfigJob.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
 #include "controllers/DeleteVersionsJob.h"
@@ -29,6 +35,7 @@
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 
+#include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/ListObjectVersionsPager.h>
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
@@ -37,6 +44,7 @@
 #include <QDir>
 #include <QFile>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -108,8 +116,9 @@ private slots:
     }
 
     // Deletes every version and delete marker under m_root in `bucket`
-    // (current objects only where versions can't be listed), one by one.
-    void purgeRoot(const QString& bucket)
+    // (current objects only where versions can't be listed), one by one —
+    // `bypass`: GOVERNANCE retention too (the object lock scratch bucket).
+    void purgeRoot(const QString& bucket, bool bypass = false)
     {
         QList<s3::ObjectIdentifier> all;
         bool listed = false;
@@ -153,8 +162,8 @@ private slots:
             QVERIFY(o.key.startsWith(m_root));
             QObject ctx;
             std::optional<s3::Result<s3::DeleteObjectResult>> r;
-            session()->deleteObject(bucket, o.key, o.versionId, &ctx,
-                                    [&](s3::Result<s3::DeleteObjectResult> res) { r.emplace(std::move(res)); });
+            const s3::DeleteObjectParams params{bucket, o.key, o.versionId, bypass};
+            session()->deleteObject(params, &ctx, [&](s3::Result<s3::DeleteObjectResult> res) { r.emplace(std::move(res)); });
             QTRY_VERIFY_WITH_TIMEOUT(r.has_value(), 30000);
             if (!*r)
                 qWarning().noquote() << "cleanup left" << bucket << o.key << o.versionId << r->error().toString();
@@ -173,6 +182,8 @@ private slots:
             purgeRoot(second);
         if (!m_versionBucket.isEmpty())
             purgeRoot(m_versionBucket);
+        if (!m_lockBucket.isEmpty())
+            purgeRoot(m_lockBucket, true);
         // Unfinished multipart uploads of this run (a failed upload job).
         s3::ListMultipartUploadsParams up;
         up.bucket = m_bucket;
@@ -566,7 +577,179 @@ private slots:
         QVERIFY(QFileInfo(target + QStringLiteral("/tree ä/empty")).isDir());
     }
 
+    // M6: bucket settings through SetBucketConfigJob on a guarded scratch
+    // bucket — written, read back, removed where the write is confirmed,
+    // refused with the reason where it isn't.
+    void bucketConfigurationThroughJobs()
+    {
+        const QString bucket = scratchBucket("QBUCKET_IT_CONFIG_BUCKET", "-config", false);
+        if (bucket.isEmpty())
+            QSKIP("no guarded scratch bucket for settings (QBUCKET_IT_CONFIG_BUCKET)");
+        s3::CorsConfiguration cors;
+        s3::CorsRule rule;
+        rule.allowedMethods = {QStringLiteral("GET")};
+        rule.allowedOrigins = {QStringLiteral("https://qbucket.invalid")};
+        cors.rules = {rule};
+        s3::LifecycleConfiguration lifecycle;
+        s3::LifecycleRule expire;
+        expire.id = QStringLiteral("qbucket-it-app");
+        expire.prefix = m_root + QStringLiteral("lc/");
+        expire.expirationDays = 1;
+        lifecycle.rules = {expire};
+        const QByteArray policy = QStringLiteral("{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\","
+                                                 "\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":"
+                                                 "\"arn:aws:s3:::%1/%2nothing/*\"}]}")
+                                      .arg(bucket, m_root)
+                                      .toUtf8();
+        const QList<std::pair<s3::BucketConfig, QByteArray>> documents = {
+            {s3::BucketConfig::Cors, s3::buildCorsConfiguration(cors).value()},
+            {s3::BucketConfig::Lifecycle, s3::buildLifecycleConfiguration(lifecycle).value()},
+            {s3::BucketConfig::Policy, policy},
+        };
+        for (const auto& [kind, document] : documents) {
+            const QString name = s3::bucketConfigName(kind);
+            const bool allowed = m_ops->check(m_account.id, bucket, {*s3::bucketConfigWriteFeature(kind)}, true).allowed;
+            if (!allowed) {
+                Job* job = run(SetBucketConfigJob::put(m_account, bucket, kind, document));
+                QVERIFY2(job->outcome() == Job::Outcome::Refused, qPrintable(name));
+                continue;
+            }
+            auto* put = SetBucketConfigJob::put(m_account, bucket, kind, document);
+            put->setReadBackDelayForTesting(3000);
+            run(put);
+            QVERIFY2(put->outcome() == Job::Outcome::Succeeded && put->report().verified,
+                     qPrintable(name + QStringLiteral(": ") + put->report().verification + put->errorText()));
+            auto* remove = SetBucketConfigJob::remove(m_account, bucket, kind);
+            remove->setReadBackDelayForTesting(3000);
+            run(remove);
+            QVERIFY2(remove->outcome() == Job::Outcome::Succeeded && remove->report().verified,
+                     qPrintable(name + QStringLiteral(": ") + remove->report().verification + remove->errorText()));
+            QVERIFY2(guardIn(bucket), "the guard object is gone");
+        }
+    }
+
+    // M6: retention and legal hold through ObjectLockJob, and what they
+    // keep DeleteVersionsJob from doing — GOVERNANCE only.
+    void objectLockThroughJobs()
+    {
+        const QString bucket = scratchBucket("QBUCKET_IT_LOCKCFG_BUCKET", "-lock", true);
+        if (bucket.isEmpty() || !m_caps->versioningOf(m_account.id, bucket).objectLock.value_or(false))
+            QSKIP("no guarded scratch bucket with object lock (QBUCKET_IT_LOCKCFG_BUCKET)");
+        m_lockBucket = bucket;
+        if (!m_ops->check(m_account.id, bucket, {s3::Feature::RetentionWrite}, true).allowed)
+            QSKIP("retention writes are not confirmed for this server");
+        const QString k = m_root + QStringLiteral("lock/kept.txt");
+        QString v;
+        QVERIFY(put(k, "kept", bucket, &v));
+        QVERIFY(!v.isEmpty());
+        Job* job = run(ObjectLockJob::retention(m_account, bucket, k, v, s3::ObjectLockMode::Governance,
+                                                QDateTime::currentDateTimeUtc().addDays(1)));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+
+        auto* refused = DeleteVersionsJob::versions(m_account, bucket, {{k, v}}, m_ops->planDir());
+        refused->setRecheckDelayForTesting(3000);
+        run(refused);
+        QCOMPARE(refused->outcome(), Job::Outcome::Failed);
+        QCOMPARE(versions(bucket, k).size(), 1);
+
+        job = run(ObjectLockJob::legalHold(m_account, bucket, k, v, true));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        auto* held = DeleteVersionsJob::versions(m_account, bucket, {{k, v}}, m_ops->planDir());
+        held->setRecheckDelayForTesting(3000);
+        run(held, true);
+        QCOMPARE(held->outcome(), Job::Outcome::Failed);   // a legal hold holds against the bypass
+        QCOMPARE(versions(bucket, k).size(), 1);
+
+        job = run(ObjectLockJob::legalHold(m_account, bucket, k, v, false));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        auto* bypassed = DeleteVersionsJob::versions(m_account, bucket, {{k, v}}, m_ops->planDir());
+        bypassed->setRecheckDelayForTesting(3000);
+        run(bypassed, true);
+        QCOMPARE(bypassed->outcome(), Job::Outcome::Succeeded);
+        QVERIFY(versions(bucket, k).isEmpty());
+        QVERIFY2(guardIn(bucket), "the guard object is gone");
+    }
+
+    // M6: a bucket created, filled, refused while not empty, emptied and
+    // deleted — through the jobs.
+    void createEmptyAndDeleteABucket()
+    {
+        if (env("QBUCKET_IT_CREATE_BUCKET") != QLatin1String("1") && env("QBUCKET_IT_TEMP_BUCKETS") != QLatin1String("1"))
+            QSKIP("temporary buckets are opt-in (QBUCKET_IT_TEMP_BUCKETS=1)");
+        const QString tmp = QStringLiteral("qbucket-it-tmp-") + m_root.mid(3, 12) + QStringLiteral("-app");
+        static const QRegularExpression safeName(QStringLiteral("^qbucket-it-tmp-[a-z0-9-]+$"));
+        QVERIFY(safeName.match(tmp).hasMatch());
+        CreateBucketJob::Options options;
+        options.versioning = m_ops->check(m_account.id, QString(), {s3::Feature::BucketVersioningWrite}, true).allowed;
+        auto* create = new CreateBucketJob(m_account, tmp, options);
+        run(create);
+        QCOMPARE(create->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(create->report().verified, qPrintable(create->report().verification));
+        bool exists = true;
+        auto drop = qScopeGuard([&] {
+            if (!exists)
+                return;
+            auto* rescue = new DeleteBucketJob(m_account, tmp, true, m_ops->planDir());
+            run(rescue);
+        });
+        QVERIFY(put(QStringLiteral("a.txt"), "one", tmp));
+        QVERIFY(put(QStringLiteral("a.txt"), "two", tmp));
+        QVERIFY(put(QStringLiteral("dir/b.txt"), "b", tmp));
+        m_caps->bucketOpened(m_account.id, tmp);
+        QVERIFY(QTest::qWaitFor([&] { return !m_caps->isProbing(m_account.id, tmp) && m_caps->bucketSet(m_account.id, tmp); },
+                                30000));
+
+        auto* refused = new DeleteBucketJob(m_account, tmp, false, m_ops->planDir());
+        run(refused);
+        QCOMPARE(refused->outcome(), Job::Outcome::Failed);
+
+        auto* del = new DeleteBucketJob(m_account, tmp, true, m_ops->planDir());
+        del->setDelaysForTesting(3000, -1);   // the profile's settle time
+        run(del);
+        QCOMPARE(del->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(del->report().verified, qPrintable(del->report().verification));
+        exists = false;
+    }
+
 private:
+    // A guarded scratch bucket (holding guard/DO-NOT-DELETE.txt): the one
+    // named by `envName`, or locally <bucket><suffix>, created here (with
+    // object lock if asked). Probed like an opened bucket. Empty: none.
+    QString scratchBucket(const char* envName, const char* suffix, bool objectLock)
+    {
+        QString bucket = env(envName);
+        static const QRegularExpression safeName(QStringLiteral("^qbucket-it-[a-z0-9-]+$"));
+        if (bucket.isEmpty() && env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1")) {
+            bucket = m_bucket + QLatin1String(suffix);
+            QObject ctx;
+            bool done = false;
+            s3::CreateBucketParams params;
+            params.bucket = bucket;
+            params.region = m_account.region;
+            params.objectLockEnabled = objectLock;
+            session()->createBucket(params, &ctx, [&](const s3::Result<void>&) { done = true; });   // exists: fine
+            (void)QTest::qWaitFor([&] { return done; }, 30000);
+            if (!guardIn(bucket))
+                (void)put(QStringLiteral("guard/DO-NOT-DELETE.txt"), "guard object: a misread write must not delete this bucket", bucket);
+        }
+        if (bucket.isEmpty() || !safeName.match(bucket).hasMatch() || !guardIn(bucket))
+            return {};
+        m_caps->bucketOpened(m_account.id, bucket);
+        (void)QTest::qWaitFor([&] { return !m_caps->isProbing(m_account.id, bucket) && m_caps->bucketSet(m_account.id, bucket); },
+                              30000);
+        return bucket;
+    }
+
+    bool guardIn(const QString& bucket)
+    {
+        std::optional<bool> found;
+        QObject ctx;
+        session()->headObject(bucket, QStringLiteral("guard/DO-NOT-DELETE.txt"), QString(), &ctx,
+                              [&](const s3::Result<s3::ObjectMeta>& r) { found = bool(r); });
+        return QTest::qWaitFor([&] { return found.has_value(); }, 30000) && *found;
+    }
+
     bool put(const QString& key, const QByteArray& data, const QString& bucket = {}, QString* versionId = nullptr)
     {
         s3::PutObjectParams p;
@@ -675,12 +858,15 @@ private:
         return s ? *s : nullptr;
     }
 
-    // Starts a job, confirms its preview, waits for the end.
-    Job* run(Job* job)
+    // Starts a job, confirms its preview (with the governance bypass when
+    // asked and offered), waits for the end.
+    Job* run(Job* job, bool bypass = false)
     {
-        QObject::connect(m_ops.get(), &OperationController::previewNeeded, job, [job](Job* j) {
-            if (j == job)
-                j->confirm();
+        QObject::connect(m_ops.get(), &OperationController::previewNeeded, job, [job, bypass](Job* j) {
+            if (j != job)
+                return;
+            j->setBypassGovernance(bypass);
+            j->confirm();
         });
         QSignalSpy done(job, &Job::finished);
         m_ops->start(job);
@@ -694,6 +880,7 @@ private:
     QTemporaryDir m_dir;
     QString m_bucket;
     QString m_versionBucket;   // when it isn't m_bucket (cleaned up too)
+    QString m_lockBucket;      // cleaned up with the governance bypass
     QString m_root;
     Account m_account;
     std::unique_ptr<AccountStore> m_accounts;

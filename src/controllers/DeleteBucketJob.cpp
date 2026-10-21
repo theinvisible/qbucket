@@ -138,8 +138,10 @@ void DeleteBucketJob::planDone_()
         const bool empty = m_plan->count() == 0 && m_uploads.isEmpty();
         const QLocale locale;
         if (!empty && !m_emptyFirst) {
-            fail_(tr("The bucket isn't empty (%1 version(s), %2 unfinished upload(s)). Delete what is in it as well, "
-                     "or empty it first.")
+            fail_((m_currentOnly ? tr("The bucket isn't empty (objects: %1, unfinished uploads: %2). Delete what is in "
+                                      "it as well, or empty it first.")
+                                 : tr("The bucket isn't empty (versions and delete markers: %1, unfinished uploads: "
+                                      "%2). Delete what is in it as well, or empty it first."))
                       .arg(locale.toString(m_plan->count()), locale.toString(m_uploads.size())));
             return;
         }

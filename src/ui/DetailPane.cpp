@@ -5,6 +5,7 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/ConnectionTester.h"
 #include "controllers/FolderSizeTask.h"
+#include "controllers/ObjectLockJob.h"
 #include "controllers/ObjectPropertyJob.h"
 #include "controllers/OperationController.h"
 #include "models/ObjectTableModel.h"
@@ -17,6 +18,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QDateTimeEdit>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLocale>
@@ -113,6 +115,7 @@ DetailPane::DetailPane(AccountSessions* sessions, QWidget* parent)
     buildTagsTab_();
     buildVersionsTab_();
     buildAccessTab_();
+    buildLockTab_();
     connect(m_tabs, &QTabWidget::currentChanged, this, &DetailPane::loadVisibleTab_);
     lay->addWidget(m_tabs, 1);
 
@@ -213,6 +216,163 @@ void DetailPane::buildAccessTab_()
     lay->addWidget(m_accessReason);
     m_accessStack->addWidget(page);
     m_tabs->addTab(m_accessStack, tr("Access"));
+}
+
+void DetailPane::buildLockTab_()
+{
+    m_lockStack = new QStackedWidget;
+    m_lockHint = makeHint(tr("Select an object to see its retention and legal hold."));
+    m_lockStack->addWidget(m_lockHint);
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(12, 10, 12, 10);
+    auto* form = new QFormLayout;
+    m_retention = new QLabel;
+    m_retention->setObjectName(QStringLiteral("retentionState"));
+    m_retention->setWordWrap(true);
+    form->addRow(tr("Retention:"), m_retention);
+    m_legalHold = new QLabel;
+    m_legalHold->setObjectName(QStringLiteral("legalHoldState"));
+    form->addRow(tr("Legal hold:"), m_legalHold);
+    lay->addLayout(form);
+    auto* change = new QFormLayout;
+    m_lockMode = new QComboBox;
+    m_lockMode->setObjectName(QStringLiteral("lockMode"));
+    m_lockMode->addItem(QStringLiteral("GOVERNANCE"), int(s3::ObjectLockMode::Governance));
+    m_lockMode->addItem(QStringLiteral("COMPLIANCE"), int(s3::ObjectLockMode::Compliance));
+    change->addRow(tr("Mode:"), m_lockMode);
+    m_lockUntil = new QDateTimeEdit(QDateTime::currentDateTime().addDays(30));
+    m_lockUntil->setObjectName(QStringLiteral("lockUntil"));
+    m_lockUntil->setCalendarPopup(true);
+    change->addRow(tr("Until:"), m_lockUntil);
+    lay->addLayout(change);
+    auto* row = new QHBoxLayout;
+    m_setRetention = new QPushButton(tr("Set Retention…"));
+    m_removeRetention = new QPushButton(tr("Remove…"));
+    m_removeRetention->setToolTip(tr("Remove a GOVERNANCE retention (needs the governance bypass)"));
+    m_holdButton = new QPushButton(tr("Put Under Legal Hold…"));
+    row->addWidget(m_setRetention);
+    row->addWidget(m_removeRetention);
+    row->addStretch(1);
+    lay->addLayout(row);
+    auto* holdRow = new QHBoxLayout;
+    holdRow->addWidget(m_holdButton);
+    holdRow->addStretch(1);
+    lay->addLayout(holdRow);
+    m_lockReason = new QLabel;
+    m_lockReason->setObjectName(QStringLiteral("hint"));
+    m_lockReason->setWordWrap(true);
+    lay->addWidget(m_lockReason);
+    lay->addStretch(1);
+    m_lockStack->addWidget(page);
+    m_tabs->addTab(m_lockStack, tr("Lock"));
+
+    const auto account = [this]() -> std::optional<Account> {
+        return m_ops ? m_ops->accounts()->account(m_account) : std::nullopt;
+    };
+    connect(m_setRetention, &QPushButton::clicked, this, [this, account] {
+        if (const std::optional<Account> a = account()) {
+            startLockJob_(ObjectLockJob::retention(*a, m_bucket, m_lockFor, m_versionId,
+                                                   s3::ObjectLockMode(m_lockMode->currentData().toInt()),
+                                                   m_lockUntil->dateTime()));
+        }
+    });
+    connect(m_removeRetention, &QPushButton::clicked, this, [this, account] {
+        if (const std::optional<Account> a = account())
+            startLockJob_(ObjectLockJob::removeRetention(*a, m_bucket, m_lockFor, m_versionId));
+    });
+    connect(m_holdButton, &QPushButton::clicked, this, [this, account] {
+        if (const std::optional<Account> a = account())
+            startLockJob_(ObjectLockJob::legalHold(*a, m_bucket, m_lockFor, m_versionId, !m_shownHold.value_or(false)));
+    });
+}
+
+void DetailPane::startLockJob_(Job* job)
+{
+    connect(job, &Job::finished, this, [this, job, key = m_lockFor] {
+        if (key == m_key && job->phase() == Job::Phase::Finished && job->outcome() != Job::Outcome::Refused)
+            loadLock_();
+    });
+    m_ops->start(job);
+}
+
+// The version's retention and legal hold, read while the tab is shown.
+void DetailPane::loadLock_()
+{
+    m_lockFor = m_key;
+    m_lockRun = std::make_unique<QObject>();
+    m_shownRetention.reset();
+    m_shownHold.reset();
+    m_lockHint->setText(tr("Loading…"));
+    m_lockStack->setCurrentIndex(0);
+    const s3::Result<s3::Session*> session = m_sessions ? m_sessions->session(m_account) : s3::Result<s3::Session*>(
+        s3::Error::make(s3::ErrorCategory::Internal, tr("not connected")));
+    if (!session) {
+        m_lockHint->setText(ConnectionTester::describe(session.error()));
+        return;
+    }
+    const QString key = m_key;
+    const auto shown = [this, key] {
+        if (key != m_key || !m_shownRetention || !m_shownHold)
+            return;
+        const s3::ObjectRetention& r = *m_shownRetention;
+        const bool active = r.mode && r.retainUntil > QDateTime::currentDateTimeUtc();
+        m_retention->setText(!r.mode ? tr("none")
+                                     : tr("%1 until %2%3")
+                                           .arg(s3::objectLockModeName(*r.mode),
+                                                QLocale().toString(r.retainUntil.toLocalTime(), QLocale::ShortFormat),
+                                                active ? QString() : tr(" (ran out)")));
+        m_legalHold->setText(*m_shownHold ? tr("on — the version can't be deleted") : tr("off"));
+        m_holdButton->setText(*m_shownHold ? tr("Lift Legal Hold…") : tr("Put Under Legal Hold…"));
+        if (r.mode) {
+            m_lockMode->setCurrentIndex(m_lockMode->findData(int(*r.mode)));
+            if (r.retainUntil.isValid())
+                m_lockUntil->setDateTime(r.retainUntil.toLocalTime());
+        }
+        OperationController::Check retention{false, tr("Read-only here.")};
+        OperationController::Check hold{false, tr("Read-only here.")};
+        if (m_ops) {
+            retention = m_ops->check(m_account, m_bucket, {s3::Feature::RetentionWrite}, true);
+            hold = m_ops->check(m_account, m_bucket, {s3::Feature::LegalHoldWrite}, true);
+        }
+        const bool compliance = active && r.mode == s3::ObjectLockMode::Compliance;
+        m_setRetention->setEnabled(retention.allowed);
+        m_lockMode->setEnabled(retention.allowed && !compliance);
+        m_lockUntil->setEnabled(retention.allowed);
+        m_removeRetention->setEnabled(retention.allowed && r.mode.has_value() && !compliance);
+        m_holdButton->setEnabled(hold.allowed);
+        QString why = !retention.allowed ? retention.reason : (!hold.allowed ? hold.reason : QString());
+        if (why.isEmpty() && compliance)
+            why = tr("COMPLIANCE: the retention can only be extended.");
+        m_lockReason->setText(why);
+        m_lockReason->setVisible(!why.isEmpty());
+        m_lockStack->setCurrentIndex(1);
+        emit lockLoaded();
+    };
+    const auto failed = [this, key](const s3::Error& e) {
+        if (key != m_key)
+            return;
+        m_lockHint->setText(ConnectionTester::describe(e));
+        emit lockLoaded();
+    };
+    (*session)->getObjectRetention(m_bucket, key, m_versionId, m_lockRun.get(),
+                                   [this, shown, failed](const s3::Result<s3::ObjectRetention>& r) {
+        if (!r) {
+            failed(r.error());
+            return;
+        }
+        m_shownRetention = *r;
+        shown();
+    });
+    (*session)->getObjectLegalHold(m_bucket, key, m_versionId, m_lockRun.get(),
+                                   [this, shown, failed](const s3::Result<bool>& r) {
+        if (!r) {
+            failed(r.error());
+            return;
+        }
+        m_shownHold = *r;
+        shown();
+    });
 }
 
 void DetailPane::buildVersionsTab_()
@@ -333,6 +493,9 @@ void DetailPane::updateFeatureTabs_()
     m_tabs->setTabVisible(TagsTab, !unsupported(s3::Feature::ObjectTagging));
     m_tabs->setTabVisible(VersionsTab, !unsupported(s3::Feature::ObjectVersionsListing));
     m_tabs->setTabVisible(AccessTab, !unsupported(s3::Feature::ObjectAcl));
+    // Retention and legal hold exist on buckets created with object lock only.
+    m_tabs->setTabVisible(LockTab, m_caps->versioningOf(m_account, m_bucket).objectLock.value_or(false)
+                                       && !unsupported(s3::Feature::Retention));
 }
 
 void DetailPane::loadVisibleTab_()
@@ -345,6 +508,8 @@ void DetailPane::loadVisibleTab_()
         return;
     if (m_tabs->currentIndex() == TagsTab && m_tagsFor != m_key)
         loadTags_();
+    else if (m_tabs->currentIndex() == LockTab && m_lockFor != m_key)
+        loadLock_();
     else if (m_tabs->currentIndex() == AccessTab && m_accessFor != m_key)
         loadAccess_();
 }
@@ -631,6 +796,8 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
     m_sizeTask.reset();   // a count of the previous selection stops
     m_tagsFor.clear();
     m_accessFor.clear();
+    m_lockFor.clear();
+    m_lockRun.reset();
     m_versionsFor.clear();
     m_account = account;
     m_bucket = bucket;
@@ -644,6 +811,8 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
     m_tagsStack->setCurrentIndex(0);
     m_accessHint->setText(tr("Select a single object to see who may access it."));
     m_accessStack->setCurrentIndex(0);
+    m_lockHint->setText(tr("Select a single object to see its retention and legal hold."));
+    m_lockStack->setCurrentIndex(0);
     m_versionsHint->setText(tr("Select a single object to see its versions."));
     m_versionsStack->setCurrentIndex(0);
     m_editMetadata->setEnabled(true);
@@ -715,6 +884,7 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
         m_metaStack->setCurrentIndex(0);
         m_tagsHint->setText(tr("A delete marker has no tags."));
         m_accessHint->setText(tr("A delete marker has no permissions."));
+        m_lockHint->setText(tr("A delete marker has no retention."));
         loadVisibleTab_();
         return;
     }

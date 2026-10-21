@@ -224,6 +224,12 @@ qbucket_add_test(test_copy_job
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_object_lock
+    test_object_lock.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_bucket_jobs
     test_bucket_jobs.cpp
     qbucket_controllers

@@ -503,7 +503,9 @@ void DeleteVersionsJob::verifyDone_(bool recheck)
             : tr("%n object(s) are still not back: %1", nullptr, int(m_remaining)).arg(samples);
     } else {
         m_verified = m_remaining == 0;
-        m_verification = m_verified ? tr("listed again: nothing of it is left")
+        const bool someFailed = m_purger && !m_purger->failedSet().isEmpty();
+        m_verification = m_verified ? (someFailed ? tr("listed again: nothing else is left")
+                                                  : tr("listed again: nothing of it is left"))
                                     : tr("%n version(s) are still listed: %1", nullptr, int(m_remaining)).arg(samples);
     }
     finish_(report_());

@@ -8,7 +8,11 @@
 #include "controllers/BrowseController.h"
 #include "controllers/SettingsController.h"
 #include "support/FakeKeychainBackend.h"
+#include "ui/BucketConfigPage.h"
+#include "ui/BucketPropertiesDialog.h"
+#include "ui/CodeEditor.h"
 #include "ui/DetailPane.h"
+#include "ui/PolicyPage.h"
 #include "ui/MainWindow.h"
 #include "ui/ObjectBrowser.h"
 #include "ui/ThemeManager.h"
@@ -17,6 +21,8 @@
 #include "accounts/SecretStore.h"
 
 #include <QAction>
+#include <QLabel>
+#include <QPushButton>
 #include <QDir>
 #include <QRegularExpression>
 #include <QStandardPaths>
@@ -159,6 +165,21 @@ private slots:
                 QVERIFY(browser->downloadAction()->isEnabled());   // reading a version is fine
         }
         m_settings->setBrowseMode(QStringLiteral("folders"));
+
+        // Buckets and their settings: read, never changed.
+        QVERIFY(!m_window->newBucketAction()->isEnabled());
+        QVERIFY(!m_window->deleteBucketAction()->isEnabled());
+        QVERIFY(m_window->bucketPropertiesAction()->isEnabled());
+        m_window->bucketPropertiesAction()->trigger();
+        auto* props = m_window->findChild<BucketPropertiesDialog*>();
+        QVERIFY(props);
+        PolicyPage* policy = props->policyPage();
+        policy->ensureLoaded();
+        QTRY_VERIFY_WITH_TIMEOUT(policy->isLoaded() || !policy->stateLabel()->text().isEmpty(), 30000);
+        QVERIFY(policy->editor()->isReadOnly());
+        QVERIFY(!policy->applyButton()->isEnabled());
+        QVERIFY(policy->readOnlyReason().contains(QLatin1String("read-only")));
+        props->close();
 
         QTest::qWait(1500);   // capability probes, sidebar listing
         const QString dir = env("QBUCKET_SCREENSHOT_DIR");

@@ -11,6 +11,7 @@
 #include <memory>
 
 class QComboBox;
+class QDateTimeEdit;
 class QFormLayout;
 class QLabel;
 class QPushButton;
@@ -24,6 +25,7 @@ namespace qbucket {
 class AccountSessions;
 class CapabilityController;
 class FolderSizeTask;
+class Job;
 class OperationController;
 
 // The right column (PLAN.md §4): Properties of the selected object
@@ -35,7 +37,9 @@ class OperationController;
 // summary for a folder or several rows. The Versions tab lists the
 // object's versions and delete markers (only while shown). A row of the
 // versions view shows that version (HEAD, tags, ACL of it — editable only
-// for the current one); a delete marker has nothing to ask for.
+// for the current one); a delete marker has nothing to ask for. On a bucket
+// with object lock the Lock tab shows the version's retention and legal
+// hold and changes them through ObjectLockJob.
 class DetailPane : public QWidget {
     Q_OBJECT
 
@@ -48,13 +52,20 @@ public:
     // Without them the tags and the access are shown read-only.
     void setControllers(OperationController* operations, CapabilityController* capabilities);
 
-    enum Tab { PropertiesTab, MetadataTab, TagsTab, VersionsTab, AccessTab };
+    enum Tab { PropertiesTab, MetadataTab, TagsTab, VersionsTab, AccessTab, LockTab };
     [[nodiscard]] QTabWidget* tabs() const { return m_tabs; }
     [[nodiscard]] QTableWidget* tagTable() const { return m_tagTable; }
     [[nodiscard]] QPushButton* applyTagsButton() const { return m_applyTags; }
     [[nodiscard]] QComboBox* cannedAclBox() const { return m_canned; }
     [[nodiscard]] QPushButton* applyAccessButton() const { return m_applyAccess; }
     [[nodiscard]] QTreeWidget* grantList() const { return m_grants; }
+    [[nodiscard]] QLabel* retentionLabel() const { return m_retention; }
+    [[nodiscard]] QLabel* legalHoldLabel() const { return m_legalHold; }
+    [[nodiscard]] QComboBox* lockModeBox() const { return m_lockMode; }
+    [[nodiscard]] QDateTimeEdit* lockUntilEdit() const { return m_lockUntil; }
+    [[nodiscard]] QPushButton* setRetentionButton() const { return m_setRetention; }
+    [[nodiscard]] QPushButton* removeRetentionButton() const { return m_removeRetention; }
+    [[nodiscard]] QPushButton* legalHoldButton() const { return m_holdButton; }
     [[nodiscard]] QTreeWidget* versionList() const { return m_versionList; }
     [[nodiscard]] QPushButton* downloadVersionButton() const { return m_versionDownload; }
     [[nodiscard]] QPushButton* restoreVersionButton() const { return m_versionRestore; }
@@ -80,6 +91,7 @@ signals:
     void headFinished();
     void tagsLoaded();
     void accessLoaded();
+    void lockLoaded();
     void versionsLoaded();
     // The Metadata tab's "Edit…".
     void editMetadataRequested();
@@ -98,6 +110,9 @@ private:
     void buildTagsTab_();
     void buildAccessTab_();
     void buildVersionsTab_();
+    void buildLockTab_();
+    void loadLock_();
+    void startLockJob_(Job* job);
     // The tab shown (or the selection settled): load what it needs.
     void loadVisibleTab_();
     void loadTags_();
@@ -154,6 +169,20 @@ private:
     QComboBox* m_canned = nullptr;
     QPushButton* m_applyAccess = nullptr;
     QLabel* m_accessReason = nullptr;
+    QString m_lockFor;       // key whose lock is shown / loading
+    std::unique_ptr<QObject> m_lockRun;
+    std::optional<s3::ObjectRetention> m_shownRetention;
+    std::optional<bool> m_shownHold;
+    QStackedWidget* m_lockStack = nullptr;
+    QLabel* m_lockHint = nullptr;
+    QLabel* m_retention = nullptr;
+    QLabel* m_legalHold = nullptr;
+    QComboBox* m_lockMode = nullptr;
+    QDateTimeEdit* m_lockUntil = nullptr;
+    QPushButton* m_setRetention = nullptr;
+    QPushButton* m_removeRetention = nullptr;
+    QPushButton* m_holdButton = nullptr;
+    QLabel* m_lockReason = nullptr;
     QString m_versionsFor;   // key whose versions are shown / loading
     std::unique_ptr<QObject> m_versionsRun;
     std::unique_ptr<s3::ListObjectVersionsPager> m_versionsPager;

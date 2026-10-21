@@ -92,6 +92,8 @@ add_library(qbucket_controllers STATIC
     controllers/ObjectSnapshot.cpp
     controllers/EditObjectsJob.h
     controllers/EditObjectsJob.cpp
+    controllers/ObjectLockJob.h
+    controllers/ObjectLockJob.cpp
     controllers/ObjectPropertyJob.h
     controllers/ObjectPropertyJob.cpp
     controllers/PresignService.h

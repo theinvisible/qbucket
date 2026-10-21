@@ -1950,9 +1950,9 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/DeleteBucketJob.cpp" line="51"/>
         <location filename="../src/controllers/DeleteBucketJob.cpp" line="95"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="192"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="248"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="369"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="194"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="250"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="371"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
@@ -1983,31 +1983,36 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message>
         <location filename="../src/controllers/DeleteBucketJob.cpp" line="141"/>
-        <source>The bucket isn&apos;t empty (%1 version(s), %2 unfinished upload(s)). Delete what is in it as well, or empty it first.</source>
-        <translation>Der Bucket ist nicht leer (Versionen: %1, unvollständige Uploads: %2). Den Inhalt mitlöschen oder ihn zuerst leeren.</translation>
+        <source>The bucket isn&apos;t empty (objects: %1, unfinished uploads: %2). Delete what is in it as well, or empty it first.</source>
+        <translation>Der Bucket ist nicht leer (Objekte: %1, unvollständige Uploads: %2). Den Inhalt mitlöschen oder ihn zuerst leeren.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="148"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="143"/>
+        <source>The bucket isn&apos;t empty (versions and delete markers: %1, unfinished uploads: %2). Delete what is in it as well, or empty it first.</source>
+        <translation>Der Bucket ist nicht leer (Versionen und Löschmarker: %1, unvollständige Uploads: %2). Den Inhalt mitlöschen oder ihn zuerst leeren.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="150"/>
         <source>MFA delete is enabled on this bucket: deleting its versions needs a code from the MFA device, which QBucket can&apos;t send. Nothing was changed.</source>
         <translation>MFA Delete ist bei diesem Bucket aktiv: Das Löschen seiner Versionen braucht einen Code vom MFA-Gerät, den QBucket nicht senden kann. Nichts wurde geändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="153"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="155"/>
         <source>Delete Bucket</source>
         <translation>Bucket löschen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="159"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="161"/>
         <source>The bucket is empty.</source>
         <translation>Der Bucket ist leer.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="160"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="162"/>
         <source>The bucket is deleted for good; its name may be taken by someone else afterwards.</source>
         <translation>Der Bucket wird endgültig gelöscht; sein Name kann danach von jemand anderem belegt werden.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="165"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="167"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n Objekt</numerusform>
@@ -2015,7 +2020,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="166"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="168"/>
         <source>%n version(s)</source>
         <translation>
             <numerusform>%n Version</numerusform>
@@ -2023,7 +2028,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="168"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="170"/>
         <source>%1, %n delete marker(s)</source>
         <translation>
             <numerusform>%1, %n Löschmarker</numerusform>
@@ -2031,7 +2036,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="170"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="172"/>
         <source>%1, %n unfinished upload(s)</source>
         <translation>
             <numerusform>%1, %n unvollständiger Upload</numerusform>
@@ -2039,28 +2044,28 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="173"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="175"/>
         <source>Everything in the bucket is deleted for good — every version, also on a versioned bucket — and then the bucket itself.</source>
         <translation>Alles im Bucket wird endgültig gelöscht – jede Version, auch bei Versionierung – und danach der Bucket selbst.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="176"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="178"/>
         <source>Object lock is enabled: versions under retention or a legal hold can&apos;t be deleted, and the bucket stays — unless GOVERNANCE retention is bypassed below.</source>
         <translation>Object Lock ist aktiv: Versionen mit Aufbewahrung oder Legal Hold lassen sich nicht löschen, und der Bucket bleibt – außer die GOVERNANCE-Aufbewahrung wird unten umgangen.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="181"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="183"/>
         <source>Before the bucket itself is deleted, QBucket lists it again to be sure it is empty.</source>
         <translation>Bevor der Bucket selbst gelöscht wird, listet QBucket ihn erneut auf, um sicher zu sein, dass er leer ist.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="216"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="233"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="218"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="235"/>
         <source>cancelled — the bucket stays; what was deleted is in the journal</source>
         <translation>abgebrochen – der Bucket bleibt; was gelöscht wurde, steht im Journal</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="239"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="241"/>
         <source>the bucket stays: %n version(s) could not be deleted</source>
         <translation>
             <numerusform>der Bucket bleibt: eine Version konnte nicht gelöscht werden</numerusform>
@@ -2068,60 +2073,60 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="265"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="267"/>
         <source>%1 (unfinished upload): %2</source>
         <translation>%1 (unvollständiger Upload): %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="277"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="283"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="279"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="285"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="298"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="300"/>
         <source>an unfinished upload of “%1”</source>
         <translation>ein unvollständiger Upload von „%1“</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="311"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="324"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="313"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="326"/>
         <source>“%1”</source>
         <translation>„%1“</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="336"/>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="351"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="338"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="353"/>
         <source>cancelled — the bucket stays</source>
         <translation>abgebrochen – der Bucket bleibt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="345"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="347"/>
         <source>The bucket isn&apos;t empty yet (%1) — it stays. Something may have been written meanwhile.</source>
         <translation>Der Bucket ist noch nicht leer (%1) – er bleibt. Womöglich wurde inzwischen etwas geschrieben.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="356"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="358"/>
         <source>Something appeared in the bucket meanwhile (%1) — it stays.</source>
         <translation>Inzwischen ist etwas im Bucket aufgetaucht (%1) – er bleibt.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="396"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="398"/>
         <source>The bucket could not be deleted: %1</source>
         <translation>Der Bucket konnte nicht gelöscht werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="421"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="423"/>
         <source>not checked (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="433"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="435"/>
         <source>the bucket is gone</source>
         <translation>der Bucket ist weg</translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteBucketJob.cpp" line="433"/>
+        <location filename="../src/controllers/DeleteBucketJob.cpp" line="435"/>
         <source>the bucket still answers — check again in a few minutes</source>
         <translation>der Bucket antwortet noch – in ein paar Minuten erneut prüfen</translation>
     </message>
@@ -2493,12 +2498,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="506"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="507"/>
+        <source>listed again: nothing else is left</source>
+        <translation>erneut aufgelistet: sonst ist nichts übrig</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="508"/>
         <source>listed again: nothing of it is left</source>
         <translation>erneut gelistet: nichts davon ist übrig</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="507"/>
+        <location filename="../src/controllers/DeleteVersionsJob.cpp" line="509"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n Version wird noch gelistet: %1</numerusform>
@@ -2509,71 +2519,71 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::DetailPane</name>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="47"/>
+        <location filename="../src/ui/DetailPane.cpp" line="49"/>
         <source>%1 (%2 bytes)</source>
         <translation>%1 (%2 Bytes)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="62"/>
-        <location filename="../src/ui/DetailPane.cpp" line="727"/>
+        <location filename="../src/ui/DetailPane.cpp" line="64"/>
+        <location filename="../src/ui/DetailPane.cpp" line="897"/>
         <source>Details</source>
         <translation>Details</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="72"/>
-        <location filename="../src/ui/DetailPane.cpp" line="618"/>
-        <location filename="../src/ui/DetailPane.cpp" line="661"/>
+        <location filename="../src/ui/DetailPane.cpp" line="74"/>
+        <location filename="../src/ui/DetailPane.cpp" line="783"/>
+        <location filename="../src/ui/DetailPane.cpp" line="830"/>
         <source>Select an object to see its details.</source>
         <translation>Wähle ein Objekt, um seine Details zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="84"/>
+        <location filename="../src/ui/DetailPane.cpp" line="86"/>
         <source>Properties</source>
         <translation>Eigenschaften</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="88"/>
+        <location filename="../src/ui/DetailPane.cpp" line="90"/>
         <source>Select an object to see its headers and metadata.</source>
         <translation>Wähle ein Objekt, um seine Header und Metadaten zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="93"/>
+        <location filename="../src/ui/DetailPane.cpp" line="95"/>
         <source>Header</source>
         <translation>Header</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="93"/>
-        <location filename="../src/ui/DetailPane.cpp" line="147"/>
+        <location filename="../src/ui/DetailPane.cpp" line="95"/>
+        <location filename="../src/ui/DetailPane.cpp" line="150"/>
         <source>Value</source>
         <translation>Wert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="111"/>
+        <location filename="../src/ui/DetailPane.cpp" line="113"/>
         <source>Metadata</source>
         <translation>Metadaten</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="177"/>
+        <location filename="../src/ui/DetailPane.cpp" line="180"/>
         <source>Tags</source>
         <translation>Tags</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="279"/>
+        <location filename="../src/ui/DetailPane.cpp" line="439"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="215"/>
+        <location filename="../src/ui/DetailPane.cpp" line="218"/>
         <source>Access</source>
         <translation>Zugriff</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="676"/>
+        <location filename="../src/ui/DetailPane.cpp" line="845"/>
         <source>Selection</source>
         <translation>Auswahl</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="676"/>
+        <location filename="../src/ui/DetailPane.cpp" line="845"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n Eintrag</numerusform>
@@ -2581,206 +2591,294 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="677"/>
+        <location filename="../src/ui/DetailPane.cpp" line="846"/>
         <source>Size of the objects</source>
         <translation>Größe der Objekte</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="679"/>
+        <location filename="../src/ui/DetailPane.cpp" line="848"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="687"/>
+        <location filename="../src/ui/DetailPane.cpp" line="856"/>
         <source>Select a single object to see its headers and metadata.</source>
         <translation>Wähle ein einzelnes Objekt, um seine Header und Metadaten zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="694"/>
-        <location filename="../src/ui/DetailPane.cpp" line="769"/>
+        <location filename="../src/ui/DetailPane.cpp" line="863"/>
+        <location filename="../src/ui/DetailPane.cpp" line="939"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="695"/>
-        <location filename="../src/ui/DetailPane.cpp" line="755"/>
-        <location filename="../src/ui/DetailPane.cpp" line="770"/>
+        <location filename="../src/ui/DetailPane.cpp" line="864"/>
+        <location filename="../src/ui/DetailPane.cpp" line="925"/>
+        <location filename="../src/ui/DetailPane.cpp" line="940"/>
         <source>Location</source>
         <translation>Ort</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="697"/>
-        <location filename="../src/ui/DetailPane.cpp" line="709"/>
+        <location filename="../src/ui/DetailPane.cpp" line="866"/>
+        <location filename="../src/ui/DetailPane.cpp" line="878"/>
         <source>Kind</source>
         <translation>Art</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="697"/>
+        <location filename="../src/ui/DetailPane.cpp" line="866"/>
         <source>Folder (a common key prefix)</source>
         <translation>Ordner (ein gemeinsames Schlüsselpräfix)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="699"/>
+        <location filename="../src/ui/DetailPane.cpp" line="868"/>
         <source>Folders have no headers or metadata of their own.</source>
         <translation>Ordner haben keine eigenen Header oder Metadaten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="229"/>
-        <location filename="../src/ui/DetailPane.cpp" line="726"/>
-        <location filename="../src/ui/DetailPane.cpp" line="772"/>
+        <location filename="../src/ui/DetailPane.cpp" line="389"/>
+        <location filename="../src/ui/DetailPane.cpp" line="896"/>
+        <location filename="../src/ui/DetailPane.cpp" line="942"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="361"/>
-        <location filename="../src/ui/DetailPane.cpp" line="456"/>
-        <location filename="../src/ui/DetailPane.cpp" line="498"/>
-        <location filename="../src/ui/DetailPane.cpp" line="727"/>
-        <location filename="../src/ui/DetailPane.cpp" line="728"/>
+        <location filename="../src/ui/DetailPane.cpp" line="306"/>
+        <location filename="../src/ui/DetailPane.cpp" line="526"/>
+        <location filename="../src/ui/DetailPane.cpp" line="621"/>
+        <location filename="../src/ui/DetailPane.cpp" line="663"/>
+        <location filename="../src/ui/DetailPane.cpp" line="897"/>
+        <location filename="../src/ui/DetailPane.cpp" line="898"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="102"/>
+        <location filename="../src/ui/DetailPane.cpp" line="104"/>
         <source>Edit…</source>
         <translation>Bearbeiten…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="140"/>
+        <location filename="../src/ui/DetailPane.cpp" line="143"/>
         <source>Select an object to see its tags.</source>
         <translation>Wähle ein Objekt, um seine Tags zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="147"/>
+        <location filename="../src/ui/DetailPane.cpp" line="150"/>
         <source>Key</source>
         <translation>Schlüssel</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="154"/>
+        <location filename="../src/ui/DetailPane.cpp" line="157"/>
         <source>Add</source>
         <translation>Hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="159"/>
+        <location filename="../src/ui/DetailPane.cpp" line="162"/>
         <source>Remove</source>
         <translation>Entfernen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="164"/>
-        <location filename="../src/ui/DetailPane.cpp" line="205"/>
+        <location filename="../src/ui/DetailPane.cpp" line="167"/>
+        <location filename="../src/ui/DetailPane.cpp" line="208"/>
         <source>Apply…</source>
         <translation>Übernehmen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="183"/>
+        <location filename="../src/ui/DetailPane.cpp" line="186"/>
         <source>Select an object to see who may access it.</source>
         <translation>Wähle ein Objekt, um zu sehen, wer darauf zugreifen darf.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="195"/>
+        <location filename="../src/ui/DetailPane.cpp" line="198"/>
         <source>Grantee</source>
         <translation>Berechtigter</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="195"/>
+        <location filename="../src/ui/DetailPane.cpp" line="198"/>
         <source>Permission</source>
         <translation>Berechtigung</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="201"/>
+        <location filename="../src/ui/DetailPane.cpp" line="204"/>
         <source>Access:</source>
         <translation>Zugriff:</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="221"/>
-        <location filename="../src/ui/DetailPane.cpp" line="619"/>
+        <location filename="../src/ui/DetailPane.cpp" line="224"/>
+        <source>Select an object to see its retention and legal hold.</source>
+        <translation>Ein Objekt auswählen, um Aufbewahrung und Legal Hold zu sehen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="233"/>
+        <source>Retention:</source>
+        <translation>Aufbewahrung:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="236"/>
+        <source>Legal hold:</source>
+        <translation>Legal Hold:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="243"/>
+        <source>Mode:</source>
+        <translation>Modus:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="247"/>
+        <source>Until:</source>
+        <translation>Bis:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="250"/>
+        <source>Set Retention…</source>
+        <translation>Aufbewahrung setzen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="251"/>
+        <source>Remove…</source>
+        <translation>Entfernen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="252"/>
+        <source>Remove a GOVERNANCE retention (needs the governance bypass)</source>
+        <translation>Eine GOVERNANCE-Aufbewahrung entfernen (braucht den Governance-Bypass)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="253"/>
+        <location filename="../src/ui/DetailPane.cpp" line="326"/>
+        <source>Put Under Legal Hold…</source>
+        <translation>Unter Legal Hold stellen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="268"/>
+        <source>Lock</source>
+        <translation>Sperre</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="320"/>
+        <source>none</source>
+        <translation>keine</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="321"/>
+        <source>%1 until %2%3</source>
+        <translation>%1 bis %2%3</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="324"/>
+        <source> (ran out)</source>
+        <translation> (abgelaufen)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="325"/>
+        <source>on — the version can&apos;t be deleted</source>
+        <translation>an – die Version lässt sich nicht löschen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="325"/>
+        <source>off</source>
+        <translation>aus</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="326"/>
+        <source>Lift Legal Hold…</source>
+        <translation>Legal Hold aufheben…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="346"/>
+        <source>COMPLIANCE: the retention can only be extended.</source>
+        <translation>COMPLIANCE: Die Aufbewahrung lässt sich nur verlängern.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="381"/>
+        <location filename="../src/ui/DetailPane.cpp" line="784"/>
         <source>Select an object to see its versions.</source>
         <translation>Ein Objekt auswählen, um seine Versionen zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="229"/>
+        <location filename="../src/ui/DetailPane.cpp" line="389"/>
         <source>Version</source>
         <translation>Version</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="248"/>
+        <location filename="../src/ui/DetailPane.cpp" line="408"/>
         <source>Download</source>
         <translation>Herunterladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="249"/>
+        <location filename="../src/ui/DetailPane.cpp" line="409"/>
         <source>Restore…</source>
         <translation>Wiederherstellen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="250"/>
+        <location filename="../src/ui/DetailPane.cpp" line="410"/>
         <source>Delete…</source>
         <translation>Löschen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="251"/>
+        <location filename="../src/ui/DetailPane.cpp" line="411"/>
         <source>Undelete…</source>
         <translation>Zurückholen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="252"/>
+        <location filename="../src/ui/DetailPane.cpp" line="412"/>
         <source>Download the selected versions</source>
         <translation>Die ausgewählten Versionen herunterladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="253"/>
+        <location filename="../src/ui/DetailPane.cpp" line="413"/>
         <source>Copy the selected earlier version over the current one</source>
         <translation>Die ausgewählte frühere Version über die aktuelle kopieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="254"/>
+        <location filename="../src/ui/DetailPane.cpp" line="414"/>
         <source>Delete the selected versions and markers for good</source>
         <translation>Die ausgewählten Versionen und Marker endgültig löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="255"/>
+        <location filename="../src/ui/DetailPane.cpp" line="415"/>
         <source>Remove the delete marker: the newest version becomes current</source>
         <translation>Den Löschmarker entfernen: Die neueste Version wird aktuell</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="364"/>
-        <location filename="../src/ui/DetailPane.cpp" line="459"/>
-        <location filename="../src/ui/DetailPane.cpp" line="501"/>
+        <location filename="../src/ui/DetailPane.cpp" line="309"/>
+        <location filename="../src/ui/DetailPane.cpp" line="529"/>
+        <location filename="../src/ui/DetailPane.cpp" line="624"/>
+        <location filename="../src/ui/DetailPane.cpp" line="666"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="385"/>
+        <location filename="../src/ui/DetailPane.cpp" line="550"/>
         <source>This server keeps no object versions.</source>
         <translation>Dieser Server führt keine Objektversionen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="418"/>
+        <location filename="../src/ui/DetailPane.cpp" line="583"/>
         <source>null (unversioned)</source>
         <translation>null (unversioniert)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="421"/>
+        <location filename="../src/ui/DetailPane.cpp" line="586"/>
         <source>deleted (current)</source>
         <translation>gelöscht (aktuell)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="421"/>
+        <location filename="../src/ui/DetailPane.cpp" line="586"/>
         <source>deleted</source>
         <translation>gelöscht</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="423"/>
+        <location filename="../src/ui/DetailPane.cpp" line="588"/>
         <source>current</source>
         <translation>aktuell</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="441"/>
+        <location filename="../src/ui/DetailPane.cpp" line="606"/>
         <source>No versions — the bucket may not keep any.</source>
         <translation>Keine Versionen — der Bucket führt vermutlich keine.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="443"/>
+        <location filename="../src/ui/DetailPane.cpp" line="608"/>
         <source>Showing the newest %n version(s); open the versions view for all.</source>
         <translation>
             <numerusform>Die neueste Version wird gezeigt; alle in der Versionsansicht.</numerusform>
@@ -2788,7 +2886,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="445"/>
+        <location filename="../src/ui/DetailPane.cpp" line="610"/>
         <source>%n version(s), newest first.</source>
         <translation>
             <numerusform>%n Version, neueste zuerst.</numerusform>
@@ -2796,67 +2894,74 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="470"/>
+        <location filename="../src/ui/DetailPane.cpp" line="635"/>
         <source>This server has no object tags.</source>
         <translation>Dieser Server hat keine Objekt-Tags.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="301"/>
-        <location filename="../src/ui/DetailPane.cpp" line="302"/>
-        <location filename="../src/ui/DetailPane.cpp" line="479"/>
-        <location filename="../src/ui/DetailPane.cpp" line="551"/>
+        <location filename="../src/ui/DetailPane.cpp" line="332"/>
+        <location filename="../src/ui/DetailPane.cpp" line="333"/>
+        <location filename="../src/ui/DetailPane.cpp" line="461"/>
+        <location filename="../src/ui/DetailPane.cpp" line="462"/>
+        <location filename="../src/ui/DetailPane.cpp" line="644"/>
+        <location filename="../src/ui/DetailPane.cpp" line="716"/>
         <source>Read-only here.</source>
         <translation>Hier nur lesend.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="481"/>
-        <location filename="../src/ui/DetailPane.cpp" line="553"/>
-        <location filename="../src/ui/DetailPane.cpp" line="723"/>
+        <location filename="../src/ui/DetailPane.cpp" line="646"/>
+        <location filename="../src/ui/DetailPane.cpp" line="718"/>
+        <location filename="../src/ui/DetailPane.cpp" line="893"/>
         <source>An earlier version: only the current one can be changed.</source>
         <translation>Eine frühere Version: nur die aktuelle lässt sich ändern.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="512"/>
+        <location filename="../src/ui/DetailPane.cpp" line="677"/>
         <source>This server has no object permissions (ACLs).</source>
         <translation>Dieser Server hat keine Objekt-Berechtigungen (ACLs).</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="518"/>
+        <location filename="../src/ui/DetailPane.cpp" line="683"/>
         <source>Owner: %1</source>
         <translation>Owner: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="530"/>
+        <location filename="../src/ui/DetailPane.cpp" line="695"/>
         <source>Owner</source>
         <translation>Owner</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="548"/>
+        <location filename="../src/ui/DetailPane.cpp" line="713"/>
         <source>custom (grants above)</source>
         <translation>benutzerdefiniert (Grants oben)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="597"/>
+        <location filename="../src/ui/DetailPane.cpp" line="762"/>
         <source>custom</source>
         <translation>benutzerdefiniert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="643"/>
+        <location filename="../src/ui/DetailPane.cpp" line="810"/>
         <source>Select a single object to see its tags.</source>
         <translation>Wähle ein einzelnes Objekt, um seine Tags zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="645"/>
+        <location filename="../src/ui/DetailPane.cpp" line="812"/>
         <source>Select a single object to see who may access it.</source>
         <translation>Wähle ein einzelnes Objekt, um zu sehen, wer darauf zugreifen darf.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="647"/>
+        <location filename="../src/ui/DetailPane.cpp" line="814"/>
+        <source>Select a single object to see its retention and legal hold.</source>
+        <translation>Ein einzelnes Objekt auswählen, um Aufbewahrung und Legal Hold zu sehen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="816"/>
         <source>Select a single object to see its versions.</source>
         <translation>Ein einzelnes Objekt auswählen, um seine Versionen zu sehen.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="679"/>
+        <location filename="../src/ui/DetailPane.cpp" line="848"/>
         <source>%n folder(s), their contents not counted yet</source>
         <translation>
             <numerusform>%n Ordner, sein Inhalt noch nicht gezählt</numerusform>
@@ -2864,106 +2969,111 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="709"/>
+        <location filename="../src/ui/DetailPane.cpp" line="878"/>
         <source>Delete marker — the object is deleted here; earlier versions remain</source>
         <translation>Löschmarker — das Objekt ist hier gelöscht; frühere Versionen bleiben</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="710"/>
+        <location filename="../src/ui/DetailPane.cpp" line="879"/>
         <source>Delete marker (an earlier one)</source>
         <translation>Löschmarker (ein früherer)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="712"/>
+        <location filename="../src/ui/DetailPane.cpp" line="881"/>
         <source>Deleted</source>
         <translation>Gelöscht</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="714"/>
+        <location filename="../src/ui/DetailPane.cpp" line="883"/>
         <source>A delete marker has no content, headers or metadata.</source>
         <translation>Ein Löschmarker hat keinen Inhalt, keine Header und keine Metadaten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="716"/>
+        <location filename="../src/ui/DetailPane.cpp" line="885"/>
         <source>A delete marker has no tags.</source>
         <translation>Ein Löschmarker hat keine Tags.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="717"/>
+        <location filename="../src/ui/DetailPane.cpp" line="886"/>
         <source>A delete marker has no permissions.</source>
         <translation>Ein Löschmarker hat keine Berechtigungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="756"/>
+        <location filename="../src/ui/DetailPane.cpp" line="887"/>
+        <source>A delete marker has no retention.</source>
+        <translation>Ein Löschmarker hat keine Aufbewahrung.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="926"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="229"/>
-        <location filename="../src/ui/DetailPane.cpp" line="774"/>
+        <location filename="../src/ui/DetailPane.cpp" line="389"/>
+        <location filename="../src/ui/DetailPane.cpp" line="944"/>
         <source>Modified</source>
         <translation>Geändert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="775"/>
+        <location filename="../src/ui/DetailPane.cpp" line="945"/>
         <source>Storage class</source>
         <translation>Speicherklasse</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="776"/>
+        <location filename="../src/ui/DetailPane.cpp" line="946"/>
         <source>Content type</source>
         <translation>Inhaltstyp</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="776"/>
-        <location filename="../src/ui/DetailPane.cpp" line="792"/>
+        <location filename="../src/ui/DetailPane.cpp" line="946"/>
+        <location filename="../src/ui/DetailPane.cpp" line="962"/>
         <source>(none)</source>
         <translation>(keine)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="777"/>
+        <location filename="../src/ui/DetailPane.cpp" line="947"/>
         <source>ETag</source>
         <translation>ETag</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="713"/>
-        <location filename="../src/ui/DetailPane.cpp" line="779"/>
+        <location filename="../src/ui/DetailPane.cpp" line="882"/>
+        <location filename="../src/ui/DetailPane.cpp" line="949"/>
         <source>Version ID</source>
         <translation>Versions-ID</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="779"/>
+        <location filename="../src/ui/DetailPane.cpp" line="949"/>
         <source>%1 (an earlier version)</source>
         <translation>%1 (eine frühere Version)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="782"/>
+        <location filename="../src/ui/DetailPane.cpp" line="952"/>
         <source>Headers</source>
         <translation>Header</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="783"/>
+        <location filename="../src/ui/DetailPane.cpp" line="953"/>
         <source>User metadata</source>
         <translation>Benutzer-Metadaten</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="815"/>
+        <location filename="../src/ui/DetailPane.cpp" line="985"/>
         <source>Contents</source>
         <translation>Inhalt</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="820"/>
+        <location filename="../src/ui/DetailPane.cpp" line="990"/>
         <source>not counted</source>
         <translation>nicht gezählt</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="823"/>
-        <location filename="../src/ui/DetailPane.cpp" line="852"/>
+        <location filename="../src/ui/DetailPane.cpp" line="993"/>
+        <location filename="../src/ui/DetailPane.cpp" line="1022"/>
         <source>Calculate Size</source>
         <translation>Größe berechnen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="848"/>
+        <location filename="../src/ui/DetailPane.cpp" line="1018"/>
         <source>counting… %n object(s), %1 so far</source>
         <translation>
             <numerusform>zähle… bisher %n Objekt, %1</numerusform>
@@ -2971,12 +3081,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="854"/>
+        <location filename="../src/ui/DetailPane.cpp" line="1024"/>
         <source>not counted: %1</source>
         <translation>nicht gezählt: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="858"/>
+        <location filename="../src/ui/DetailPane.cpp" line="1028"/>
         <source>%n object(s), %1</source>
         <translation>
             <numerusform>%n Objekt, %1</numerusform>
@@ -2984,12 +3094,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="868"/>
+        <location filename="../src/ui/DetailPane.cpp" line="1038"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="869"/>
+        <location filename="../src/ui/DetailPane.cpp" line="1039"/>
         <source>counting…</source>
         <translation>zähle…</translation>
     </message>
@@ -3884,7 +3994,8 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/ui/MainWindow.cpp" line="337"/>
         <location filename="../src/ui/MainWindow.cpp" line="349"/>
         <location filename="../src/ui/MainWindow.cpp" line="354"/>
-        <location filename="../src/ui/MainWindow.cpp" line="999"/>
+        <location filename="../src/ui/MainWindow.cpp" line="996"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1008"/>
         <source>Open a bucket first.</source>
         <translation>Öffne zuerst einen Bucket.</translation>
     </message>
@@ -4042,199 +4153,204 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Was „%1“ unterstützt, hat sich geändert — siehe Extras → Server-Fähigkeiten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1004"/>
+        <location filename="../src/ui/MainWindow.cpp" line="995"/>
+        <source>Open an account first.</source>
+        <translation>Zuerst ein Konto öffnen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="1013"/>
         <source>Unfinished multipart uploads of this bucket</source>
         <translation>Unvollständige Multipart-Uploads dieses Buckets</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1060"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1069"/>
         <source>Delete Bucket</source>
         <translation>Bucket löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1061"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1070"/>
         <source>Delete the bucket “%1”?</source>
         <translation>Den Bucket „%1“ löschen?</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1062"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1071"/>
         <source>A bucket can only be deleted when it is empty. QBucket can delete what is in it first — every version and unfinished upload, for good. The next step shows exactly what and asks you to type the bucket&apos;s name.</source>
         <translation>Ein Bucket lässt sich nur löschen, wenn er leer ist. QBucket kann den Inhalt vorher löschen – jede Version und jeden unvollständigen Upload, endgültig. Der nächste Schritt zeigt genau, was, und verlangt, den Namen des Buckets einzutippen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1065"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1074"/>
         <source>Delete everything in it, too</source>
         <translation>Auch den gesamten Inhalt löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1067"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1076"/>
         <source>Continue…</source>
         <translation>Weiter…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1129"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1138"/>
         <source>&amp;File</source>
         <translation>&amp;Datei</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1130"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1139"/>
         <source>Add &amp;Account…</source>
         <translation>&amp;Konto hinzufügen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1133"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1142"/>
         <source>&amp;Quit</source>
         <translation>&amp;Beenden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1136"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1145"/>
         <source>&amp;Edit</source>
         <translation>&amp;Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1139"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1148"/>
         <source>&amp;View</source>
         <translation>&amp;Ansicht</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1142"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1151"/>
         <source>&amp;Folders</source>
         <translation>&amp;Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1143"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1152"/>
         <source>F&amp;lat Listing</source>
         <translation>&amp;Flache Liste</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1144"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1153"/>
         <source>&amp;Versions</source>
         <translation>&amp;Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1163"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1172"/>
         <source>&amp;Back</source>
         <translation>&amp;Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1165"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1174"/>
         <source>&amp;Forward</source>
         <translation>&amp;Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1167"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1176"/>
         <source>&amp;Up One Level</source>
         <translation>Eine Ebene &amp;nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1169"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1178"/>
         <source>&amp;Refresh</source>
         <translation>&amp;Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1171"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1180"/>
         <source>&amp;Go to Path…</source>
         <translation>&amp;Gehe zu Pfad…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1177"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1186"/>
         <source>&amp;Theme</source>
         <translation>&amp;Design</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1179"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1188"/>
         <source>&amp;Dark</source>
         <translation>&amp;Dunkel</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1180"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1189"/>
         <source>&amp;Light</source>
         <translation>&amp;Hell</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1181"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1190"/>
         <source>Follow &amp;System</source>
         <translation>&amp;System folgen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1200"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1209"/>
         <source>&amp;Bucket</source>
         <translation>B&amp;ucket</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1201"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1210"/>
         <source>&amp;New Bucket…</source>
         <translation>&amp;Neuer Bucket…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1204"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1213"/>
         <source>&amp;Properties…</source>
         <translation>&amp;Eigenschaften…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1209"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1218"/>
         <source>&amp;Delete Bucket…</source>
         <translation>Bucket &amp;löschen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1216"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1225"/>
         <source>&amp;Tools</source>
         <translation>E&amp;xtras</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1217"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1226"/>
         <source>Server &amp;Capabilities…</source>
         <translation>Server-&amp;Fähigkeiten…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1219"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1228"/>
         <source>&amp;Incomplete Uploads…</source>
         <translation>&amp;Unvollständige Uploads…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1222"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1231"/>
         <source>&amp;Settings…</source>
         <translation>&amp;Einstellungen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1226"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1235"/>
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1227"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1236"/>
         <source>&amp;About QBucket…</source>
         <translation>&amp;Über QBucket…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1228"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1237"/>
         <source>About &amp;Qt…</source>
         <translation>Über &amp;Qt…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1236"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1245"/>
         <source>Main</source>
         <translation>Haupt</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1255"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1264"/>
         <source>Upload</source>
         <translation>Hochladen</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="333"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1257"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1266"/>
         <source>Upload files or folders to the current location</source>
         <translation>Dateien oder Ordner an den aktuellen Ort hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1261"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1270"/>
         <source>Download the selection</source>
         <translation>Auswahl herunterladen</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="335"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1265"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1274"/>
         <source>New folder</source>
         <translation>Neuer Ordner</translation>
     </message>
@@ -4254,141 +4370,141 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Herunterladen nach</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1269"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1278"/>
         <source>Delete the selection</source>
         <translation>Auswahl löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1275"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1284"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1279"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1288"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1283"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1292"/>
         <source>Up one level</source>
         <translation>Eine Ebene nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1287"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1296"/>
         <source>Refresh</source>
         <translation>Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1295"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1304"/>
         <source>Filter this folder…</source>
         <translation>Diesen Ordner filtern…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1314"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1323"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1315"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1324"/>
         <source>Flat</source>
         <translation>Flach</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1316"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1325"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1333"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1342"/>
         <source>Folders: browse by prefix · Flat: every key below the current prefix · Versions: all object versions</source>
         <translation>Ordner: nach Präfix navigieren · Flach: alle Keys unterhalb des aktuellen Präfixes · Versionen: alle Objektversionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1339"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1348"/>
         <source>Toggle light / dark</source>
         <translation>Hell / dunkel umschalten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1346"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1355"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1421"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1431"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1438"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1430"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1440"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1447"/>
         <source>Transfers</source>
         <translation>Übertragungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1438"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1447"/>
         <source>No transfers.</source>
         <translation>Keine Übertragungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1440"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1449"/>
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1447"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1456"/>
         <source>&amp;Transfers Panel</source>
         <translation>&amp;Übertragungsbereich</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1094"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1459"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1103"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1468"/>
         <source>Not connected</source>
         <translation>Nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1096"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1473"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1105"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1482"/>
         <source>Offline</source>
         <translation>Offline</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1103"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1112"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1108"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1117"/>
         <source>Refreshing…</source>
         <translation>Wird aktualisiert…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1108"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1117"/>
         <source>Online</source>
         <translation>Online</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1112"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1121"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1467"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1476"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1548"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1557"/>
         <source>Account “%1” saved — its secret is kept for this session only.</source>
         <translation>Konto „%1“ gespeichert — sein geheimer Schlüssel wird nur für diese Sitzung gehalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1549"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1558"/>
         <source>Account “%1” saved.</source>
         <translation>Konto „%1“ gespeichert.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1556"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1565"/>
         <source>About QBucket</source>
         <translation>Über QBucket</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1557"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1566"/>
         <source>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;A native browser for S3 and S3-compatible object storage.&lt;/p&gt;&lt;p&gt;Built with Qt %2 Widgets. Licensed under the MIT license.&lt;/p&gt;</source>
         <translation>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;Ein nativer Browser für S3 und S3-kompatiblen Object Storage.&lt;/p&gt;&lt;p&gt;Erstellt mit Qt %2 Widgets. Lizenziert unter der MIT-Lizenz.&lt;/p&gt;</translation>
     </message>
@@ -4802,6 +4918,218 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/controllers/ObjectCopyRunner.cpp" line="198"/>
         <source>copied, but the original could not be deleted: %1</source>
         <translation>kopiert, aber das Original ließ sich nicht löschen: %1</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::ObjectLockJob</name>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="57"/>
+        <source>Set the retention of “%1”</source>
+        <translation>Aufbewahrung von „%1“ setzen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="58"/>
+        <source>Remove the retention of “%1”</source>
+        <translation>Aufbewahrung von „%1“ entfernen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="60"/>
+        <source>Put “%1” under legal hold</source>
+        <translation>„%1“ unter Legal Hold stellen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="60"/>
+        <source>Lift the legal hold of “%1”</source>
+        <translation>Legal Hold von „%1“ aufheben</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="73"/>
+        <source>no retention</source>
+        <translation>keine Aufbewahrung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="74"/>
+        <source>%1 until %2</source>
+        <translation>%1 bis %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="83"/>
+        <source>A retention lasts until a moment in the future.</source>
+        <translation>Eine Aufbewahrung dauert bis zu einem Zeitpunkt in der Zukunft.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="89"/>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="99"/>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="112"/>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="199"/>
+        <source>Not connected.</source>
+        <translation>Nicht verbunden.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="94"/>
+        <source>“%1” could not be read: %2</source>
+        <translation>„%1“ konnte nicht gelesen werden: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="107"/>
+        <source>The retention could not be read: %1</source>
+        <translation>Die Aufbewahrung konnte nicht gelesen werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="118"/>
+        <source>The legal hold could not be read: %1</source>
+        <translation>Der Legal Hold konnte nicht gelesen werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="136"/>
+        <source>Version %1.</source>
+        <translation>Version %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="137"/>
+        <source>Now: %1; legal hold %2.</source>
+        <translation>Jetzt: %1; Legal Hold %2.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="137"/>
+        <source>on</source>
+        <translation>ein</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="137"/>
+        <source>off</source>
+        <translation>aus</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="143"/>
+        <source>the legal hold is on already</source>
+        <translation>der Legal Hold ist bereits gesetzt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="143"/>
+        <source>there is no legal hold</source>
+        <translation>es gibt keinen Legal Hold</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="146"/>
+        <source>Put Under Legal Hold</source>
+        <translation>Unter Legal Hold stellen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="146"/>
+        <source>Lift Legal Hold</source>
+        <translation>Legal Hold aufheben</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="147"/>
+        <source>Under legal hold the version can&apos;t be deleted or overwritten — whatever its retention — until the hold is lifted.</source>
+        <translation>Unter Legal Hold lässt sich die Version nicht löschen oder überschreiben – unabhängig von ihrer Aufbewahrung –, bis der Hold aufgehoben ist.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="149"/>
+        <source>Without the hold, only its retention (if any) protects the version.</source>
+        <translation>Ohne den Hold schützt nur noch ihre Aufbewahrung (falls vorhanden) die Version.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="156"/>
+        <source>there is no retention</source>
+        <translation>es gibt keine Aufbewahrung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="160"/>
+        <source>A COMPLIANCE retention can&apos;t be removed — by anyone — until %1.</source>
+        <translation>Eine COMPLIANCE-Aufbewahrung kann niemand entfernen – bis %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="164"/>
+        <source>Remove Retention</source>
+        <translation>Aufbewahrung entfernen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="169"/>
+        <source>A COMPLIANCE retention can only be extended, by nobody shortened or weakened.</source>
+        <translation>Eine COMPLIANCE-Aufbewahrung lässt sich nur verlängern; verkürzen oder abschwächen kann sie niemand.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="173"/>
+        <source>the retention is set like that already</source>
+        <translation>die Aufbewahrung ist bereits so gesetzt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="176"/>
+        <source>Set Retention</source>
+        <translation>Aufbewahrung setzen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="177"/>
+        <source>New: %1.</source>
+        <translation>Neu: %1.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="180"/>
+        <source>COMPLIANCE: nobody — not even the account owner — can delete this version, shorten or remove the retention until it has run out.</source>
+        <translation>COMPLIANCE: Niemand – nicht einmal der Kontoinhaber – kann diese Version löschen oder die Aufbewahrung verkürzen oder entfernen, bis sie abgelaufen ist.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="187"/>
+        <source>This shortens or removes a GOVERNANCE retention: it needs the governance bypass below. Without it the server refuses.</source>
+        <translation>Das verkürzt oder entfernt eine GOVERNANCE-Aufbewahrung: Es braucht den Governance-Bypass unten. Ohne ihn lehnt der Server ab.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="203"/>
+        <source>Shortening or removing a GOVERNANCE retention needs the bypass — nothing was sent.</source>
+        <translation>Eine GOVERNANCE-Aufbewahrung zu verkürzen oder zu entfernen braucht den Bypass – nichts wurde gesendet.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="228"/>
+        <source>The server refused: protected by object lock, or not permitted (%1)</source>
+        <translation>Der Server lehnte ab: durch Object Lock geschützt oder nicht erlaubt (%1)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="229"/>
+        <source>The server refused: %1</source>
+        <translation>Der Server lehnte ab: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="264"/>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="278"/>
+        <source>not checked (not connected)</source>
+        <translation>nicht geprüft (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="273"/>
+        <source>%1 — but the object reads differently now</source>
+        <translation>%1 – aber das Objekt liest sich jetzt anders</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="284"/>
+        <source>read back: under legal hold</source>
+        <translation>zurückgelesen: unter Legal Hold</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="284"/>
+        <source>read back: no legal hold</source>
+        <translation>zurückgelesen: kein Legal Hold</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="285"/>
+        <source>the legal hold doesn&apos;t read back as set</source>
+        <translation>der Legal Hold liest sich nicht wie gesetzt zurück</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="296"/>
+        <source>read back: %1</source>
+        <translation>zurückgelesen: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="296"/>
+        <source>read back: no retention</source>
+        <translation>zurückgelesen: keine Aufbewahrung</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectLockJob.cpp" line="297"/>
+        <source>the retention doesn&apos;t read back as set</source>
+        <translation>die Aufbewahrung liest sich nicht wie gesetzt zurück</translation>
     </message>
 </context>
 <context>

@@ -50,6 +50,11 @@ public:
                AccountStore* accounts = nullptr, SecretStore* secrets = nullptr,
                QWidget* parent = nullptr);
 
+    // The Bucket menu (tests).
+    [[nodiscard]] QAction* newBucketAction() const { return m_actNewBucket; }
+    [[nodiscard]] QAction* bucketPropertiesAction() const { return m_actBucketProperties; }
+    [[nodiscard]] QAction* deleteBucketAction() const { return m_actDeleteBucket; }
+
 protected:
     void closeEvent(QCloseEvent* event) override;
 

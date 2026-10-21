@@ -61,7 +61,7 @@
 <context>
     <name>qbucket::DeleteBucketJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="165"/>
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="167"/>
         <source>%n object(s)</source>
         <translation>
             <numerusform>%n object</numerusform>
@@ -69,7 +69,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="166"/>
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="168"/>
         <source>%n version(s)</source>
         <translation>
             <numerusform>%n version</numerusform>
@@ -77,7 +77,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="168"/>
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="170"/>
         <source>%1, %n delete marker(s)</source>
         <translation>
             <numerusform>%1, %n delete marker</numerusform>
@@ -85,7 +85,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="170"/>
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="172"/>
         <source>%1, %n unfinished upload(s)</source>
         <translation>
             <numerusform>%1, %n unfinished upload</numerusform>
@@ -93,7 +93,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="239"/>
+        <location filename="../../src/controllers/DeleteBucketJob.cpp" line="241"/>
         <source>the bucket stays: %n version(s) could not be deleted</source>
         <translation>
             <numerusform>the bucket stays: one version could not be deleted</numerusform>
@@ -236,7 +236,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="507"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="509"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n version is still listed: %1</numerusform>
@@ -247,7 +247,7 @@
 <context>
     <name>qbucket::DetailPane</name>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="443"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="608"/>
         <source>Showing the newest %n version(s); open the versions view for all.</source>
         <translation>
             <numerusform>Showing the newest version; open the versions view for all.</numerusform>
@@ -255,7 +255,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="445"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="610"/>
         <source>%n version(s), newest first.</source>
         <translation>
             <numerusform>%n version.</numerusform>
@@ -263,7 +263,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="676"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="845"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -271,7 +271,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="679"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="848"/>
         <source>%n folder(s), their contents not counted yet</source>
         <translation>
             <numerusform>%n folder, its contents not counted yet</numerusform>
@@ -279,7 +279,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="848"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="1018"/>
         <source>counting… %n object(s), %1 so far</source>
         <translation>
             <numerusform>counting… %n object, %1 so far</numerusform>
@@ -287,7 +287,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="858"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="1028"/>
         <source>%n object(s), %1</source>
         <translation>
             <numerusform>%n object, %1</numerusform>
