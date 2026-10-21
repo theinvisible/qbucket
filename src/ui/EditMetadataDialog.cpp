@@ -57,7 +57,13 @@ void EditMetadataDialog::build_(const QString& intro)
     lay->addWidget(text);
 
     auto* form = new QFormLayout;
-    const std::pair<const char*, QString s3::ObjectHeaders::*> headers[] = {
+    // A struct, not std::pair: MSVC can't parse a pointer-to-member type as a
+    // template argument here (C3083).
+    struct Header {
+        const char* name;
+        QString s3::ObjectHeaders::*member;
+    };
+    const Header headers[] = {
         {"Content-Type", &s3::ObjectHeaders::contentType},
         {"Cache-Control", &s3::ObjectHeaders::cacheControl},
         {"Content-Disposition", &s3::ObjectHeaders::contentDisposition},

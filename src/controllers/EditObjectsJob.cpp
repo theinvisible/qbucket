@@ -65,7 +65,13 @@ QStringList headerDifferences(const s3::ObjectHeaders& want, const s3::ObjectHea
     // An empty content type becomes the server's default.
     if (!want.contentType.isEmpty() && want.contentType != have.contentType)
         out.append(QStringLiteral("Content-Type"));
-    const std::pair<const char*, QString s3::ObjectHeaders::*> fields[] = {
+    // A struct, not std::pair: MSVC can't parse a pointer-to-member type as a
+    // template argument here (C3083).
+    struct Field {
+        const char* name;
+        QString s3::ObjectHeaders::*member;
+    };
+    const Field fields[] = {
         {"Cache-Control", &s3::ObjectHeaders::cacheControl},
         {"Content-Disposition", &s3::ObjectHeaders::contentDisposition},
         {"Content-Encoding", &s3::ObjectHeaders::contentEncoding},
