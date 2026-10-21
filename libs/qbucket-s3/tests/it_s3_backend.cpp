@@ -11,7 +11,9 @@
 //             access to the bucket, for NotPermitted),
 //             QBUCKET_IT_VERSIONING_BUCKET (a qbucket-it-* scratch bucket
 //             holding guard/DO-NOT-DELETE.txt: toggleVersioning switches its
-//             versioning off and on again)
+//             versioning off and on again),
+//             QBUCKET_IT_RUN (16 hex digits: reuse an earlier run's prefix,
+//             e.g. to clean up after it)
 //
 // Known deviations of a backend live in tests/data/it-expectations/
 // <backend>.json. They are asserted, not just skipped — when a backend
@@ -146,10 +148,10 @@ private:
     }
 
     // Every key under `prefix`, walking all pages.
-    Result<QStringList> listKeys(const QString& prefix, int maxKeys = 1000)
+    Result<QStringList> listKeys(const QString& prefix, int maxKeys = 1000, const QString& bucket = {})
     {
         ListObjectsParams p;
-        p.bucket = m_bucket;
+        p.bucket = bucket.isEmpty() ? m_bucket : bucket;
         p.prefix = prefix;
         p.maxKeys = maxKeys;
         ListObjectsPager pager(*m_session, p);
@@ -238,6 +240,17 @@ private:
     {
         const Result<DeleteObjectsResult> r = await<DeleteObjectsResult>(
             [&](auto cb) { m_session->deleteObjects(bucket, batch, &m_ctx, std::move(cb)); });
+        if (!r && r.error().category == ErrorCategory::InvalidRequest) {
+            // A key XML can't carry (control characters) refuses the whole
+            // batch: one by one instead.
+            for (const ObjectIdentifier& o : batch) {
+                const Result<DeleteObjectResult> one = await<DeleteObjectResult>(
+                    [&](auto cb) { m_session->deleteObject(bucket, o.key, o.versionId, &m_ctx, std::move(cb)); });
+                if (!one)
+                    qWarning().noquote() << "cleanup left" << o.key << o.versionId << one.error().toString();
+            }
+            return;
+        }
         if (!r) {
             qWarning().noquote() << "cleanup:" << r.error().toString();
             return;
@@ -260,7 +273,7 @@ private:
                 if (v.key.startsWith(m_prefix))
                     all.append({v.key, v.versionId});
             }
-        } else if (const Result<QStringList> keys = listKeys(prefix)) {   // no version listing (Garage)
+        } else if (const Result<QStringList> keys = listKeys(prefix, 1000, bucket)) {   // no version listing (Garage)
             for (const QString& k : keys.value()) {
                 if (k.startsWith(m_prefix))
                     all.append({k, {}});
@@ -380,8 +393,16 @@ private Q_SLOTS:
         QVERIFY2(m_options.endpoint.isValid(), qPrintable(m_options.endpoint.validationError()));
         m_session = std::make_unique<Session>(m_options);
 
-        const quint64 run = QRandomGenerator::global()->generate64();
-        m_prefix = QStringLiteral("it/%1/").arg(run, 16, 16, QLatin1Char('0'));
+        // QBUCKET_IT_RUN repeats an earlier run's prefix — to clean up after
+        // it: `it_s3_backend bucketIsVisible` (any one test; the cleanup runs).
+        static const QRegularExpression runId(QStringLiteral("^[0-9a-f]{16}$"));
+        if (!env("QBUCKET_IT_RUN").isEmpty()) {
+            QVERIFY2(runId.match(env("QBUCKET_IT_RUN")).hasMatch(), "QBUCKET_IT_RUN must be 16 hex digits");
+            m_prefix = QStringLiteral("it/%1/").arg(env("QBUCKET_IT_RUN"));
+        } else {
+            const quint64 run = QRandomGenerator::global()->generate64();
+            m_prefix = QStringLiteral("it/%1/").arg(run, 16, 16, QLatin1Char('0'));
+        }
         qInfo().noquote() << "backend" << m_backend << "bucket" << m_bucket << "prefix" << m_prefix;
 
         if (env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1")) {
@@ -400,6 +421,9 @@ private Q_SLOTS:
             deleteAllUnder(m_prefix);
             if (!m_versionBucket.isEmpty() && m_versionBucket != m_bucket)
                 deleteAllUnder(m_prefix, m_versionBucket);
+            const QString second = env("QBUCKET_IT_SECOND_BUCKET");   // crossBucketCopy's target
+            if (safeBucketName(second) && second != m_bucket)
+                deleteAllUnder(m_prefix, second);
         }
     }
 

@@ -27,6 +27,8 @@
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 
+#include <qbucket/s3/ListObjectVersionsPager.h>
+#include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
 
 #include <QCryptographicHash>
@@ -103,37 +105,70 @@ private slots:
         }
     }
 
+    // Deletes every version and delete marker under m_root in `bucket`
+    // (current objects only where versions can't be listed), one by one.
+    void purgeRoot(const QString& bucket)
+    {
+        QList<s3::ObjectIdentifier> all;
+        bool listed = false;
+        {
+            s3::ListObjectVersionsParams p;
+            p.bucket = bucket;
+            p.prefix = m_root;
+            s3::ListObjectVersionsPager pager(*session(), p);
+            listed = true;
+            while (pager.hasMore() && listed) {
+                std::optional<s3::Result<s3::ListObjectVersionsPage>> r;
+                QObject ctx;
+                pager.fetchNext(&ctx, [&](s3::Result<s3::ListObjectVersionsPage> res) { r.emplace(std::move(res)); });
+                QTRY_VERIFY_WITH_TIMEOUT(r.has_value(), 30000);
+                if (!*r) {
+                    listed = false;
+                    break;
+                }
+                for (const s3::VersionEntry& v : (*r)->entries)
+                    all.append({v.key, v.versionId});
+            }
+        }
+        if (!listed) {   // no version listing (Garage): the current objects
+            all.clear();
+            s3::ListObjectsParams p;
+            p.bucket = bucket;
+            p.prefix = m_root;
+            s3::ListObjectsPager pager(*session(), p);
+            while (pager.hasMore()) {
+                std::optional<s3::Result<s3::ListPage>> r;
+                QObject ctx;
+                pager.fetchNext(&ctx, [&](s3::Result<s3::ListPage> res) { r.emplace(std::move(res)); });
+                QTRY_VERIFY_WITH_TIMEOUT(r.has_value(), 30000);
+                if (!*r)
+                    break;
+                for (const s3::ObjectEntry& e : (*r)->objects)
+                    all.append({e.key, QString()});
+            }
+        }
+        for (const s3::ObjectIdentifier& o : std::as_const(all)) {
+            QVERIFY(o.key.startsWith(m_root));
+            QObject ctx;
+            std::optional<s3::Result<s3::DeleteObjectResult>> r;
+            session()->deleteObject(bucket, o.key, o.versionId, &ctx,
+                                    [&](s3::Result<s3::DeleteObjectResult> res) { r.emplace(std::move(res)); });
+            QTRY_VERIFY_WITH_TIMEOUT(r.has_value(), 30000);
+            if (!*r)
+                qWarning().noquote() << "cleanup left" << bucket << o.key << o.versionId << r->error().toString();
+        }
+    }
+
     void cleanupTestCase()
     {
         if (!m_sessions)
             return;
-        // Everything below this run's root, and nothing else.
-        QStringList keys;
-        QString token;
-        for (int page = 0; page < 100; ++page) {
-            s3::ListObjectsParams p;
-            p.bucket = m_bucket;
-            p.prefix = m_root;
-            p.continuationToken = token;
-            std::optional<s3::Result<s3::ListPage>> r;
-            QObject ctx;
-            session()->listObjects(p, &ctx, [&](s3::Result<s3::ListPage> res) { r.emplace(std::move(res)); });
-            QTRY_VERIFY_WITH_TIMEOUT(r.has_value(), 30000);
-            if (!*r)
-                break;
-            for (const s3::ObjectEntry& e : (*r)->objects)
-                keys.append(e.key);
-            if (!(*r)->isTruncated)
-                break;
-            token = (*r)->nextContinuationToken;
-        }
-        for (const QString& k : std::as_const(keys)) {
-            QVERIFY(k.startsWith(m_root));
-            QObject ctx;
-            bool done = false;
-            session()->deleteObject(m_bucket, k, QString(), &ctx, [&](const s3::Result<s3::DeleteObjectResult>&) { done = true; });
-            QTRY_VERIFY_WITH_TIMEOUT(done, 30000);
-        }
+        // Everything below this run's root, and nothing else — every version
+        // and delete marker on versioned buckets; also in the second bucket.
+        purgeRoot(m_bucket);
+        const QString second = qEnvironmentVariable("QBUCKET_IT_SECOND_BUCKET");
+        if (!second.isEmpty() && second != m_bucket)
+            purgeRoot(second);
         // Unfinished multipart uploads of this run (a failed upload job).
         s3::ListMultipartUploadsParams up;
         up.bucket = m_bucket;
