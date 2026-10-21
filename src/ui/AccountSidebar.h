@@ -52,6 +52,7 @@ public:
 
 signals:
     void addAccountRequested();
+    void importAccountsRequested();
     // The current row became a bucket / an account (or a status row of it).
     void bucketSelected(const QUuid& account, const QString& bucket);
     void accountSelected(const QUuid& account);

@@ -55,6 +55,7 @@ public:
     [[nodiscard]] QAction* newBucketAction() const { return m_actNewBucket; }
     [[nodiscard]] QAction* bucketPropertiesAction() const { return m_actBucketProperties; }
     [[nodiscard]] QAction* deleteBucketAction() const { return m_actDeleteBucket; }
+    [[nodiscard]] QAction* importAccountsAction() const { return m_actImportAccounts; }
     // Bookmarks (tests).
     [[nodiscard]] QAction* addBookmarkAction() const { return m_actAddBookmark; }
     [[nodiscard]] QMenu* bookmarksMenu() const { return m_bookmarksMenu; }
@@ -124,6 +125,7 @@ private:
     void applyThemeChoice_();
     void showSettingsDialog_();
     void showAddAccountDialog_();
+    void showImportAccountsDialog_();
     void showAbout_();
     // Bookmarks and recent locations.
     void addBookmark_();
@@ -151,6 +153,7 @@ private:
     QMenu*        m_editMenu        = nullptr;
     QMenu*        m_viewMenu        = nullptr;
     QAction*      m_actAddAccount   = nullptr;
+    QAction*      m_actImportAccounts = nullptr;
     QAction*      m_actQuit         = nullptr;
     QActionGroup* m_browseModeGroup = nullptr;
     QAction*      m_actFolders      = nullptr;

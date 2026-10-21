@@ -61,6 +61,14 @@ qbucket_add_test(test_location_store
     test_location_store.cpp
     qbucket_accounts
 )
+qbucket_add_test(test_account_import
+    test_account_import.cpp
+    qbucket_controllers
+)
+qbucket_add_test(test_import_accounts_dialog
+    test_import_accounts_dialog.cpp
+    qbucket_app_ui
+)
 
 qbucket_add_test(test_secret_store
     test_secret_store.cpp

@@ -30,6 +30,7 @@
 #include "ui/CreateBucketDialog.h"
 #include "ui/CapabilitiesDialog.h"
 #include "ui/EditMetadataDialog.h"
+#include "ui/ImportAccountsDialog.h"
 #include "ui/IncompleteUploadsDialog.h"
 #include "ui/ManageBookmarksDialog.h"
 #include "ui/LogPanel.h"
@@ -184,9 +185,12 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
 
     const bool accountsAvailable = m_sessions != nullptr;
     m_actAddAccount->setEnabled(accountsAvailable);
+    m_actImportAccounts->setEnabled(accountsAvailable);
     if (accountsAvailable) {
         connect(m_actAddAccount, &QAction::triggered, this, &MainWindow::showAddAccountDialog_);
         connect(m_sidebar, &AccountSidebar::addAccountRequested, this, &MainWindow::showAddAccountDialog_);
+        connect(m_actImportAccounts, &QAction::triggered, this, &MainWindow::showImportAccountsDialog_);
+        connect(m_sidebar, &AccountSidebar::importAccountsRequested, this, &MainWindow::showImportAccountsDialog_);
         connect(m_secrets, &SecretStore::sessionOnlyModeEntered, this, [this](const QString& reason) {
             statusBar()->showMessage(
                 tr("No system keychain available — secrets are kept for this session only (%1).").arg(reason));
@@ -1237,6 +1241,8 @@ void MainWindow::buildMenuBar_()
     auto* file = mb->addMenu(tr("&File"));
     m_actAddAccount = file->addAction(tr("Add &Account…"));
     m_actAddAccount->setEnabled(false);
+    m_actImportAccounts = file->addAction(tr("&Import Accounts…"));
+    m_actImportAccounts->setEnabled(false);
     file->addSeparator();
     m_actQuit = file->addAction(tr("&Quit"), qApp, &QApplication::quit);
     setStandardShortcut(m_actQuit, QKeySequence::Quit);
@@ -1656,6 +1662,20 @@ void MainWindow::showSettingsDialog_()
 {
     SettingsDialog dlg(m_settings, this);
     dlg.exec();
+}
+
+void MainWindow::showImportAccountsDialog_()
+{
+    auto* dlg = new ImportAccountsDialog(m_accounts, m_secrets, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &ImportAccountsDialog::imported, this, [this](int count, bool sessionOnly) {
+        statusBar()->showMessage(sessionOnly
+                                     ? tr("%n account(s) imported — their secrets are kept for this session only.",
+                                          nullptr, count)
+                                     : tr("%n account(s) imported.", nullptr, count),
+                                 8000);
+    });
+    dlg->open();
 }
 
 void MainWindow::showAddAccountDialog_()

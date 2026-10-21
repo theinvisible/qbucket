@@ -270,6 +270,7 @@ void AccountSidebar::showContextMenu_(const QPoint& pos)
     QMenu menu(this);
     if (!index.isValid()) {
         menu.addAction(tr("Add Account…"), this, &AccountSidebar::addAccountRequested);
+        menu.addAction(tr("Import Accounts…"), this, &AccountSidebar::importAccountsRequested);
         menu.exec(m_tree->viewport()->mapToGlobal(pos));
         return;
     }

@@ -31,6 +31,8 @@ add_library(qbucket_accounts STATIC
     accounts/KeychainCredentialsProvider.cpp
     accounts/LocationStore.h
     accounts/LocationStore.cpp
+    accounts/RcloneConfigReader.h
+    accounts/RcloneConfigReader.cpp
     accounts/QtKeychain.h
     accounts/QtKeychainBackend.h
     accounts/QtKeychainBackend.cpp
@@ -47,6 +49,8 @@ target_link_libraries(qbucket_accounts
 add_library(qbucket_controllers STATIC
     controllers/AbortUploadsJob.h
     controllers/AbortUploadsJob.cpp
+    controllers/AccountImporter.h
+    controllers/AccountImporter.cpp
     controllers/AccountSessions.h
     controllers/AccountSessions.cpp
     controllers/ActivityLog.h
@@ -228,6 +232,8 @@ add_library(qbucket_app_ui STATIC
     ui/SettingsDialog.cpp
     ui/TransferPanel.h
     ui/TransferPanel.cpp
+    ui/ImportAccountsDialog.h
+    ui/ImportAccountsDialog.cpp
     ui/IncompleteUploadsDialog.h
     ui/IncompleteUploadsDialog.cpp
     ui/ManageBookmarksDialog.h

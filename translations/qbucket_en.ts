@@ -377,6 +377,17 @@
     </message>
 </context>
 <context>
+    <name>qbucket::ImportAccountsDialog</name>
+    <message numerus="yes">
+        <location filename="../../src/ui/ImportAccountsDialog.cpp" line="260"/>
+        <source>Import %n Account(s)</source>
+        <translation>
+            <numerusform>Import %n Account</numerusform>
+            <numerusform>Import %n Accounts</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::IncompleteUploadsDialog</name>
     <message numerus="yes">
         <location filename="../../src/ui/IncompleteUploadsDialog.cpp" line="79"/>
@@ -398,7 +409,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="258"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="262"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -406,7 +417,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="734"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="738"/>
         <source>%n folder(s) of s3://%1</source>
         <translation>
             <numerusform>%n folder of s3://%1</numerusform>
@@ -414,11 +425,27 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="877"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="881"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
             <numerusform>%1 (%2) and %n more</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/MainWindow.cpp" line="1673"/>
+        <source>%n account(s) imported — their secrets are kept for this session only.</source>
+        <translation>
+            <numerusform>%n account imported — its secret is kept for this session only.</numerusform>
+            <numerusform>%n accounts imported — their secrets are kept for this session only.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/MainWindow.cpp" line="1675"/>
+        <source>%n account(s) imported.</source>
+        <translation>
+            <numerusform>%n account imported.</numerusform>
+            <numerusform>%n accounts imported.</numerusform>
         </translation>
     </message>
 </context>

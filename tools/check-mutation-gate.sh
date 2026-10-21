@@ -17,4 +17,14 @@ if [ -n "$hits" ]; then
     echo "$hits"
     exit 1
 fi
+# PLAN.md §3.1 — no hostname sniffing: ProviderRegistry::matchEndpoint only
+# suggests a profile when an account is set up (the import), never picks
+# behaviour while talking to a server.
+sniff=$(grep -rn 'matchEndpoint' src --include='*.cpp' --include='*.h' \
+        | grep -v '^src/controllers/AccountImporter\.' || true)
+if [ -n "$sniff" ]; then
+    echo "ProviderRegistry::matchEndpoint outside the account import (PLAN.md §3.1):"
+    echo "$sniff"
+    exit 1
+fi
 echo "mutation gate: ok"
