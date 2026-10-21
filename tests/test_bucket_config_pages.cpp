@@ -11,12 +11,14 @@
 #include "controllers/OperationController.h"
 #include "support/AccountHarness.h"
 #include "ui/AclSection.h"
+#include "controllers/DeleteBucketJob.h"
 #include "ui/BucketPropertiesDialog.h"
 #include "ui/CodeEditor.h"
 #include "ui/CreateBucketDialog.h"
 #include "ui/CorsPage.h"
 #include "ui/LifecyclePage.h"
 #include "ui/ObjectLockPage.h"
+#include "ui/OperationPreviewDialog.h"
 #include "ui/OtherConfigPage.h"
 #include "ui/PolicyPage.h"
 #include "ui/PublicAccessBlockSection.h"
@@ -470,6 +472,25 @@ private slots:
         shoot(BucketPropertiesDialog::LifecycleSettingsPage, nullptr, "bucket-lifecycle.png");
         shoot(BucketPropertiesDialog::ObjectLockSettingsPage, dlg->objectLockPage(), "bucket-object-lock.png");
         shoot(BucketPropertiesDialog::AccessSettingsPage, dlg->aclSection(), "bucket-access.png");
+        dlg->close();
+
+        // Deleting the bucket with what is in it: the preview.
+        for (const char* key : {"site/index.html", "site/logo.svg", "logs/2026-10-20.log", "logs/2026-10-21.log"})
+            m_objects->putObject(kBucket, QLatin1String(key), "x");
+        m_objects->putObject(kBucket, QStringLiteral("site/index.html"), "y");
+        m_objects->deleteObject(kBucket, QStringLiteral("logs/2026-10-20.log"));
+        disconnect(m_ops.get(), &OperationController::previewNeeded, this, nullptr);
+        OperationPreviewDialog* preview = nullptr;
+        connect(m_ops.get(), &OperationController::previewNeeded, this, [&preview](Job* job) {
+            preview = new OperationPreviewDialog(job);
+            preview->setAttribute(Qt::WA_DeleteOnClose);
+            preview->show();
+        });
+        m_ops->start(new DeleteBucketJob(m_h->account, kBucket, true, m_ops->planDir()));
+        QTRY_VERIFY_WITH_TIMEOUT(preview != nullptr, 10000);
+        QTest::qWait(500);
+        QVERIFY(preview->grab().save(QDir(dir).filePath(QStringLiteral("delete-bucket-preview.png"))));
+        preview->reject();
         m_theme.apply(QStringLiteral("Light"));
     }
 };

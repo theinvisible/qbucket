@@ -57,6 +57,9 @@ canned ACLs; presigned links; folder size).
 **M5 done** — devlog 008 (versions view and tab, download / link / restore
 a version, delete versions for good, undelete, the versioning switch in
 Bucket Properties).
+**M6 done** — devlog 009 (bucket policy, CORS, lifecycle, access, object
+lock in Bucket Properties; retention and legal hold per object; the
+governance bypass; creating and deleting buckets).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -127,6 +130,20 @@ What exists:
   undelete), `RestoreVersionsJob` (on `InPlaceCopy`), version downloads and
   links, `SetBucketVersioningJob`, `ui/BucketPropertiesDialog`,
   `ui/UndeleteDialog`; `CapabilityController::versioningOf()`.
+- Bucket management (M6), library: `BucketConfig.h` (one transport for
+  every configuration document, typed lossless-or-saying-so views of CORS,
+  lifecycle, object lock, public access block; policy checks; bucket name
+  rules), write guards (answers like CreateBucket / DeleteBucket are
+  Protocol errors), eight write-only `*Write` features, object retention /
+  legal hold, the governance bypass on deletes, `CephProfile`,
+  `ProviderProfile::bucketEmptinessSettleSecs()`.
+- Bucket management (M6), app: `SetBucketConfigJob`, `CreateBucketJob`,
+  `DeleteBucketJob`, `ObjectLockJob`, `VersionPurger` (shared with
+  `DeleteVersionsJob`); `Preview::bypassOffer`; Bucket Properties pages
+  (`ui/BucketConfigPage` + `PolicyPage`, `CorsPage`, `LifecyclePage`,
+  `AclSection`, `PublicAccessBlockSection`, `ObjectLockPage`,
+  `OtherConfigPage`, `ui/CodeEditor`), `ui/CreateBucketDialog`, the
+  Bucket menu, the DetailPane Lock tab.
 - `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
   with the tests, run by hand, release builds only; `--version-keys` for
   the versions view).
@@ -137,7 +154,7 @@ What exists:
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M6** (bucket management).
+Next: **M7** (drag out & platform polish).
 
 ## Devlog
 
@@ -212,8 +229,11 @@ ctest --test-dir build -L docker
 # Hetzner (qbucket-it-* buckets with a guard object only):
 #   set -a; . ~/.config/qbucket-it/hetzner.env; set +a
 #   build/libs/qbucket-s3/tests/it_s3_backend    (+ QBUCKET_IT_SECOND_BUCKET=qbucket-it-lock
-#                                                   QBUCKET_IT_VERSIONING_BUCKET=qbucket-it-versioning)
-#   build/tests/it_operations; build/tests/it_browser   (it_browser: read-only account)
+#                                                   QBUCKET_IT_VERSIONING_BUCKET=qbucket-it-versioning
+#                                                   QBUCKET_IT_CONFIG_BUCKET=qbucket-it-versioning
+#                                                   QBUCKET_IT_LOCKCFG_BUCKET=qbucket-it-lockcfg
+#                                                   QBUCKET_IT_TEMP_BUCKETS=1)
+#   build/tests/it_operations (same variables); build/tests/it_browser   (it_browser: read-only account)
 # listing budgets (release build; offscreen — the budgets' platform)
 QT_QPA_PLATFORM=offscreen build-release/bench/bench_listing --keys 100000 --flat-keys 1000000 --version-keys 250000
 # transfer budgets: GUI stalls while planning 1M files / uploading / browsing,
@@ -488,6 +508,21 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
   ?versioning` needs `bucket.versioning-write` (Hetzner: confirmed by
   canary + toggle on `qbucket-it-versioning`, 2026-10-21); never sent with
   MfaDelete. Destructive version jobs need the bucket probed first.
+- **Bucket configuration writes have write-only features** (one per kind,
+  PUT and DELETE): a read probe never sets them; a profile does after a
+  canary + write / read / remove on a guarded scratch bucket (Hetzner: all
+  confirmed 2026-10-21; Ceph: all; Garage: CORS and lifecycle; VersityGW
+  without lifecycle, public access block, ACL). A removal is followed by a
+  look at the bucket. Editors never drop what their form can't show
+  (`lossless`).
+- **Hetzner's DeleteBucket deletes a bucket that looked empty within the
+  last ~10 s — with the objects just written** (the proxy decides by lagging
+  statistics). `bucketEmptinessSettleSecs()` (Hetzner 20): list it empty,
+  wait, list again, then delete; never trust BucketNotEmpty alone there.
+  A guard object protects only once it is older than that.
+- Hetzner: a default retention reaches new versions only after up to
+  ~1.5 min; one gateway may not know an hour-old bucket (empty-message
+  NoSuchBucket, retried). COMPLIANCE is never set on a real server in tests.
 - "Folders" are prefixes; a `prefix/` marker object may or may not exist.
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.

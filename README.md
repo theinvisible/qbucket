@@ -4,7 +4,7 @@ A native desktop browser for **S3 and S3-compatible object storage** —
 Hetzner Object Storage, Ceph RGW, AWS S3 and others. Windows and Linux,
 MIT-licensed, built with C++20 and Qt 6 Widgets.
 
-> **Status: early development (M5 — versioning).** Accounts with
+> **Status: early development (M6 — bucket management).** Accounts with
 > the secret in the system keychain, browsing buckets and folders of any
 > size, object details, the server's capabilities; new folder, delete,
 > rename; uploads and downloads of any size — multipart, verified by MD5,
@@ -12,7 +12,10 @@ MIT-licensed, built with C++20 and Qt 6 Widgets.
 > from the file manager; copy / move (also between buckets) with Ctrl+C / X
 > / V and drag & drop; headers, metadata, storage class, tags and canned
 > ACLs; presigned links; folder sizes; object versions — browse, download,
-> restore, delete for good, undelete folders, switch a bucket's versioning.
+> restore, delete for good, undelete folders, switch a bucket's versioning;
+> bucket policy, CORS and lifecycle rules, ACL and public access block,
+> object lock (default retention, retention and legal hold per object, the
+> governance bypass per operation); creating and deleting buckets.
 > Every change is planned, previewed, verified and journaled. See
 > [PLAN.md](PLAN.md).
 

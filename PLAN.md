@@ -752,7 +752,21 @@ locked versions are reported, never bypassed (object lock: M6).
 - Download a specific version, restore (copy old version over latest),
   delete a version permanently, remove a delete marker (= undelete)
 
-### M6 — Bucket management — **L** (1.5 weeks)
+### M6 — Bucket management — **L** (1.5 weeks) — ✅ done (devlog 009)
+
+Implemented in 7 commits on `main` (library first). Deviations from the
+text below: editors for what Hetzner supports (policy, CORS, lifecycle,
+access, object lock) — bucket tagging, logging, website, replication and
+encryption are shown read-only; the ACL is canned only (grants shown, not
+edited); object lock is offered only when a bucket is created; no separate
+`SessionController` (the capability controller and the profiles merge as
+described). Added: one configuration transport with lossless-or-saying-so
+typed views (a form never drops what it can't show), eight write-only
+`*Write` features, guards against answers that look like CreateBucket /
+DeleteBucket, the governance bypass per operation (never preset, typed),
+`CephProfile`, and `ProviderProfile::bucketEmptinessSettleSecs()` — Hetzner
+deletes a bucket that looked empty within ~10 s together with what was
+just written, so a bucket is listed empty twice before DeleteBucket.
 
 `BucketPropertiesDialog` with the xyz-profiler preferences-sidebar look.
 Each category is driven by the capability safeguard (§3.3): unsupported
@@ -1248,7 +1262,7 @@ regressions show up.
 | M3 ✅ | Content-MD5 per part, download verification, `.qbpart` atomic finalize, conflict dialog, journal + crash/resume tests, QNAM pool, adaptive concurrency |
 | M4 ✅ | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
 | M5 ✅ | Versioning-aware confirmations, separate permanent-delete flow |
-| M6 | Read-back verification of every bucket config write, object-lock/governance safeguards |
+| M6 | Read-back verification of every bucket config write, object-lock/governance safeguards ✅ |
 
 **Effect on the timeline:** roughly **+2 weeks** overall (fault-injection
 server, operation planning, journal, verification paths). Parity estimate

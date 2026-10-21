@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QTabWidget>
@@ -104,7 +105,12 @@ LifecyclePage::LifecyclePage(const Context& context, QWidget* parent)
     buttons->addWidget(m_removeRule);
     leftLay->addLayout(buttons);
     split->addWidget(left);
-    split->addWidget(buildForm_());
+    // Scrolls rather than squeezes the fields when the window is low.
+    auto* formScroll = new QScrollArea;
+    formScroll->setWidget(buildForm_());
+    formScroll->setWidgetResizable(true);
+    formScroll->setFrameShape(QFrame::NoFrame);
+    split->addWidget(formScroll);
     split->setStretchFactor(1, 1);
     split->setSizes({150, 400});
     m_tabs->addTab(split, tr("Rules"));
