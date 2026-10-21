@@ -19,6 +19,7 @@ constexpr auto kKeyDownloadDir    = "transfers/download_directory";
 constexpr auto kKeyParallelParts  = "transfers/parallel_parts";
 constexpr auto kKeyThreads        = "transfers/threads";
 constexpr auto kKeyBookmarksOpen  = "ui/bookmarks_expanded";
+constexpr auto kKeyFetchConfirm   = "transfers/fetch_confirm_mib";
 
 QString systemDownloadDirectory()
 {
@@ -85,6 +86,17 @@ void SettingsController::load_()
     m_transferThreads = std::clamp(m_store->value(QLatin1String(kKeyThreads), 4).toInt(),
                                    kMinTransferThreads, kMaxTransferThreads);
     m_bookmarksExpanded = m_store->value(QLatin1String(kKeyBookmarksOpen), true).toBool();
+    m_fetchConfirmMiB = std::clamp(m_store->value(QLatin1String(kKeyFetchConfirm), 100).toInt(),
+                                   kMinFetchConfirmMiB, kMaxFetchConfirmMiB);
+}
+
+void SettingsController::setFetchConfirmMiB(int mib)
+{
+    const int next = std::clamp(mib, kMinFetchConfirmMiB, kMaxFetchConfirmMiB);
+    if (m_fetchConfirmMiB == next) return;
+    m_fetchConfirmMiB = next;
+    write_(QString::fromLatin1(kKeyFetchConfirm), m_fetchConfirmMiB);
+    emit transferSettingsChanged();
 }
 
 void SettingsController::setBookmarksExpanded(bool expanded)

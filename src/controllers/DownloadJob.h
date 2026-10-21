@@ -47,6 +47,23 @@ public:
         // false: a single object without a local conflict on a
         // non-production account starts without the preview.
         bool alwaysConfirm = true;
+        // Into the application's own cache (open in another app, drag out):
+        // no resume record (nothing to continue next session), and the
+        // preview only above confirmAboveBytes (< 0: never) or when objects
+        // are left out. alwaysConfirm is ignored.
+        bool transient = false;
+        qint64 confirmAboveBytes = -1;
+        // Keep what was downloaded for doneItems() (small jobs only).
+        bool listDone = false;
+    };
+    // A downloaded file (Options::listDone).
+    struct DoneItem {
+        QString key;
+        QString versionId;
+        QString path;         // absolute
+        QString etag;
+        qint64 size = 0;
+        bool md5Verified = false;
     };
 
     static constexpr int kParallelFiles = 8;
@@ -72,6 +89,8 @@ public:
 
     [[nodiscard]] QString targetDir() const { return m_target; }
     [[nodiscard]] QList<Item> failedItems() const { return m_failedItems; }
+    [[nodiscard]] QList<DoneItem> doneItems() const { return m_doneItems; }
+    [[nodiscard]] bool isTransient() const { return m_options.transient; }
     [[nodiscard]] qint64 md5Verified() const { return m_md5Verified; }
     [[nodiscard]] qint64 sizeVerified() const { return m_sizeVerified; }
 
@@ -173,6 +192,7 @@ private:
     QStringList m_failures;
     QStringList m_notes;
     QList<Item> m_failedItems;
+    QList<DoneItem> m_doneItems;
     qint64 m_readOrdinal = 0;
     bool m_resuming = false;
     TransferJobStore::Record m_record;

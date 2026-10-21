@@ -2,11 +2,13 @@
 
 #include "models/ObjectSelection.h"
 #include <QMainWindow>
+#include <QUuid>
 
 class QAction;
 class QActionGroup;
 class QButtonGroup;
 class QDockWidget;
+class QFrame;
 class QLabel;
 class QLineEdit;
 class QMenu;
@@ -25,6 +27,7 @@ class CapabilityController;
 class CapabilityStore;
 class Job;
 class Journal;
+class OpenFileService;
 class OperationController;
 class PresignService;
 class TransferService;
@@ -60,6 +63,9 @@ public:
     [[nodiscard]] QAction* addBookmarkAction() const { return m_actAddBookmark; }
     [[nodiscard]] QMenu* bookmarksMenu() const { return m_bookmarksMenu; }
     [[nodiscard]] LocationStore* locations() const { return m_locations; }
+    // Objects opened in another application (tests).
+    [[nodiscard]] OpenFileService* openFiles() const { return m_openFiles; }
+    [[nodiscard]] QFrame* changeBar() const { return m_changeBar; }
 
 protected:
     void closeEvent(QCloseEvent* event) override;
@@ -132,6 +138,13 @@ private:
     void fillBookmarksMenu_();
     void manageBookmarks_();
     void pruneLocations_();
+    // Open in the default application; the bar for changed files.
+    void connectOpenFiles_();
+    void updateChangeBar_();
+    void showOpenFiles_();
+    void showFolder_(const QString& filePath);
+    // Quitting with changed files that were not uploaded: false = ask first.
+    bool openFilesSettled_();
 
     SettingsController* m_settings;
     ThemeManager*       m_theme;
@@ -147,6 +160,11 @@ private:
     TransferService* m_transfers = nullptr;
     TransferModel* m_transferModel = nullptr;
     LocationStore* m_locations = nullptr;
+    OpenFileService* m_openFiles = nullptr;
+    QFrame* m_changeBar = nullptr;
+    QLabel* m_changeText = nullptr;
+    QUuid m_changeId;
+    bool m_quitDecided = false;
     QTabWidget* m_dockTabs = nullptr;
 
     // Menu actions
@@ -170,6 +188,7 @@ private:
     QAction*      m_actThemeSystem  = nullptr;
     QAction*      m_actCapabilities = nullptr;
     QAction*      m_actIncompleteUploads = nullptr;
+    QAction*      m_actOpenFiles = nullptr;
     QAction*      m_actNewBucket = nullptr;
     QAction*      m_actBucketProperties = nullptr;
     QAction*      m_actDeleteBucket = nullptr;

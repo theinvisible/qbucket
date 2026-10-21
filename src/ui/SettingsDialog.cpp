@@ -151,6 +151,16 @@ QWidget* SettingsDialog::buildTransfersPage_()
     m_threads->setValue(m_settings->transferThreads());
     connect(m_threads, &QSpinBox::valueChanged, m_settings, &SettingsController::setTransferThreads);
     form->addRow(tr("Transfer threads per account:"), m_threads);
+
+    auto* fetch = new QSpinBox;
+    fetch->setObjectName(QStringLiteral("fetchConfirm"));
+    fetch->setRange(SettingsController::kMinFetchConfirmMiB, SettingsController::kMaxFetchConfirmMiB);
+    fetch->setSuffix(QStringLiteral(" MiB"));
+    fetch->setValue(m_settings->fetchConfirmMiB());
+    fetch->setToolTip(tr("Opening an object in another application or dragging it out downloads it first; "
+                         "above this size QBucket asks."));
+    connect(fetch, &QSpinBox::valueChanged, m_settings, &SettingsController::setFetchConfirmMiB);
+    form->addRow(tr("Ask before fetching more than:"), fetch);
     lay->addLayout(form);
 
     auto* hint = new QLabel(

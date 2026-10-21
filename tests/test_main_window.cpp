@@ -153,6 +153,12 @@ private:
         dir->setText(QDir::tempPath());
         emit dir->editingFinished();
         QCOMPARE(settings.downloadDirectory(), QDir::cleanPath(QDir::tempPath()));
+        auto* fetch = dlg.findChild<QSpinBox*>(QStringLiteral("fetchConfirm"));
+        QVERIFY(fetch);
+        QCOMPARE(fetch->value(), 100);
+        fetch->setValue(512);
+        QCOMPARE(settings.fetchConfirmMiB(), 512);
+        fetch->setValue(100);
         parts->setValue(16);
         threads->setValue(4);
         settings.setDownloadDirectory(QString());

@@ -105,6 +105,9 @@ bool DownloadJob::needsConfirmation() const
 {
     if (m_resuming)
         return false;
+    if (m_options.transient)
+        return m_check.skipped > 0 || m_check.conflicts > 0
+            || (m_options.confirmAboveBytes >= 0 && m_check.bytes > m_options.confirmAboveBytes);
     return m_options.alwaysConfirm || m_check.conflicts > 0 || m_check.skipped > 0 || m_check.renamed > 0
         || m_check.files + m_check.folders != 1 || account().environment == Environment::Production;
 }
@@ -252,6 +255,8 @@ DownloadJob::LocalCheck DownloadJob::checkLocal(const QString& rawPath, const QS
 
 TransferJobStore* DownloadJob::jobStore_() const
 {
+    if (m_options.transient)
+        return nullptr;   // nothing to continue next session
     TransferService* t = controller_() ? controller_()->transfers() : nullptr;
     return t ? t->jobs() : nullptr;
 }
@@ -469,6 +474,7 @@ void DownloadJob::checked_(const LocalCheck& check)
     p.conflictSamples = check.conflictSamples;
     if (check.conflicts > 0)
         p.warnings.append(tr("Overwriting replaces those local files; the previous content is not kept."));
+    p.keepBothLabel = tr("Keep both (save as “name (1)”)");
     setProgress_(0, p.objects);
     setBytes_(0, check.bytes);
     setPreview_(p);
@@ -663,8 +669,9 @@ void DownloadJob::download_(const std::shared_ptr<Active>& item, bool overwrite)
     req.transferId = transferId_(item->record);
     req.account = account().id.toString(QUuid::WithoutBraces);
     req.extra.insert(QStringLiteral("job"), m_record.id.isEmpty() ? id() : m_record.id);
-    item->downloader = std::make_unique<s3::transfer::Downloader>(session, req, transfers->limiter(account().id),
-                                                                  transfers->resumeStore());
+    item->downloader = std::make_unique<s3::transfer::Downloader>(
+        session, req, transfers->limiter(account().id),
+        m_options.transient ? nullptr : transfers->resumeStore());
     Active* raw = item.get();
     connect(item->downloader.get(), &s3::transfer::Downloader::finished, this, [this, raw] { itemDone_(raw); });
     connect(item->downloader.get(), &s3::transfer::Downloader::progress, this, [this] { updateProgress_(false); });
@@ -701,6 +708,10 @@ void DownloadJob::itemDone_(Active* raw)
             ++m_md5Verified;
         else
             ++m_sizeVerified;
+        if (m_options.listDone) {
+            m_doneItems.append({item->record.key, r->versionId.isEmpty() ? item->record.versionId : r->versionId,
+                                r->path, r->etag, r->size, r->integrity == s3::Integrity::Md5Verified});
+        }
     } else {
         const s3::Error& e = r.error();
         if (e.category == s3::ErrorCategory::Cancelled) {

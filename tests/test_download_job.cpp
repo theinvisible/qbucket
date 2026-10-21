@@ -170,6 +170,47 @@ private slots:
         QCOMPARE(readFile(local(QStringLiteral("report.pdf"))), QByteArray("pdf"));
     }
 
+    void aTransientDownloadLeavesNothingToResume()
+    {
+        // Production would preview a download; a transient one into the
+        // app's own cache doesn't, up to its size limit.
+        m_objects->putObject(kBucket, QStringLiteral("docs/report.pdf"), "pdf");
+        DownloadJob::Options o;
+        o.transient = true;
+        o.listDone = true;
+        o.confirmAboveBytes = 1000;
+        auto* job = new DownloadJob(m_h->account, kBucket, {{QStringLiteral("docs/report.pdf"), false, {}}}, m_target,
+                                    m_ops->planDir(), o);
+        QSignalSpy preview(m_ops.get(), &OperationController::previewNeeded);
+        QSignalSpy done(job, &Job::finished);
+        QList<DownloadJob::DoneItem> items;
+        connect(job, &Job::finished, this, [&] { items = job->doneItems(); });
+        m_ops->start(job);
+        QVERIFY(done.wait(20000));
+        QVERIFY(preview.isEmpty());
+        QCOMPARE(items.size(), 1);
+        QCOMPARE(items.first().path, local(QStringLiteral("report.pdf")));
+        QCOMPARE(items.first().etag, m_objects->object(kBucket, QStringLiteral("docs/report.pdf"))->etag);
+        QVERIFY(items.first().md5Verified);
+        QVERIFY(m_transfers->jobs()->waitForWrites(5000));
+        QObject ctx;
+        std::optional<QList<TransferJobStore::Record>> records;
+        m_transfers->jobs()->load(&ctx, [&](const QList<TransferJobStore::Record>& r) { records = r; });
+        QTRY_VERIFY(records.has_value());
+        QVERIFY(records->isEmpty());
+
+        // Above the limit it asks.
+        m_objects->putObject(kBucket, QStringLiteral("big.bin"), QByteArray(2000, 'x'));
+        auto* big = new DownloadJob(m_h->account, kBucket, {{QStringLiteral("big.bin"), false, {}}}, m_target,
+                                    m_ops->planDir(), o);
+        QSignalSpy bigDone(big, &Job::finished);
+        m_ops->start(big);
+        QVERIFY(preview.wait(20000));
+        QCOMPARE(preview.first().first().value<Job*>(), big);
+        big->cancel();
+        QVERIFY(bigDone.size() == 1 || bigDone.wait(5000));
+    }
+
     void anEarlierVersionIsDownloaded()
     {
         m_objects->setVersioning(kBucket, QStringLiteral("Enabled"));

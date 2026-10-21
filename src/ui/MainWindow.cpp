@@ -19,6 +19,7 @@
 #include "controllers/RestoreVersionsJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
+#include "controllers/OpenFileService.h"
 #include "controllers/OperationController.h"
 #include "controllers/PresignService.h"
 #include "controllers/DiscardTransfersJob.h"
@@ -33,6 +34,7 @@
 #include "ui/ImportAccountsDialog.h"
 #include "ui/IncompleteUploadsDialog.h"
 #include "ui/ManageBookmarksDialog.h"
+#include "ui/OpenFilesDialog.h"
 #include "ui/LogPanel.h"
 #include "ui/OperationPreviewDialog.h"
 #include "ui/PresignDialog.h"
@@ -67,6 +69,10 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QUrl>
+#include <QFrame>
+#include <QFileInfo>
+#include <QDesktopServices>
 #include <QSet>
 #include <QLabel>
 #include <QLineEdit>
@@ -163,6 +169,7 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         m_operations->setTransfers(m_transfers);
         m_presign = new PresignService(m_operations, this);
         m_locations = new LocationStore(this);
+        m_openFiles = new OpenFileService(m_operations, {}, {}, this);
         const auto applyTransferSettings = [this] {
             m_sessions->setTransferLanes(m_settings->transferThreads());
             m_transfers->setMaxParallelParts(m_settings->transferParallelParts());
@@ -244,6 +251,7 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
     }
     connectBrowser_();
     connectOperations_();
+    connectOpenFiles_();
     if (m_transfers)
         QTimer::singleShot(0, this, &MainWindow::offerResume_);
 }
@@ -1345,6 +1353,8 @@ void MainWindow::buildMenuBar_()
     m_actCapabilities->setEnabled(false);
     m_actIncompleteUploads = tools->addAction(tr("&Incomplete Uploads…"), this, &MainWindow::showIncompleteUploads_);
     m_actIncompleteUploads->setEnabled(false);
+    m_actOpenFiles = tools->addAction(tr("&Open Files…"), this, &MainWindow::showOpenFiles_);
+    m_actOpenFiles->setEnabled(false);
     tools->addSeparator();
     m_actSettings = tools->addAction(tr("&Settings…"),
                                      this, &MainWindow::showSettingsDialog_);
@@ -1528,8 +1538,143 @@ QWidget* MainWindow::buildSidebar_()
 
 QWidget* MainWindow::buildObjectArea_()
 {
+    auto* area = new QWidget;
+    auto* lay = new QVBoxLayout(area);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(0);
+    // A file opened in another application changed: upload it?
+    m_changeBar = new QFrame;
+    m_changeBar->setObjectName(QStringLiteral("changeBar"));
+    auto* bar = new QHBoxLayout(m_changeBar);
+    bar->setContentsMargins(12, 6, 8, 6);
+    m_changeText = new QLabel;
+    m_changeText->setWordWrap(true);
+    bar->addWidget(m_changeText, 1);
+    auto* upload = new QPushButton(tr("Upload"));
+    upload->setObjectName(QStringLiteral("primary"));
+    auto* ignore = new QPushButton(tr("Ignore"));
+    auto* all = new QPushButton(tr("Open Files…"));
+    all->setObjectName(QStringLiteral("ghost"));
+    for (QPushButton* b : {upload, ignore, all})
+        bar->addWidget(b);
+    connect(upload, &QPushButton::clicked, this, [this] { m_openFiles->upload(m_changeId); });
+    connect(ignore, &QPushButton::clicked, this, [this] { m_openFiles->ignoreChange(m_changeId); });
+    connect(all, &QPushButton::clicked, this, &MainWindow::showOpenFiles_);
+    m_changeBar->hide();
+    lay->addWidget(m_changeBar);
     m_browser = new ObjectBrowser(m_accounts, m_sessions);
-    return m_browser;
+    lay->addWidget(m_browser, 1);
+    return area;
+}
+
+// ---------------------------------------------------------------------------
+// Open in the default application
+// ---------------------------------------------------------------------------
+void MainWindow::connectOpenFiles_()
+{
+    if (!m_openFiles)
+        return;
+    m_actOpenFiles->setEnabled(true);
+    m_openFiles->setOpener([](const QUrl& url) { return QDesktopServices::openUrl(url); });
+    const auto applyLimit = [this] {
+        m_openFiles->setConfirmAboveBytes(qint64(m_settings->fetchConfirmMiB()) * 1024 * 1024);
+    };
+    applyLimit();
+    connect(m_settings, &SettingsController::transferSettingsChanged, this, applyLimit);
+    connect(m_browser, &ObjectBrowser::openObjectRequested, this, [this](const QString& key, const QString& versionId) {
+        const Location here = m_browser->navigation()->current();
+        if (here.hasBucket())
+            m_openFiles->open(here.account, here.bucket, key, versionId);
+    });
+    connect(m_openFiles, &OpenFileService::fileChanged, this, [this](const QUuid& id) {
+        m_changeId = id;
+        updateChangeBar_();
+    });
+    connect(m_openFiles, &OpenFileService::entriesChanged, this, &MainWindow::updateChangeBar_);
+    connect(m_openFiles, &OpenFileService::message, this,
+            [this](const QString& text) { statusBar()->showMessage(text, 8000); });
+    updateChangeBar_();   // changes kept from the last session
+}
+
+void MainWindow::updateChangeBar_()
+{
+    const QList<OpenFileService::Entry> changed = m_openFiles->changedEntries();
+    QList<OpenFileService::Entry> waiting;
+    for (const OpenFileService::Entry& e : changed) {
+        if (e.state == OpenFileService::State::Changed)
+            waiting.append(e);
+    }
+    if (waiting.isEmpty()) {
+        m_changeBar->hide();
+        m_changeId = QUuid();
+        return;
+    }
+    const auto it = std::find_if(waiting.cbegin(), waiting.cend(),
+                                 [this](const OpenFileService::Entry& e) { return e.id == m_changeId; });
+    const OpenFileService::Entry& e = it != waiting.cend() ? *it : waiting.first();
+    m_changeId = e.id;
+    QString text = tr("“%1” was changed in another application.").arg(e.key.section(u'/', -1));
+    if (!e.error.isEmpty())
+        text += u' ' + tr("Not uploaded: %1").arg(e.error);
+    if (waiting.size() > 1)
+        text += u' ' + tr("(%n more changed file(s))", nullptr, int(waiting.size() - 1));
+    m_changeText->setText(text);
+    m_changeText->setToolTip(QStringLiteral("s3://%1/%2").arg(e.bucket, e.key));
+    m_changeBar->show();
+}
+
+void MainWindow::showOpenFiles_()
+{
+    if (!m_openFiles)
+        return;
+    auto* dlg = new OpenFilesDialog(m_openFiles, m_accounts, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &OpenFilesDialog::showFolderRequested, this, &MainWindow::showFolder_);
+    dlg->open();
+}
+
+void MainWindow::showFolder_(const QString& filePath)
+{
+    QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(filePath).absolutePath()));
+}
+
+bool MainWindow::openFilesSettled_()
+{
+    if (!m_openFiles || m_quitDecided)
+        return true;
+    const QList<OpenFileService::Entry> changed = m_openFiles->changedEntries();
+    if (changed.isEmpty()) {
+        m_openFiles->cleanup();
+        return true;
+    }
+    QStringList names;
+    for (const OpenFileService::Entry& e : changed)
+        names.append(QStringLiteral("s3://%1/%2").arg(e.bucket, e.key));
+    auto* box = new QMessageBox(QMessageBox::Warning, tr("Changed Files"),
+                                tr("%n file(s) opened from QBucket were changed and not uploaded.", nullptr,
+                                   int(changed.size())),
+                                QMessageBox::NoButton, this);
+    box->setInformativeText(tr("Keep them to upload in the next session, or discard the changes."));
+    box->setDetailedText(names.join(u'\n'));
+    QPushButton* keep = box->addButton(tr("Keep for Later"), QMessageBox::AcceptRole);
+    QPushButton* discard = box->addButton(tr("Discard Changes"), QMessageBox::DestructiveRole);
+    box->addButton(QMessageBox::Cancel);
+    box->setDefaultButton(keep);
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    connect(box, &QMessageBox::finished, this, [this, box, keep, discard] {
+        if (box->clickedButton() == keep) {
+            m_openFiles->keepForLater();
+        } else if (box->clickedButton() == discard) {
+            for (const OpenFileService::Entry& e : m_openFiles->entries())
+                m_openFiles->discard(e.id);
+        } else {
+            return;
+        }
+        m_quitDecided = true;
+        close();
+    });
+    box->open();
+    return false;
 }
 
 QWidget* MainWindow::buildDetailPane_()
@@ -1732,6 +1877,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
     // (PLAN.md §3, orderly shutdown), then close for real.
     if (m_sessions && !m_sessions->isShutDown()) {
         event->ignore();
+        if (!openFilesSettled_())
+            return;   // asked; closes again once answered
         saveWindowState_();
         if (m_locations)
             m_locations->flush();

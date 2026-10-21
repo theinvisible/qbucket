@@ -223,6 +223,11 @@ qbucket_add_test(test_main_window_operations
     qbucket_app_ui
     qbucket::s3_testsupport
 )
+qbucket_add_test(test_main_window_open
+    test_main_window_open.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
 
 qbucket_add_test(test_rename_job
     test_rename_job.cpp
@@ -262,6 +267,16 @@ qbucket_add_test(test_version_jobs
 
 qbucket_add_test(test_edit_objects_job
     test_edit_objects_job.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+qbucket_add_test(test_replace_object_job
+    test_replace_object_job.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+qbucket_add_test(test_open_file_service
+    test_open_file_service.cpp
     qbucket_controllers
     qbucket::s3_testsupport
 )

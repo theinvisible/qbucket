@@ -71,6 +71,10 @@ add_library(qbucket_controllers STATIC
     controllers/OperationController.cpp
     controllers/PlanFile.h
     controllers/PlanFile.cpp
+    controllers/OpenFileService.h
+    controllers/OpenFileService.cpp
+    controllers/ReplaceObjectJob.h
+    controllers/ReplaceObjectJob.cpp
     controllers/RenameJob.h
     controllers/RenameJob.cpp
     controllers/DeleteVersionsJob.h
@@ -222,6 +226,8 @@ add_library(qbucket_app_ui STATIC
     ui/EditMetadataDialog.cpp
     ui/PresignDialog.h
     ui/PresignDialog.cpp
+    ui/OpenFilesDialog.h
+    ui/OpenFilesDialog.cpp
     ui/OperationPreviewDialog.h
     ui/OperationPreviewDialog.cpp
     ui/ObjectRowDelegate.h

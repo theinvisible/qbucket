@@ -117,12 +117,16 @@ signals:
     void objectsDropped(const qbucket::ObjectSelection& selection, const QString& prefix, bool move);
     // Paste: the clipboard's objects into the current folder (a cut moves).
     void pasteRequested(const qbucket::ObjectSelection& selection, const QString& prefix);
+    // Open / double-click on an object: in the default application
+    // (versionId: an earlier version, from the versions view).
+    void openObjectRequested(const QString& key, const QString& versionId);
 
 private:
     void onLocationChanged_(const Location& location);
     void onAccountsChanged_();
     void updatePage_();
     void onActivated_(const QModelIndex& index);
+    [[nodiscard]] bool canOpen_(const QModelIndexList& rows) const;
     void maybePrefetch_();
     void rememberCurrent_();
     void restoreCurrent_();

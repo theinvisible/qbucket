@@ -44,6 +44,11 @@ public:
     // Transfer threads per account (each with its own connections); for
     // sessions created after a change.
     int transferThreads() const { return m_transferThreads; }
+    // Opening an object in another application or dragging it out
+    // downloads it first; above this many MiB that asks.
+    int fetchConfirmMiB() const { return m_fetchConfirmMiB; }
+    static constexpr int kMinFetchConfirmMiB = 1;
+    static constexpr int kMaxFetchConfirmMiB = 1024 * 1024;
     static constexpr int kMinParallelParts = 1;
     static constexpr int kMaxParallelParts = 64;
     static constexpr int kMinTransferThreads = 1;
@@ -54,6 +59,7 @@ public:
     void setDownloadDirectory(const QString& dir);
     void setTransferParallelParts(int parts);
     void setTransferThreads(int threads);
+    void setFetchConfirmMiB(int mib);
     // The sidebar's bookmarks section is open. Persisted only.
     bool bookmarksExpanded() const { return m_bookmarksExpanded; }
     void setBookmarksExpanded(bool expanded);
@@ -86,6 +92,7 @@ private:
     QString    m_downloadDirectory;
     int        m_parallelParts = 16;
     int        m_transferThreads = 4;
+    int        m_fetchConfirmMiB = 100;
     bool       m_bookmarksExpanded = true;
 };
 

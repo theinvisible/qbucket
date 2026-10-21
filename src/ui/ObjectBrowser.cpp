@@ -343,10 +343,27 @@ void ObjectBrowser::showMessage_(const QString& text, bool retry)
 
 void ObjectBrowser::onActivated_(const QModelIndex& index)
 {
-    if (!index.data(ObjectTableModel::IsFolderRole).toBool())
+    if (!index.data(ObjectTableModel::IsFolderRole).toBool()) {
+        // An object (or one version of it) opens in the default application.
+        if (!m_downloadsAllowed || index.data(ObjectTableModel::IsDeleteMarkerRole).toBool())
+            return;
+        const bool version = m_mode == ObjectTableModel::Mode::Versions;
+        emit openObjectRequested(index.data(ObjectTableModel::KeyRole).toString(),
+                                 version ? index.data(ObjectTableModel::VersionIdRole).toString() : QString());
         return;
+    }
     const Location here = m_nav->current();
     m_nav->navigate({here.account, here.bucket, index.data(ObjectTableModel::KeyRole).toString()});
+}
+
+bool ObjectBrowser::canOpen_(const QModelIndexList& rows) const
+{
+    if (rows.size() != 1)
+        return false;
+    const QModelIndex& r = rows.first();
+    if (r.data(ObjectTableModel::IsFolderRole).toBool())
+        return true;
+    return m_downloadsAllowed && !r.data(ObjectTableModel::IsDeleteMarkerRole).toBool();
 }
 
 void ObjectBrowser::maybePrefetch_()
@@ -567,7 +584,7 @@ void ObjectBrowser::updateActions_()
         updateVersionActions_(rows);
         return;
     }
-    m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
+    m_actOpen->setEnabled(canOpen_(rows));
     m_actCopyKey->setEnabled(!rows.isEmpty());
     m_actCopyUri->setEnabled(!rows.isEmpty());
     m_actCopy->setEnabled(!rows.isEmpty());
@@ -605,7 +622,7 @@ void ObjectBrowser::updateActions_()
 // restore it, remove a delete marker, delete versions for good.
 void ObjectBrowser::updateVersionActions_(const QModelIndexList& rows)
 {
-    m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
+    m_actOpen->setEnabled(canOpen_(rows));
     m_actCopyKey->setEnabled(!rows.isEmpty());
     m_actCopyUri->setEnabled(!rows.isEmpty());
     const QString notHere = tr("Not in the versions view — switch to Folders or Flat");

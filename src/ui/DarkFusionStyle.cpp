@@ -159,6 +159,7 @@ QLabel#envBadge { border-radius: 4px; padding: 0 5px; font-weight: 700; font-siz
 QLineEdit#pathEdit { border-radius: 5px; padding: 3px 8px; margin: 2px 6px; }
 QLabel#bannerInfo, QLabel#bannerError { background: @panel2@; border-bottom: 1px solid @border@; padding: 6px 12px; }
 QLabel#bannerInfo { color: @text2@; }
+QFrame#changeBar { background: @panel2@; border-bottom: 1px solid @border@; }
 QLabel#bannerError { color: @danger@; }
 QLabel#emptyState { color: @text3@; padding: 24px; }
 QLabel#paneTitle { color: @text@; font-weight: 600; padding: 12px 14px 6px 14px; }

@@ -37,20 +37,29 @@ bool headersAreAscii(const s3::ObjectHeaders& h)
     return true;
 }
 
+} // namespace
+
+struct InPlaceCopy::State {
+    Request request;
+    Done done;
+    bool inParts = false;
+    bool rechecked = false;
+};
+
 // "" and STANDARD are the same class.
-bool sameClass(const QString& a, const QString& b)
+bool InPlaceCopy::sameClass(const QString& a, const QString& b)
 {
     const auto norm = [](const QString& c) { return c.isEmpty() ? QStringLiteral("STANDARD") : c.toUpper(); };
     return norm(a) == norm(b);
 }
 
 // The class header a copy must send: the default needs none.
-QString classToSend(const QString& target)
+QString InPlaceCopy::classToSend(const QString& target)
 {
     return target.isEmpty() || target.compare(QLatin1String("STANDARD"), Qt::CaseInsensitive) == 0 ? QString() : target;
 }
 
-bool sameTags(s3::TagSet a, s3::TagSet b)
+bool InPlaceCopy::sameTags(s3::TagSet a, s3::TagSet b)
 {
     const auto byKey = [](const s3::Tag& x, const s3::Tag& y) { return x.key < y.key; };
     std::sort(a.begin(), a.end(), byKey);
@@ -59,7 +68,7 @@ bool sameTags(s3::TagSet a, s3::TagSet b)
 }
 
 // What differs between the headers a copy should have and has (names only).
-QStringList headerDifferences(const s3::ObjectHeaders& want, const s3::ObjectHeaders& have)
+QStringList InPlaceCopy::headerDifferences(const s3::ObjectHeaders& want, const s3::ObjectHeaders& have)
 {
     QStringList out;
     // An empty content type becomes the server's default.
@@ -87,15 +96,6 @@ QStringList headerDifferences(const s3::ObjectHeaders& want, const s3::ObjectHea
         out.append(QStringLiteral("x-amz-meta-*"));
     return out;
 }
-
-} // namespace
-
-struct InPlaceCopy::State {
-    Request request;
-    Done done;
-    bool inParts = false;
-    bool rechecked = false;
-};
 
 InPlaceCopy::InPlaceCopy(Job* job)
     : QObject(job),

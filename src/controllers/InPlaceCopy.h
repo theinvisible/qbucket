@@ -63,6 +63,15 @@ public:
     [[nodiscard]] static QString cannotCarry(const ObjectSnapshot& snapshot, const QString& providerId, bool writeTags,
                                              bool writeAcl, bool lockMatters);
 
+    // Shared with ReplaceObjectJob (an object rewritten from a file).
+    // "" and STANDARD are the same class; the class a write must send (the
+    // default needs none); tags compared in any order; which headers differ
+    // between what a write should leave and what HEAD shows (names only).
+    [[nodiscard]] static bool sameClass(const QString& a, const QString& b);
+    [[nodiscard]] static QString classToSend(const QString& target);
+    [[nodiscard]] static bool sameTags(s3::TagSet a, s3::TagSet b);
+    [[nodiscard]] static QStringList headerDifferences(const s3::ObjectHeaders& want, const s3::ObjectHeaders& have);
+
     // `done` is called once, later, on this thread.
     void run(const Request& request, Done done);
     // Stops multipart copies (their uploads are aborted, the object stays as
