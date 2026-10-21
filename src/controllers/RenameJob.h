@@ -12,9 +12,7 @@
 
 namespace qbucket {
 
-namespace s3::transfer {
-class Copier;
-}
+class ObjectCopyRunner;
 
 // Renames an object or a folder in place (PLAN.md §12.3: move = copy →
 // verify → delete source; never a blind delete after a copy).
@@ -35,7 +33,6 @@ class RenameJob : public Job {
     Q_OBJECT
 
 public:
-    static constexpr qint64 kCopyLimit = Q_INT64_C(5) * 1024 * 1024 * 1024;
     static constexpr int kParallel = 4;
     static constexpr int kSamples = 10;
 
@@ -71,8 +68,6 @@ private:
     void planDone_();
     void pump_();
     void renameOne_(const Entry& e);
-    void copyInParts_(const Entry& e, const QString& target);
-    void copied_(const Entry& e, const QString& target, bool inParts);
     void settled_();
     void addFailure_(const QString& key, const QString& reason);
     [[nodiscard]] QString targetFor_(const QString& key) const;
@@ -86,7 +81,7 @@ private:
     std::unique_ptr<PlanFile> m_plan;
     std::unique_ptr<QObject> m_run;
     std::unique_ptr<s3::ListObjectsPager> m_pager;
-    std::vector<std::unique_ptr<s3::transfer::Copier>> m_copiers;
+    ObjectCopyRunner* m_runner = nullptr;   // child
     bool m_large = false;   // something above 5 GiB is in the plan
 
     qint64 m_bytes = 0;

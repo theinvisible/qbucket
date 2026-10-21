@@ -275,7 +275,7 @@
 <context>
     <name>qbucket::RenameJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/RenameJob.cpp" line="517"/>
+        <location filename="../../src/controllers/RenameJob.cpp" line="368"/>
         <source>not verified: %n object(s) still under the old name</source>
         <translation>
             <numerusform>not verified: %n object still under the old name</numerusform>

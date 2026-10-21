@@ -2261,6 +2261,62 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::ObjectCopyRunner</name>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="41"/>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="92"/>
+        <source>not copied (not connected) — the original is untouched</source>
+        <translation>nicht kopiert (nicht verbunden) — das Original ist unberührt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="71"/>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="126"/>
+        <source>changed since it was planned — left alone</source>
+        <translation>seit der Planung verändert — nicht angetastet</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="72"/>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="127"/>
+        <source>not copied (%1) — the original is untouched</source>
+        <translation>nicht kopiert (%1) — das Original ist unverändert</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="147"/>
+        <source>copied, but not verified (not connected) — the original is kept</source>
+        <translation>kopiert, aber nicht geprüft (nicht verbunden) — das Original bleibt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="148"/>
+        <source>copied, but not verified (not connected)</source>
+        <translation>kopiert, aber nicht geprüft (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="160"/>
+        <source> — the original is kept</source>
+        <translation> — das Original bleibt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="162"/>
+        <source>the copy does not match (size or checksum), check “%1”</source>
+        <translation>die Kopie stimmt nicht überein (Größe oder Prüfsumme), prüfe „%1“</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="163"/>
+        <source>the copy could not be read back</source>
+        <translation>die Kopie ließ sich nicht zurücklesen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="179"/>
+        <source>copied and verified, but the original could not be deleted (not connected)</source>
+        <translation>kopiert und geprüft, aber das Original ließ sich nicht löschen (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/ObjectCopyRunner.cpp" line="198"/>
+        <source>copied, but the original could not be deleted: %1</source>
+        <translation>kopiert, aber das Original ließ sich nicht löschen: %1</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ObjectTableModel</name>
     <message>
         <location filename="../src/models/ObjectTableModel.cpp" line="747"/>
@@ -2453,153 +2509,126 @@ F5 drücken, um es erneut zu versuchen.</translation>
 <context>
     <name>qbucket::RenameJob</name>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="59"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="54"/>
         <source>Rename “%1” to “%2”</source>
         <translation>„%1“ in „%2“ umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="76"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="71"/>
         <source>The name is unchanged.</source>
         <translation>Der Name ist unverändert.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="88"/>
-        <location filename="../src/controllers/RenameJob.cpp" line="129"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="83"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="124"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="92"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="87"/>
         <source>“%1” exists already; renaming never overwrites anything.</source>
         <translation>„%1“ existiert bereits; Umbenennen überschreibt nie etwas.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="143"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="138"/>
         <source>Could not look up “%1”: %2</source>
         <translation>„%1“ ließ sich nicht abfragen: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="160"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="155"/>
         <source>Could not list “%1”: %2</source>
         <translation>„%1“ ließ sich nicht auflisten: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="188"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="183"/>
         <source>The plan could not be written: %1</source>
         <translation>Der Plan konnte nicht geschrieben werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="192"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="187"/>
         <source>nothing to rename</source>
         <translation>nichts umzubenennen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="197"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="192"/>
         <source>Rename</source>
         <translation>Umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="202"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="197"/>
         <source>New name: s3://%1/%2</source>
         <translation>Neuer Name: s3://%1/%2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="203"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="198"/>
         <source>Each object is copied, the copy checked, and only then the original deleted.</source>
         <translation>Jedes Objekt wird kopiert, die Kopie geprüft und erst dann das Original gelöscht.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="207"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="202"/>
         <source>The bucket keeps versions: the old names keep their earlier versions, hidden behind delete markers.</source>
         <translation>Der Bucket behält Versionen: Die alten Namen behalten ihre früheren Versionen, verborgen hinter Löschmarkern.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="209"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="204"/>
         <source>Object ACLs are not copied: the renamed objects get the bucket&apos;s default access.</source>
         <translation>Objekt-ACLs werden nicht kopiert: Die umbenannten Objekte bekommen den Standardzugriff des Buckets.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="260"/>
-        <source>not connected</source>
-        <translation>nicht verbunden</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="292"/>
-        <location filename="../src/controllers/RenameJob.cpp" line="355"/>
-        <source>changed since it was planned — not renamed</source>
-        <translation>seit der Planung verändert — nicht umbenannt</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="293"/>
-        <location filename="../src/controllers/RenameJob.cpp" line="356"/>
         <source>not copied (%1) — the original is untouched</source>
         <translation>nicht kopiert (%1) — das Original ist unverändert</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="320"/>
         <source>not copied (not connected) — the original is untouched</source>
         <translation>nicht kopiert (nicht verbunden) — das Original ist unberührt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="379"/>
         <source>copied, but not verified (not connected) — the original is kept</source>
         <translation>kopiert, aber nicht geprüft (nicht verbunden) — das Original bleibt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="391"/>
-        <source>the copy does not match (size or checksum) — the original is kept, check “%1”</source>
-        <translation>die Kopie stimmt nicht überein (Größe oder Prüfsumme) — das Original bleibt, prüfe „%1“</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="393"/>
-        <source>the copy could not be read back — the original is kept</source>
-        <translation>die Kopie ließ sich nicht zurücklesen — das Original bleibt</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="401"/>
         <source>copied and verified, but the original could not be deleted (not connected)</source>
         <translation>kopiert und geprüft, aber das Original ließ sich nicht löschen (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="419"/>
         <source>copied, but the original could not be deleted: %1</source>
         <translation>kopiert, aber das Original ließ sich nicht löschen: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="434"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="286"/>
         <source>cancelled — %1 of %2 renamed</source>
         <translation>abgebrochen — %1 von %2 umbenannt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="456"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="307"/>
         <source>renamed; cancelled while verifying</source>
         <translation>umbenannt; beim Prüfen abgebrochen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="470"/>
-        <location filename="../src/controllers/RenameJob.cpp" line="500"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="321"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="351"/>
         <source>not verified (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="478"/>
-        <location filename="../src/controllers/RenameJob.cpp" line="515"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="329"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="366"/>
         <source>verified</source>
         <translation>geprüft</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="478"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="329"/>
         <source>not verified: the old name still answers</source>
         <translation>nicht bestätigt: der alte Name antwortet noch</translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="491"/>
-        <location filename="../src/controllers/RenameJob.cpp" line="507"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="342"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="358"/>
         <source>not verified: %1</source>
         <translation>nicht geprüft: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/RenameJob.cpp" line="517"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="368"/>
         <source>not verified: %n object(s) still under the old name</source>
         <translation>
             <numerusform>nicht bestätigt: %n Objekt noch unter dem alten Namen</numerusform>
@@ -2607,7 +2636,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/RenameJob.cpp" line="519"/>
+        <location filename="../src/controllers/RenameJob.cpp" line="370"/>
         <source>not verified: fewer objects under the new name than renamed</source>
         <translation>nicht bestätigt: weniger Objekte unter dem neuen Namen als umbenannt</translation>
     </message>

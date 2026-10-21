@@ -3,6 +3,7 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
+#include "controllers/ObjectCopyRunner.h"
 #include "controllers/RenameJob.h"
 #include "support/AccountHarness.h"
 #include "support/FakeBucket.h"
@@ -162,7 +163,7 @@ private slots:
         // A stateful store for this one: UploadPartCopy, no data needed.
         FakeObjectStore store(m_h->server.get());
         store.createBucket(QStringLiteral("bkt"));
-        store.putSyntheticObject(QStringLiteral("bkt"), QStringLiteral("big/huge.img"), RenameJob::kCopyLimit + 1);
+        store.putSyntheticObject(QStringLiteral("bkt"), QStringLiteral("big/huge.img"), ObjectCopyRunner::kCopyLimit + 1);
         store.putObject(QStringLiteral("bkt"), QStringLiteral("big/small"), "s");
         TransferService transfers(m_h->path(QStringLiteral("transfers")), nullptr);
         m_ops->setTransfers(&transfers);
@@ -171,7 +172,7 @@ private slots:
         QVERIFY2(job->report().verified, qPrintable(job->report().verification));
         QCOMPARE(store.keys(QStringLiteral("bkt")),
                  (QStringList{QStringLiteral("bigger/huge.img"), QStringLiteral("bigger/small")}));
-        QCOMPARE(store.object(QStringLiteral("bkt"), QStringLiteral("bigger/huge.img"))->size, RenameJob::kCopyLimit + 1);
+        QCOMPARE(store.object(QStringLiteral("bkt"), QStringLiteral("bigger/huge.img"))->size, ObjectCopyRunner::kCopyLimit + 1);
         QCOMPARE(store.count(QStringLiteral("UploadPartCopy")), 11);   // 512 MiB parts
         QCOMPARE(store.count(QStringLiteral("CopyObject")), 1);         // the small one
         QVERIFY(store.uploadIds(QStringLiteral("bkt")).isEmpty());
