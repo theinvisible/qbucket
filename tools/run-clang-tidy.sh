@@ -3,7 +3,8 @@
 # the library), in parallel, optionally only one shard of them — CI splits
 # the files across several runners. The build directory needs
 # compile_commands.json and the moc output; building the `autogen` target
-# (configure with -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON) is enough.
+# (configure with -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
+# -DCMAKE_AUTOGEN_ORIGIN_DEPENDS=OFF, seconds) is enough.
 #
 #   tools/run-clang-tidy.sh BUILD_DIR [SHARD SHARDS]
 #

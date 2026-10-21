@@ -205,9 +205,11 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-          -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
+          -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON -DCMAKE_AUTOGEN_ORIGIN_DEPENDS=OFF
 
       # moc/uic output must exist for clang-tidy to parse; nothing else.
+      # ORIGIN_DEPENDS=OFF: otherwise each autogen target waits until the
+      # libraries its target links are compiled (5–7 min on 2 vCPUs).
       - name: Generate moc output
         run: cmake --build build --target autogen -j
 
