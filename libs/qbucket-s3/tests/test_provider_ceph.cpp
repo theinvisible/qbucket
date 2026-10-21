@@ -49,6 +49,7 @@ private Q_SLOTS:
                                 Feature::RetentionWrite, Feature::LegalHoldWrite})
             QCOMPARE(p->capabilities().state(f), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::SseC), CapabilityState::Unknown);
+        QCOMPARE(p->capabilities().state(Feature::ConditionalOverwrite), CapabilityState::Unsupported);
     }
 
     void probeAnswers()

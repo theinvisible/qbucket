@@ -72,6 +72,12 @@ enum class Feature : quint16 {
     PublicAccessBlockWrite,
     RetentionWrite,
     LegalHoldWrite,
+    // If-Match on PutObject / CompleteMultipartUpload: the write is refused
+    // when the object changed since. Write-only, never probed; a server that
+    // ignores the header overwrites (as Hetzner and Garage do with
+    // If-None-Match), so only profile knowledge after an IT that sees a
+    // wrong ETag refused. Without it, callers check with HEAD right before.
+    ConditionalOverwrite,
 };
 
 QBUCKET_S3_EXPORT QString featureId(Feature feature);   // e.g. "bucket.versioning"

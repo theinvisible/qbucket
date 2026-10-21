@@ -30,6 +30,10 @@ CapabilitySet CephProfile::capabilities() const
                             Feature::RetentionWrite, Feature::LegalHoldWrite}) {
         set.set(f, yes);
     }
+    // If-Match on PutObject is compared with the unquoted ETag (the quoted
+    // one is refused even when it matches), CompleteMultipartUpload ignores
+    // it (Squid 19.2.6, it_s3_backend conditionalOverwrite).
+    set.set(Feature::ConditionalOverwrite, {CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0});
     return set;
 }
 

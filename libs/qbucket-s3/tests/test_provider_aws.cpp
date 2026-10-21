@@ -27,6 +27,7 @@ private Q_SLOTS:
         QCOMPARE(p->capabilities().state(Feature::BucketVersioningWrite), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::LifecycleWrite), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::LegalHoldWrite), CapabilityState::Supported);
+        QCOMPARE(p->capabilities().state(Feature::ConditionalOverwrite), CapabilityState::Supported);
         QCOMPARE(p->cannedObjectAcls().size(), 6);
         QVERIFY(p->isArchiveStorageClass(QStringLiteral("DEEP_ARCHIVE")));
         QVERIFY(p->isArchiveStorageClass(QStringLiteral("glacier")));

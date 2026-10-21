@@ -73,8 +73,15 @@ public:
     // In memory, up to ClientConfig::maxResponseBytes; MD5-verified against
     // the ETag where that is meaningful (see Integrity). Streaming to files
     // is the transfer engine's job.
-    quint64 getObject(const QString& bucket, const QString& key, const QString& versionId,
-                      Done<ObjectData> done);
+    quint64 getObject(const GetObjectParams& params, Done<ObjectData> done);
+    quint64 getObject(const QString& bucket, const QString& key, const QString& versionId, Done<ObjectData> done)
+    {
+        GetObjectParams params;
+        params.bucket = bucket;
+        params.key = key;
+        params.versionId = versionId;
+        return getObject(params, std::move(done));
+    }
     // Streamed into a file (range, part or whole object); see
     // GetObjectToFileParams. A server that ignores the Range header is an
     // error, never silently a whole object at the wrong offset.

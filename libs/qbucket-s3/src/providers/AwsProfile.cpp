@@ -55,6 +55,7 @@ CapabilitySet AwsProfile::capabilities() const
     set.set(Feature::ObjectTaggingWrite, yes);
     set.set(Feature::ObjectAclWrite, yes);
     set.set(Feature::BucketVersioningWrite, yes);
+    set.set(Feature::ConditionalOverwrite, yes);   // If-Match on PutObject / Complete (S3, since 2024-11)
     for (const Feature f : {Feature::BucketPolicyWrite, Feature::CorsWrite, Feature::LifecycleWrite,
                             Feature::ObjectLockWrite, Feature::BucketAclWrite, Feature::PublicAccessBlockWrite,
                             Feature::RetentionWrite, Feature::LegalHoldWrite}) {

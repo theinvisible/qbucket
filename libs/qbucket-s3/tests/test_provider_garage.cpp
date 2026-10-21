@@ -21,6 +21,7 @@ private Q_SLOTS:
         QCOMPARE(p->capabilities().state(Feature::BatchDelete), CapabilityState::Supported);
         // Ignores If-None-Match and overwrites (it_s3_backend_garage).
         QCOMPARE(p->capabilities().state(Feature::ConditionalWrites), CapabilityState::Unsupported);
+        QCOMPARE(p->capabilities().state(Feature::ConditionalOverwrite), CapabilityState::Unsupported);
         QCOMPARE(p->capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
         QCOMPARE(p->capabilities().state(Feature::BucketVersioning), CapabilityState::Unsupported);
         QCOMPARE(p->storageClasses(), QStringList{QStringLiteral("STANDARD")});

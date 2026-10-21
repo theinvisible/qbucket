@@ -261,7 +261,7 @@ private Q_SLOTS:
             offset += sizes[n - 1];
         }
         std::optional<Result<CompleteMultipartUploadResult>> done;
-        m_session->completeMultipartUpload({kBucket, QStringLiteral("irr"), (*created)->uploadId, parts, false}, &ctx,
+        m_session->completeMultipartUpload({kBucket, QStringLiteral("irr"), (*created)->uploadId, parts, false, {}}, &ctx,
                                            [&](Result<CompleteMultipartUploadResult> r) { done.emplace(std::move(r)); });
         QTRY_VERIFY(done.has_value());
         QVERIFY(*done);

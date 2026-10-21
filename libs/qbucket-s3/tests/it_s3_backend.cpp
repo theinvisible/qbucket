@@ -1275,6 +1275,121 @@ private Q_SLOTS:
             QCOMPARE(honoured, expected.toBool());
     }
 
+    // If-Match on PutObject and CompleteMultipartUpload (Feature::
+    // ConditionalOverwrite): a wrong ETag must be refused (412) without a
+    // write, the right one must overwrite. it-expectations say
+    // "conditionalOverwrite": true (all three hold) or false (the backend
+    // ignores the header somewhere, or refuses the right ETag — a profile
+    // then knows the feature as Unsupported and callers check with HEAD).
+    // A refusal never writes, whatever the backend. A ranged in-memory read
+    // rides along.
+    void conditionalOverwrite()
+    {
+        // Observe the server, not the profile: a session whose capability
+        // set lets the header through even where the profile refuses it.
+        qInfo() << "profile says" << int(m_options.profile->capabilities().state(Feature::ConditionalOverwrite))
+                << "(0 Unknown, 1 Supported, 2 Unsupported)";
+        Session observer(m_options);
+        CapabilitySet open;
+        open.scope = CapabilityScope::Server;
+        open.set(Feature::ConditionalOverwrite, {CapabilityState::Supported, CapabilitySource::Learned, {}, 0, {}, false, 0});
+        observer.setCapabilities(open);
+        Session* const session = &observer;
+        const QString k = key(QStringLiteral("if-match.txt"));
+        const Result<PutObjectResult> first = put(k, "first");
+        VERIFY_OK(first);
+        const QString wrong = QStringLiteral("\"0123456789abcdef0123456789abcdef\"");
+        const auto current = [&] {
+            return await<ObjectData>([&](auto cb) { m_session->getObject(m_bucket, k, {}, &m_ctx, std::move(cb)); });
+        };
+        const auto describe = [](const auto& r, const Result<ObjectData>& now) {
+            return r ? QStringLiteral("accepted, object now \"%1\"").arg(QString::fromLatin1(now->data))
+                     : r.error().toString();
+        };
+
+        GetObjectParams g;
+        g.bucket = m_bucket;
+        g.key = k;
+        g.rangeStart = 1;
+        g.rangeLength = 3;
+        g.ifMatch = first->etag;
+        const Result<ObjectData> range = await<ObjectData>([&](auto cb) { m_session->getObject(g, &m_ctx, std::move(cb)); });
+        VERIFY_OK(range);
+        QCOMPARE(range->data, QByteArray("irs"));
+        QCOMPARE(range->objectSize, 5);
+
+        const auto putWith = [&](const QByteArray& data, const QString& ifMatch) {
+            const QString path = writeFile(QStringLiteral("if-match-%1.bin").arg(QString::fromLatin1(data)), data);
+            PutObjectParams p;
+            p.bucket = m_bucket;
+            p.key = k;
+            p.file = bodyFor(path, data, 0, data.size());
+            p.contentType = QStringLiteral("text/plain");
+            p.ifMatch = ifMatch;
+            return await<PutObjectResult>([&](auto cb) { session->putObject(p, &m_ctx, std::move(cb)); });
+        };
+
+        // A wrong ETag on PutObject.
+        const Result<PutObjectResult> wrongPut = putWith("second", wrong);
+        Result<ObjectData> now = current();
+        VERIFY_OK(now);
+        qInfo() << "If-Match (wrong ETag) on PutObject:" << describe(wrongPut, now);
+        if (!wrongPut)
+            QCOMPARE(now->data, QByteArray("first"));   // a refusal never writes
+        const bool wrongPutRefused = !wrongPut && wrongPut.error().category == ErrorCategory::PreconditionFailed;
+
+        // The right ETag on PutObject.
+        const Result<PutObjectResult> rightPut = putWith("third", now->meta.etag);
+        const QByteArray before = now->data;
+        now = current();
+        VERIFY_OK(now);
+        qInfo() << "If-Match (right ETag) on PutObject:" << describe(rightPut, now);
+        if (!rightPut)
+            QCOMPARE(now->data, before);
+        const bool rightPutAccepted = rightPut && now->data == "third";
+
+        // A wrong ETag on CompleteMultipartUpload.
+        const QByteArray partData = "multipart";
+        const QString partPath = writeFile(QStringLiteral("if-match-part.bin"), partData);
+        CreateMultipartUploadParams cp;
+        cp.bucket = m_bucket;
+        cp.key = k;
+        const Result<CreateMultipartUploadResult> created =
+            await<CreateMultipartUploadResult>([&](auto cb) { m_session->createMultipartUpload(cp, &m_ctx, std::move(cb)); });
+        VERIFY_OK(created);
+        auto abortUpload = qScopeGuard([&] {
+            (void)await<void>([&](auto cb) { m_session->abortMultipartUpload(m_bucket, k, created->uploadId, &m_ctx, std::move(cb)); });
+        });
+        UploadPartParams up;
+        up.bucket = m_bucket;
+        up.key = k;
+        up.uploadId = created->uploadId;
+        up.partNumber = 1;
+        up.file = bodyFor(partPath, partData, 0, partData.size());
+        const Result<UploadPartResult> part = await<UploadPartResult>([&](auto cb) { m_session->uploadPart(up, &m_ctx, std::move(cb)); });
+        VERIFY_OK(part);
+        CompleteMultipartUploadParams done;
+        done.bucket = m_bucket;
+        done.key = k;
+        done.uploadId = created->uploadId;
+        done.parts = {{1, part->etag}};
+        done.ifMatch = wrong;
+        const QByteArray beforeComplete = now->data;
+        const Result<CompleteMultipartUploadResult> completed = await<CompleteMultipartUploadResult>(
+            [&](auto cb) { session->completeMultipartUpload(done, &m_ctx, std::move(cb)); });
+        now = current();
+        VERIFY_OK(now);
+        qInfo() << "If-Match (wrong ETag) on CompleteMultipartUpload:" << describe(completed, now);
+        if (!completed)
+            QCOMPARE(now->data, beforeComplete);
+        const bool wrongCompleteRefused = !completed && completed.error().category == ErrorCategory::PreconditionFailed;
+
+        const bool honoured = wrongPutRefused && rightPutAccepted && wrongCompleteRefused;
+        const QJsonValue expected = m_expect.value(QLatin1String("conditionalOverwrite"));
+        if (expected.isBool())
+            QCOMPARE(honoured, expected.toBool());
+    }
+
     // Opt-in: QBUCKET_IT_SECOND_BUCKET (another qbucket-it-* bucket on the
     // same account). The copy lands under this run's prefix there and is
     // removed again. it-expectations may say "crossBucketCopy": true/false.

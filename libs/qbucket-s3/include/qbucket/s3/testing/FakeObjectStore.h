@@ -128,6 +128,8 @@ public:
     // false: If-None-Match is ignored and the write overwrites — a server
     // without conditional writes.
     void setHonourIfNoneMatch(bool honour);
+    // false: If-Match on PUT / Complete is ignored and the write overwrites.
+    void setHonourIfMatch(bool honour);
     // Ranges are ignored (200 with the whole object) — a broken server.
     void setIgnoreRanges(bool ignore);
     // x-amz-metadata-directive: REPLACE is treated as COPY — a server that

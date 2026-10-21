@@ -474,6 +474,13 @@ RequestId Session::getObject(const QString& bucket, const QString& key, const QS
                                  });
 }
 
+RequestId Session::getObject(const GetObjectParams& params, QObject* context, Callback<ObjectData> callback)
+{
+    return d->submit<ObjectData>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {
+        return c->getObject(params, std::move(done));
+    });
+}
+
 RequestId Session::putObject(const PutObjectParams& params, QObject* context,
                              Callback<PutObjectResult> callback, ProgressCallback progress)
 {

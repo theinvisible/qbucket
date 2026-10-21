@@ -40,5 +40,7 @@
   "objectLockWrite": false,
   "retentionWrite": false,
   "legalHoldWrite": false,
-  "deleteBucketRightAfterAWriteSucceeds": false
+  "deleteBucketRightAfterAWriteSucceeds": false,
+  "_conditionalOverwrite": "Garage ignores If-Match on PutObject and CompleteMultipartUpload: a wrong ETag overwrites. GarageProfile: Unsupported.",
+  "conditionalOverwrite": false
 }

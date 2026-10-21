@@ -24,6 +24,7 @@ private Q_SLOTS:
         // Multipart is core S3; conditional writes are left to the probes.
         QCOMPARE(p.capabilities().state(Feature::MultipartUpload), CapabilityState::Supported);
         QCOMPARE(p.capabilities().state(Feature::ConditionalWrites), CapabilityState::Unknown);
+        QCOMPARE(p.capabilities().state(Feature::ConditionalOverwrite), CapabilityState::Unknown);
         QVERIFY(p.storageClasses().isEmpty());   // unknown: whatever the server accepts
         // A read probe never unlocks these: unknown until a profile says so.
         QCOMPARE(p.capabilities().state(Feature::ObjectTaggingWrite), CapabilityState::Unknown);

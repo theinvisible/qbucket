@@ -329,8 +329,12 @@ std::optional<Error> S3Client::shortCircuit(const RequestSpec& spec) const
 {
     QList<Feature> needed = featuresFor(spec.operation);
     for (const auto& [name, value] : spec.headers) {
-        if (name.compare("If-None-Match", Qt::CaseInsensitive) == 0 && spec.method != "GET" && spec.method != "HEAD")
+        if (spec.method == "GET" || spec.method == "HEAD")
+            break;
+        if (name.compare("If-None-Match", Qt::CaseInsensitive) == 0)
             needed.append(Feature::ConditionalWrites);
+        else if (name.compare("If-Match", Qt::CaseInsensitive) == 0)
+            needed.append(Feature::ConditionalOverwrite);
     }
     if (!spec.sourceBucket.isEmpty() && spec.sourceBucket != spec.bucket)
         needed.append(Feature::CrossBucketCopy);
@@ -586,22 +590,30 @@ quint64 S3Client::headObject(const HeadObjectParams& params, Done<ObjectMeta> do
 
 // --- Objects -----------------------------------------------------------------------
 
-quint64 S3Client::getObject(const QString& bucket, const QString& key, const QString& versionId,
-                            Done<ObjectData> done)
+quint64 S3Client::getObject(const GetObjectParams& params, Done<ObjectData> done)
 {
-    if (bucket.isEmpty() || key.isEmpty())
+    if (params.bucket.isEmpty() || params.key.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    const bool ranged = params.rangeLength >= 0;
+    if (ranged && (params.rangeStart < 0 || params.rangeLength == 0))
+        return failLater(std::move(done), invalid(QStringLiteral("invalid byte range")));
     RequestSpec spec;
     spec.operation = Operation::GetObject;
-    spec.bucket = bucket;
-    spec.key = key;
-    spec.versionId = versionId;
-    if (!versionId.isEmpty())
-        spec.query.append({"versionId", versionId.toUtf8(), false});
+    spec.bucket = params.bucket;
+    spec.key = params.key;
+    spec.versionId = params.versionId;
+    if (!params.versionId.isEmpty())
+        spec.query.append({"versionId", params.versionId.toUtf8(), false});
+    if (ranged) {
+        spec.headers.append({"Range", "bytes=" + QByteArray::number(params.rangeStart) + '-'
+                                          + QByteArray::number(params.rangeStart + params.rangeLength - 1)});
+    }
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"If-Match", params.ifMatch.toLatin1()});
     // Never mayReturn200Error: the object itself may be an <Error> document.
-    return single(std::move(spec), std::move(done), [key](const RawResponse& r) -> Result<ObjectData> {
+    return single(std::move(spec), std::move(done), [params, ranged](const RawResponse& r) -> Result<ObjectData> {
         ObjectData out;
-        out.meta = metaFromHeaders(key, r);
+        out.meta = metaFromHeaders(params.key, r);
         out.data = r.body;
         if (out.meta.size >= 0 && out.meta.size != out.data.size()) {
             return Error::make(ErrorCategory::Transient,
@@ -609,6 +621,31 @@ quint64 S3Client::getObject(const QString& bucket, const QString& key, const QSt
                                    .arg(out.data.size())
                                    .arg(out.meta.size));
         }
+        if (ranged) {
+            if (r.status != 206) {
+                return Error::make(ErrorCategory::Protocol,
+                                   QStringLiteral("the server ignored the Range header (status %1)").arg(r.status));
+            }
+            // "bytes 0-99/1234": the object's size; "*" when unknown.
+            const QByteArray contentRange = r.header("content-range").trimmed();
+            const QByteArray expected = "bytes " + QByteArray::number(params.rangeStart) + '-';
+            if (!contentRange.startsWith(expected)) {
+                return Error::make(ErrorCategory::Protocol,
+                                   QStringLiteral("the server answered another range: ")
+                                       + QString::fromLatin1(contentRange));
+            }
+            bool ok = false;
+            const qint64 total = contentRange.mid(contentRange.lastIndexOf('/') + 1).toLongLong(&ok);
+            if (ok)
+                out.objectSize = total;
+            const qint64 received = out.data.size();
+            if (received != params.rangeLength && !(ok && params.rangeStart + received == total)) {
+                return Error::make(ErrorCategory::Protocol,
+                                   QStringLiteral("received %1 bytes of a %2-byte range").arg(received).arg(params.rangeLength));
+            }
+            return out;
+        }
+        out.objectSize = out.data.size();
         if (etagIsContentMd5(out.meta.etag, r)) {
             QString expected = out.meta.etag;
             expected.remove(QLatin1Char('"'));
@@ -716,6 +753,10 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
 {
     if (params.bucket.isEmpty() || params.key.isEmpty())
         return failLater(std::move(done), invalid(QStringLiteral("bucket or key is missing")));
+    if (params.headers && (!params.contentType.isEmpty() || !params.metadata.isEmpty()))
+        return failLater(std::move(done), invalid(QStringLiteral("either headers or a content type and metadata, not both")));
+    if (params.ifNoneMatch && !params.ifMatch.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("If-Match and If-None-Match exclude each other")));
     if (params.file) {
         if (!params.data.isEmpty())
             return failLater(std::move(done), invalid(QStringLiteral("either data or a file, not both")));
@@ -741,10 +782,20 @@ quint64 S3Client::putObject(const PutObjectParams& params, Done<PutObjectResult>
     spec.headers.append({"Content-MD5", params.file ? params.file->md5Base64 : contentMd5(params.data)});
     if (!params.storageClass.isEmpty())
         spec.headers.append({"x-amz-storage-class", params.storageClass.toLatin1()});
+    if (!params.serverSideEncryption.isEmpty())
+        spec.headers.append({"x-amz-server-side-encryption", params.serverSideEncryption.toLatin1()});
+    if (!params.cannedAcl.isEmpty())
+        spec.headers.append({"x-amz-acl", params.cannedAcl.toLatin1()});
     if (params.ifNoneMatch)
         spec.headers.append({"If-None-Match", QByteArray("*")});
-    if (std::optional<Error> e = appendMetadata(spec, params.metadata))
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"If-Match", params.ifMatch.toLatin1()});
+    if (params.headers) {
+        if (std::optional<Error> e = appendObjectHeaders(spec, *params.headers))
+            return failLater(std::move(done), *e);
+    } else if (std::optional<Error> e = appendMetadata(spec, params.metadata)) {
         return failLater(std::move(done), *e);
+    }
 
     return single(std::move(spec), std::move(done), [](const RawResponse& r) {
         PutObjectResult out;
@@ -982,8 +1033,12 @@ quint64 S3Client::completeMultipartUpload(const CompleteMultipartUploadParams& p
     spec.body = xml::buildCompleteMultipartUpload(params.parts);
     spec.contentType = "application/xml";
     spec.headers.append({"Content-MD5", contentMd5(spec.body)});
+    if (params.ifNoneMatch && !params.ifMatch.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("If-Match and If-None-Match exclude each other")));
     if (params.ifNoneMatch)
         spec.headers.append({"If-None-Match", QByteArray("*")});
+    if (!params.ifMatch.isEmpty())
+        spec.headers.append({"If-Match", params.ifMatch.toLatin1()});
     // The server may fail after sending 200 (assembling takes a while) —
     // and a lost answer leaves it open whether the object now exists.
     spec.mayReturn200Error = true;

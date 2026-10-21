@@ -545,6 +545,7 @@ QString CapabilityController::featureName(s3::Feature f)
     case F::PublicAccessBlockWrite: return tr("Changing the public access block");
     case F::RetentionWrite: return tr("Changing an object's retention");
     case F::LegalHoldWrite: return tr("Changing a legal hold");
+    case F::ConditionalOverwrite: return tr("Replacing only an unchanged object");
     }
     return s3::featureId(f);
 }

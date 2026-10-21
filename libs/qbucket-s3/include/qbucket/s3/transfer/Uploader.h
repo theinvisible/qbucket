@@ -13,6 +13,7 @@
 #include <QString>
 
 #include <memory>
+#include <optional>
 
 namespace qbucket::s3::transfer {
 
@@ -24,11 +25,20 @@ struct UploadRequest {
     QString localPath;
     QString contentType;                  // empty: application/octet-stream
     QMap<QString, QString> metadata;
+    // Instead of contentType / metadata (which must then be empty): every
+    // settable header, e.g. those of an object replaced in place.
+    std::optional<ObjectHeaders> headers;
     QString storageClass;
+    QString serverSideEncryption;         // e.g. AES256; empty: none
+    QString cannedAcl;                    // x-amz-acl (Feature::ObjectAclWrite); empty: none
     // If-None-Match: * on the PUT / Complete. Only where the caller knows
     // Feature::ConditionalWrites is confirmed — otherwise it must check for
     // an existing key itself.
     bool ifNoneMatch = false;
+    // If-Match: <ETag> on the PUT / Complete — replace the object only if it
+    // is still that one. Only where Feature::ConditionalOverwrite is
+    // confirmed; excludes ifNoneMatch.
+    QString ifMatch;
     PartPlannerOptions planner;
     // With a ResumeStore: the record's id (isValidTransferId) and the
     // application's account id for it.

@@ -97,7 +97,11 @@ struct Uploader::Impl {
         r.contentType = req.contentType;
         r.storageClass = req.storageClass;
         r.metadata = req.metadata;
+        r.headers = req.headers;
+        r.serverSideEncryption = req.serverSideEncryption;
+        r.cannedAcl = req.cannedAcl;
         r.ifNoneMatch = req.ifNoneMatch;
+        r.ifMatch = req.ifMatch;
         r.extra = req.extra;
         return r;
     }
@@ -235,9 +239,15 @@ struct Uploader::Impl {
         CreateMultipartUploadParams p;
         p.bucket = req.bucket;
         p.key = req.key;
-        p.headers.contentType = req.contentType;
-        p.headers.userMetadata = req.metadata;
+        if (req.headers) {
+            p.headers = *req.headers;
+        } else {
+            p.headers.contentType = req.contentType;
+            p.headers.userMetadata = req.metadata;
+        }
         p.storageClass = req.storageClass;
+        p.serverSideEncryption = req.serverSideEncryption;
+        p.cannedAcl = req.cannedAcl;
         const RequestId id = session->createMultipartUpload(p, q, [this](Result<CreateMultipartUploadResult> r) {
             if (done)
                 return;
@@ -285,7 +295,11 @@ struct Uploader::Impl {
         req.contentType = r.contentType;
         req.storageClass = r.storageClass;
         req.metadata = r.metadata;
+        req.headers = r.headers;
+        req.serverSideEncryption = r.serverSideEncryption;
+        req.cannedAcl = r.cannedAcl;
         req.ifNoneMatch = r.ifNoneMatch;
+        req.ifMatch = r.ifMatch;
         req.extra = r.extra;
         fileSize = r.size;
         fileModified = r.localModified;
@@ -483,14 +497,26 @@ struct Uploader::Impl {
             put.bucket = req.bucket;
             put.key = req.key;
             put.file = bodyOf(n);
-            put.contentType = req.contentType;
-            put.metadata = req.metadata;
+            if (req.headers) {
+                put.headers = req.headers;
+            } else {
+                put.contentType = req.contentType;
+                put.metadata = req.metadata;
+            }
             put.storageClass = req.storageClass;
+            put.serverSideEncryption = req.serverSideEncryption;
+            put.cannedAcl = req.cannedAcl;
             put.ifNoneMatch = req.ifNoneMatch;
+            put.ifMatch = req.ifMatch;
             p.request = session->putObject(put, q, [this](Result<PutObjectResult> r) {
                 const Error* e = r ? nullptr : &r.error();
                 if (!partFinished(1, e, r && r->throttled))
                     return;
+                if (!r && r.error().category == ErrorCategory::PreconditionFailed
+                    && (req.ifNoneMatch || !req.ifMatch.isEmpty())) {
+                    resolvePrecondition(r.error());
+                    return;
+                }
                 if (!r) {
                     partFailed(1, r.error());
                     return;
@@ -634,6 +660,7 @@ struct Uploader::Impl {
         p.key = req.key;
         p.uploadId = uploadId;
         p.ifNoneMatch = req.ifNoneMatch;
+        p.ifMatch = req.ifMatch;
         for (size_t i = 0; i < parts.size(); ++i)
             p.parts.append({int(i) + 1, parts[i].etag});
         const RequestId id = session->completeMultipartUpload(p, q, [this](Result<CompleteMultipartUploadResult> r) {
@@ -652,6 +679,22 @@ struct Uploader::Impl {
             // PreconditionFailed (If-None-Match), InvalidPart, …: the parts
             // can't become this object.
             fail(e, false);
+        });
+        pendingRequests.push_back(id);
+    }
+
+    // A conditional PUT refused: a retry after a lost answer meets our own
+    // object — HEAD tells it from somebody else's.
+    void resolvePrecondition(const Error& original)
+    {
+        const RequestId id = session->headObject(req.bucket, req.key, {}, q, [this, original](Result<ObjectMeta> head) {
+            if (done)
+                return;
+            if (head && head->size == fileSize && sameEtag(head->etag, md5Etag(parts[0].md5))) {
+                verifyAndFinish(head->etag, head->versionId, {}, true);
+                return;
+            }
+            fail(original, false);
         });
         pendingRequests.push_back(id);
     }

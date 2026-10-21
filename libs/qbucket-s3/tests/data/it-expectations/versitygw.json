@@ -48,5 +48,7 @@
   "objectLockWrite": true,
   "retentionWrite": true,
   "legalHoldWrite": true,
-  "deleteBucketRightAfterAWriteSucceeds": false
+  "deleteBucketRightAfterAWriteSucceeds": false,
+  "_conditionalOverwrite": "VersityGW refuses a wrong ETag on PutObject and CompleteMultipartUpload (412) and accepts the right one.",
+  "conditionalOverwrite": true
 }

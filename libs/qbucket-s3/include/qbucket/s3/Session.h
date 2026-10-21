@@ -108,6 +108,8 @@ public:
     RequestId headObject(const HeadObjectParams& params, QObject* context, Callback<ObjectMeta> callback);
     RequestId getObject(const QString& bucket, const QString& key, const QString& versionId,
                         QObject* context, Callback<ObjectData> callback);
+    // A byte range of it, or with If-Match (GetObjectParams); in memory too.
+    RequestId getObject(const GetObjectParams& params, QObject* context, Callback<ObjectData> callback);
     // Retention (Feature::Retention) and legal hold (Feature::LegalHold) of
     // an object (version); none set is an empty retention / false.
     RequestId getObjectRetention(const QString& bucket, const QString& key, const QString& versionId,

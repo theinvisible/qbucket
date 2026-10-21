@@ -317,6 +317,95 @@ private Q_SLOTS:
         QCOMPARE(m_store->object(kBucket, QStringLiteral("taken"))->data, QByteArray("old"));
     }
 
+    void replaceKeepsEveryHeaderAndChecksTheETag()
+    {
+        m_store->putObject(kBucket, QStringLiteral("doc.html"), "old");
+        const QString etag = m_store->object(kBucket, QStringLiteral("doc.html"))->etag;
+        ObjectHeaders h;
+        h.contentType = QStringLiteral("text/html");
+        h.cacheControl = QStringLiteral("max-age=60");
+        h.userMetadata.insert(QStringLiteral("origin"), QStringLiteral("editor"));
+        const auto replace = [&](const QByteArray& data, const QString& ifMatch, const QString& id) {
+            UploadRequest r = request(writeFile(id, data), QStringLiteral("doc.html"), id);
+            r.contentType.clear();
+            r.headers = h;
+            r.cannedAcl = QStringLiteral("public-read");
+            r.serverSideEncryption = QStringLiteral("AES256");
+            r.ifMatch = ifMatch;
+            return uploader(r);
+        };
+
+        // Single PUT.
+        auto up = replace("new content", etag, QStringLiteral("r1"));
+        QVERIFY(runToEnd(*up));
+        if (!up->result())
+            QFAIL(qPrintable(up->result().error().toString()));
+        auto o = m_store->object(kBucket, QStringLiteral("doc.html"));
+        QCOMPARE(o->data, QByteArray("new content"));
+        QCOMPARE(o->contentType, QStringLiteral("text/html"));
+        QCOMPARE(o->headers.value(QStringLiteral("cache-control")), QStringLiteral("max-age=60"));
+        QCOMPARE(o->metadata.value(QStringLiteral("origin")), QStringLiteral("editor"));
+        QCOMPARE(o->acl, QStringLiteral("public-read"));
+        QCOMPARE(o->headers.value(QStringLiteral("x-amz-server-side-encryption")), QStringLiteral("AES256"));
+
+        // The old ETag is stale now: refused, nothing changes.
+        up = replace("other", etag, QStringLiteral("r2"));
+        QVERIFY(runToEnd(*up));
+        QVERIFY(!up->result());
+        QCOMPARE(up->result().error().category, ErrorCategory::PreconditionFailed);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc.html"))->data, QByteArray("new content"));
+
+        // Multipart: the same headers on CreateMultipartUpload, the condition on Complete.
+        const QByteArray big = pattern(100 * kKiB);
+        up = replace(big, etag, QStringLiteral("r3"));
+        QVERIFY(runToEnd(*up));
+        QVERIFY(!up->result());
+        QCOMPARE(up->result().error().category, ErrorCategory::PreconditionFailed);
+        QTRY_VERIFY(m_store->uploadIds(kBucket).isEmpty());
+        const QString current = m_store->object(kBucket, QStringLiteral("doc.html"))->etag;
+        up = replace(big, current, QStringLiteral("r4"));
+        QVERIFY(runToEnd(*up));
+        if (!up->result())
+            QFAIL(qPrintable(up->result().error().toString()));
+        QVERIFY(up->result()->multipart);
+        o = m_store->object(kBucket, QStringLiteral("doc.html"));
+        QCOMPARE(o->data, big);
+        QCOMPARE(o->contentType, QStringLiteral("text/html"));
+        QCOMPARE(o->headers.value(QStringLiteral("cache-control")), QStringLiteral("max-age=60"));
+        QCOMPARE(o->metadata.value(QStringLiteral("origin")), QStringLiteral("editor"));
+        QCOMPARE(o->acl, QStringLiteral("public-read"));
+    }
+
+    void conditionalPutRefusedOnItsOwnRetryIsResolvedByHead()
+    {
+        // The PUT lands, its answer is lost, the Session retries — and the
+        // server refuses the retry because the object is ours now.
+        m_store->putObject(kBucket, QStringLiteral("doc"), "old");
+        FakeResponse lost;
+        lost.dropWithoutResponse = true;
+        m_store->addFault({QStringLiteral("PutObject"), 0, 0, 1, true, lost});
+        UploadRequest r = request(writeFile(QStringLiteral("a"), "mine"), QStringLiteral("doc"));
+        r.ifMatch = m_store->object(kBucket, QStringLiteral("doc"))->etag;
+        auto up = uploader(r);
+        QVERIFY(runToEnd(*up));
+        if (!up->result())
+            QFAIL(qPrintable(up->result().error().toString()));
+        QCOMPARE(up->result()->integrity, Integrity::Md5Verified);
+        QCOMPARE(m_store->count(QStringLiteral("PutObject")), 2);
+        QVERIFY(m_store->count(QStringLiteral("HeadObject")) >= 1);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc"))->data, QByteArray("mine"));
+
+        // Somebody else's object behind the refusal stays a refusal.
+        m_store->putObject(kBucket, QStringLiteral("doc2"), "old");
+        UploadRequest r2 = request(writeFile(QStringLiteral("b"), "mine"), QStringLiteral("doc2"), QStringLiteral("t2"));
+        r2.ifMatch = QStringLiteral("\"0123456789abcdef0123456789abcdef\"");
+        auto up2 = uploader(r2);
+        QVERIFY(runToEnd(*up2));
+        QVERIFY(!up2->result());
+        QCOMPARE(up2->result().error().category, ErrorCategory::PreconditionFailed);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc2"))->data, QByteArray("old"));
+    }
+
     void missingFileFails()
     {
         auto up = uploader(request(m_dir->filePath(QStringLiteral("nope")), QStringLiteral("k")));

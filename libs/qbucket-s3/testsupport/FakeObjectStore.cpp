@@ -227,6 +227,7 @@ struct FakeObjectStore::Impl {
     bool discard = false;
     qint64 minPartSize = Q_INT64_C(5) * 1024 * 1024;
     bool honourIfNoneMatch = true;
+    bool honourIfMatch = true;
     bool ignoreRanges = false;
     bool ignoreMetadataReplace = false;
     bool dropObjectSubresources = false;
@@ -844,6 +845,21 @@ struct FakeObjectStore::Impl {
         return honourIfNoneMatch && req.header("if-none-match") == "*" && find(bucket, key);
     }
 
+    // If-Match on a write: the current object must have that ETag (S3: 404
+    // when there is none, 412 when it differs).
+    std::optional<FakeResponse> blockedByIfMatch(const RecordedRequest& req, const QString& bucket, const QString& key)
+    {
+        const QByteArray ifMatch = req.header("if-match");
+        if (!honourIfMatch || ifMatch.isNull())
+            return std::nullopt;
+        const Object* o = find(bucket, key);
+        if (!o)
+            return error(404, "NoSuchKey", "The specified key does not exist.");
+        if (unquoted(QString::fromLatin1(ifMatch)) != unquoted(o->etag))
+            return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
+        return std::nullopt;
+    }
+
     FakeResponse stored(const Object& o, const QString& bucket, const QString& versionId)
     {
         return withVersion(FakeResponse::ok().withHeader("ETag", o.etag.toLatin1()), bucket, versionId);
@@ -862,6 +878,8 @@ struct FakeObjectStore::Impl {
             return *bad;
         if (blockedByIfNoneMatch(req, bucket, key))
             return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
+        if (std::optional<FakeResponse> blocked = blockedByIfMatch(req, bucket, key))
+            return *blocked;
         Object o;
         o.size = req.body.size();
         o.md5 = md5(req.body);
@@ -1193,6 +1211,8 @@ struct FakeObjectStore::Impl {
         }
         if (blockedByIfNoneMatch(req, bucket, key))
             return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
+        if (std::optional<FakeResponse> blocked = blockedByIfMatch(req, bucket, key))
+            return *blocked;
         Object o;
         o.size = total;
         o.data = data;
@@ -1723,6 +1743,11 @@ void FakeObjectStore::setMinPartSize(qint64 bytes)
 void FakeObjectStore::setHonourIfNoneMatch(bool honour)
 {
     d->honourIfNoneMatch = honour;
+}
+
+void FakeObjectStore::setHonourIfMatch(bool honour)
+{
+    d->honourIfMatch = honour;
 }
 
 void FakeObjectStore::setIgnoreRanges(bool ignore)

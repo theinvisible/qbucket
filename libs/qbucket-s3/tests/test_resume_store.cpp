@@ -82,6 +82,31 @@ private Q_SLOTS:
         QCOMPARE(state->parts[1].offset, part(2).offset);
     }
 
+    void replaceRecordKeepsHeadersAndCondition()
+    {
+        JsonFileResumeStore store(storeDir());
+        TransferRecord r = sampleRecord();
+        ObjectHeaders h;
+        h.contentType = QStringLiteral("text/html");
+        h.cacheControl = QStringLiteral("no-cache");
+        h.userMetadata.insert(QStringLiteral("origin"), QStringLiteral("editor"));
+        r.headers = h;
+        r.serverSideEncryption = QStringLiteral("AES256");
+        r.cannedAcl = QStringLiteral("public-read");
+        r.ifMatch = QStringLiteral("\"abc\"");
+        QVERIFY(store.begin(r));
+        const auto state = JsonFileResumeStore(storeDir()).load(r.id);
+        QVERIFY(state);
+        QVERIFY(state->record.headers);
+        QCOMPARE(*state->record.headers, h);
+        QCOMPARE(state->record.serverSideEncryption, QStringLiteral("AES256"));
+        QCOMPARE(state->record.cannedAcl, QStringLiteral("public-read"));
+        QCOMPARE(state->record.ifMatch, QStringLiteral("\"abc\""));
+        // Records of earlier versions have none.
+        QVERIFY(store.begin(sampleRecord()));
+        QVERIFY(!JsonFileResumeStore(storeDir()).load(r.id)->record.headers);
+    }
+
     void tornLastLineIsIgnored()
     {
         JsonFileResumeStore store(storeDir());

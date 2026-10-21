@@ -37,6 +37,8 @@ CapabilitySet GarageProfile::capabilities() const
     // If-None-Match: * is ignored and the write overwrites (Garage 1.x in
     // tests/docker, it_s3_backend conditionalPutBehaviour).
     set.set(Feature::ConditionalWrites, no);
+    // If-Match on PutObject / Complete too (it_s3_backend conditionalOverwrite).
+    set.set(Feature::ConditionalOverwrite, no);
     // No object tags and no object ACLs (the read probes answer 501 too).
     set.set(Feature::ObjectTaggingWrite, no);
     set.set(Feature::ObjectAclWrite, no);

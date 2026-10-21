@@ -1,6 +1,7 @@
 #pragma once
 
 #include <qbucket/s3/Result.h>
+#include <qbucket/s3/Types.h>
 #include <qbucket/s3/transfer/Export.h>
 
 #include <QByteArray>
@@ -10,6 +11,8 @@
 #include <QMap>
 #include <QString>
 #include <QStringList>
+
+#include <optional>
 
 namespace qbucket::s3::transfer {
 
@@ -39,7 +42,11 @@ struct TransferRecord {
     QString contentType;
     QString storageClass;
     QMap<QString, QString> metadata;
+    std::optional<ObjectHeaders> headers;   // instead of contentType / metadata
+    QString serverSideEncryption;
+    QString cannedAcl;
     bool ifNoneMatch = false;
+    QString ifMatch;
     // Downloads: replace an existing target file.
     bool overwrite = false;
     QJsonObject extra;          // free for the application

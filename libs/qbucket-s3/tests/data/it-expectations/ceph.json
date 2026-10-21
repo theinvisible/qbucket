@@ -45,5 +45,7 @@
   "objectLockWrite": true,
   "retentionWrite": true,
   "legalHoldWrite": true,
-  "deleteBucketRightAfterAWriteSucceeds": false
+  "deleteBucketRightAfterAWriteSucceeds": false,
+  "_conditionalOverwrite": "Ceph RGW 19.2.6 (Docker): If-Match on PutObject is compared with the unquoted ETag — the RFC form (quoted) is refused even when it matches; CompleteMultipartUpload ignores If-Match and overwrites. Unusable: CephProfile knows object.conditional-overwrite as Unsupported.",
+  "conditionalOverwrite": false
 }

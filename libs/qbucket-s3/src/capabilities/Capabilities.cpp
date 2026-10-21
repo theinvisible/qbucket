@@ -11,7 +11,7 @@ namespace qbucket::s3 {
 namespace {
 
 // Stable ids — never change one, only append.
-constexpr std::array<std::pair<Feature, const char*>, 38> kIds = {{
+constexpr std::array<std::pair<Feature, const char*>, 39> kIds = {{
     {Feature::BucketVersioning, "bucket.versioning"},
     {Feature::ObjectLock, "bucket.object-lock"},
     {Feature::LegalHold, "object.legal-hold"},
@@ -50,6 +50,7 @@ constexpr std::array<std::pair<Feature, const char*>, 38> kIds = {{
     {Feature::PublicAccessBlockWrite, "bucket.public-access-block-write"},
     {Feature::RetentionWrite, "object.retention-write"},
     {Feature::LegalHoldWrite, "object.legal-hold-write"},
+    {Feature::ConditionalOverwrite, "object.conditional-overwrite"},
 }};
 
 bool isDefinitive(CapabilityState s)

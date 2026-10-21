@@ -188,6 +188,20 @@ struct ObjectData {
     ObjectMeta meta;
     QByteArray data;
     Integrity integrity = Integrity::SizeVerified;
+    qint64 objectSize = -1;               // the whole object's size (from Content-Range on a range)
+};
+
+// GetObject into memory (bounded by SessionOptions::maxInMemoryBytes): the
+// whole object or a byte range of it.
+struct GetObjectParams {
+    QString bucket;
+    QString key;
+    QString versionId;                    // empty: the current version
+    // Byte range; rangeLength < 0: the whole object. A range is only
+    // size-checked (Integrity::SizeVerified) — the ETag covers the whole.
+    qint64 rangeStart = 0;
+    qint64 rangeLength = -1;
+    QString ifMatch;                      // ETag with quotes; the object changed → PreconditionFailed
 };
 
 // A byte range of a local file as a request body: streamed from disk on the
@@ -215,11 +229,21 @@ struct PutObjectParams {
     std::optional<FileBody> file;
     QString contentType;                  // empty: application/octet-stream
     QMap<QString, QString> metadata;      // x-amz-meta-*; printable ASCII only (for now)
+    // Instead of contentType / metadata (which must then be empty): every
+    // settable header — an object replaced in place keeps what it had.
+    std::optional<ObjectHeaders> headers;
     QString storageClass;                 // empty: server default
+    QString serverSideEncryption;         // x-amz-server-side-encryption (e.g. AES256); empty: none
+    QString cannedAcl;                    // x-amz-acl (Feature::ObjectAclWrite); empty: none
     // If-None-Match: * — the server refuses (PreconditionFailed) when the key
     // exists. Only meaningful where Feature::ConditionalWrites is confirmed:
     // a server that ignores the header overwrites.
     bool ifNoneMatch = false;
+    // If-Match: the object's ETag (with quotes) — the server refuses
+    // (PreconditionFailed) when the object changed since. Only meaningful
+    // where Feature::ConditionalOverwrite is confirmed: a server that
+    // ignores the header overwrites. Excludes ifNoneMatch.
+    QString ifMatch;
 };
 
 struct PutObjectResult {
@@ -535,6 +559,7 @@ struct CompleteMultipartUploadParams {
     QString uploadId;
     QList<CompletedPart> parts;           // ascending part numbers
     bool ifNoneMatch = false;             // as PutObjectParams::ifNoneMatch
+    QString ifMatch;                      // as PutObjectParams::ifMatch
 };
 
 struct CompleteMultipartUploadResult {

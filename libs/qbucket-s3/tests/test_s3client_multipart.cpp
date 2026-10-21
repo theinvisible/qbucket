@@ -444,6 +444,167 @@ private Q_SLOTS:
         REQUIRE_OK(fresh);
     }
 
+    void ifMatchReplacesOnlyTheSameObject()
+    {
+        m_store->putObject(kBucket, QStringLiteral("doc"), "old");
+        const QString etag = m_store->object(kBucket, QStringLiteral("doc"))->etag;
+        PutObjectParams put;
+        put.bucket = kBucket;
+        put.key = QStringLiteral("doc");
+        put.file = bodyFor(m_path, m_data, 0, 100);
+        put.ifMatch = QStringLiteral("\"0123456789abcdef0123456789abcdef\"");
+        auto r = await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::PreconditionFailed);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc"))->data, QByteArray("old"));
+        QCOMPARE(m_server->requests().last().header("if-match"), QByteArray("\"0123456789abcdef0123456789abcdef\""));
+
+        put.key = QStringLiteral("missing");
+        r = await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::NotFound);
+        QVERIFY(!m_store->object(kBucket, QStringLiteral("missing")));
+
+        put.key = QStringLiteral("doc");
+        put.ifMatch = etag;
+        REQUIRE_OK(await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); }));
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc"))->data, m_data.left(100));
+
+        // The same for a multipart upload, decided by its Complete.
+        const QString current = m_store->object(kBucket, QStringLiteral("doc"))->etag;
+        QString uploadId;
+        QList<CompletedPart> parts = uploadThreeParts(QStringLiteral("doc"), &uploadId);
+        CompleteMultipartUploadParams p;
+        p.bucket = kBucket;
+        p.key = QStringLiteral("doc");
+        p.uploadId = uploadId;
+        p.parts = parts;
+        p.ifMatch = etag;   // stale now
+        auto c = await<CompleteMultipartUploadResult>([&](auto cb) { m_session->completeMultipartUpload(p, &m_context, cb); });
+        QVERIFY(!c);
+        QCOMPARE(c.error().category, ErrorCategory::PreconditionFailed);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc"))->data, m_data.left(100));
+        p.ifMatch = current;
+        REQUIRE_OK(await<CompleteMultipartUploadResult>([&](auto cb) { m_session->completeMultipartUpload(p, &m_context, cb); }));
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc"))->size, m_data.size());
+    }
+
+    void conditionsExcludeEachOther()
+    {
+        PutObjectParams put;
+        put.bucket = kBucket;
+        put.key = QStringLiteral("k");
+        put.file = bodyFor(m_path, m_data, 0, 100);
+        put.ifNoneMatch = true;
+        put.ifMatch = QStringLiteral("\"e\"");
+        auto r = await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        put.ifNoneMatch = false;
+        put.ifMatch.clear();
+        put.headers = ObjectHeaders{};
+        put.contentType = QStringLiteral("text/plain");
+        r = await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        QCOMPARE(m_server->requestCount(), 0);
+    }
+
+    void unsupportedConditionalOverwriteIsRefusedLocally()
+    {
+        CapabilitySet set;
+        set.scope = CapabilityScope::Server;
+        set.set(Feature::ConditionalOverwrite, {CapabilityState::Unsupported, CapabilitySource::Profile, {}, 0, {}, false, 0});
+        m_session->setCapabilities(set);
+        m_store->putObject(kBucket, QStringLiteral("doc"), "old");
+        PutObjectParams put;
+        put.bucket = kBucket;
+        put.key = QStringLiteral("doc");
+        put.file = bodyFor(m_path, m_data, 0, 100);
+        put.ifMatch = m_store->object(kBucket, QStringLiteral("doc"))->etag;
+        const auto r = await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::Unsupported);
+        QCOMPARE(m_server->requestCount(), 0);
+        QCOMPARE(m_store->object(kBucket, QStringLiteral("doc"))->data, QByteArray("old"));
+    }
+
+    void putObjectCarriesEveryHeader()
+    {
+        PutObjectParams put;
+        put.bucket = kBucket;
+        put.key = QStringLiteral("page.html");
+        put.file = bodyFor(m_path, m_data, 0, 100);
+        ObjectHeaders h;
+        h.contentType = QStringLiteral("text/html; charset=utf-8");
+        h.cacheControl = QStringLiteral("max-age=60");
+        h.contentDisposition = QStringLiteral("inline");
+        h.contentEncoding = QStringLiteral("identity");
+        h.contentLanguage = QStringLiteral("de");
+        h.expires = QStringLiteral("Wed, 21 Oct 2026 07:28:00 GMT");
+        h.userMetadata.insert(QStringLiteral("origin"), QStringLiteral("editor"));
+        put.headers = h;
+        put.storageClass = QStringLiteral("STANDARD");
+        put.serverSideEncryption = QStringLiteral("AES256");
+        put.cannedAcl = QStringLiteral("public-read");
+        REQUIRE_OK(await<PutObjectResult>([&](auto cb) { m_session->putObject(put, &m_context, cb); }));
+        const auto o = m_store->object(kBucket, QStringLiteral("page.html"));
+        QVERIFY(o);
+        QCOMPARE(o->contentType, h.contentType);
+        QCOMPARE(o->headers.value(QStringLiteral("cache-control")), h.cacheControl);
+        QCOMPARE(o->headers.value(QStringLiteral("content-disposition")), h.contentDisposition);
+        QCOMPARE(o->headers.value(QStringLiteral("content-encoding")), h.contentEncoding);
+        QCOMPARE(o->headers.value(QStringLiteral("content-language")), h.contentLanguage);
+        QCOMPARE(o->headers.value(QStringLiteral("expires")), h.expires);
+        QCOMPARE(o->headers.value(QStringLiteral("x-amz-server-side-encryption")), QStringLiteral("AES256"));
+        QCOMPARE(o->metadata.value(QStringLiteral("origin")), QStringLiteral("editor"));
+        QCOMPARE(o->acl, QStringLiteral("public-read"));
+    }
+
+    void rangedGetObjectInMemory()
+    {
+        m_store->putObject(kBucket, QStringLiteral("blob"), m_data.left(1000));
+        const QString etag = m_store->object(kBucket, QStringLiteral("blob"))->etag;
+        GetObjectParams g;
+        g.bucket = kBucket;
+        g.key = QStringLiteral("blob");
+        g.rangeStart = 100;
+        g.rangeLength = 200;
+        g.ifMatch = etag;
+        auto r = await<ObjectData>([&](auto cb) { m_session->getObject(g, &m_context, cb); });
+        REQUIRE_OK(r);
+        QCOMPARE(r->data, m_data.mid(100, 200));
+        QCOMPARE(r->objectSize, 1000);
+        QCOMPARE(r->integrity, Integrity::SizeVerified);
+        QCOMPARE(m_server->requests().last().header("range"), QByteArray("bytes=100-299"));
+
+        // The tail: fewer bytes than asked for, up to the end.
+        g.rangeStart = 900;
+        g.rangeLength = 500;
+        r = await<ObjectData>([&](auto cb) { m_session->getObject(g, &m_context, cb); });
+        REQUIRE_OK(r);
+        QCOMPARE(r->data, m_data.mid(900, 100));
+
+        g.ifMatch = QStringLiteral("\"0123456789abcdef0123456789abcdef\"");
+        r = await<ObjectData>([&](auto cb) { m_session->getObject(g, &m_context, cb); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::PreconditionFailed);
+
+        // The whole object through the same call is MD5-checked.
+        g.ifMatch.clear();
+        g.rangeStart = 0;
+        g.rangeLength = -1;
+        r = await<ObjectData>([&](auto cb) { m_session->getObject(g, &m_context, cb); });
+        REQUIRE_OK(r);
+        QCOMPARE(r->integrity, Integrity::Md5Verified);
+        QCOMPARE(r->objectSize, 1000);
+
+        m_store->setIgnoreRanges(true);
+        g.rangeStart = 10;
+        g.rangeLength = 10;
+        r = await<ObjectData>([&](auto cb) { m_session->getObject(g, &m_context, cb); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::Protocol);
+    }
+
     void unsupportedConditionalWritesAreRefusedLocally()
     {
         CapabilitySet set;

@@ -53,6 +53,39 @@ Direction directionFrom(const QString& name)
     return Direction::Upload;
 }
 
+QJsonObject headersJson(const ObjectHeaders& h)
+{
+    QJsonObject o;
+    o.insert(QStringLiteral("contentType"), h.contentType);
+    o.insert(QStringLiteral("cacheControl"), h.cacheControl);
+    o.insert(QStringLiteral("contentDisposition"), h.contentDisposition);
+    o.insert(QStringLiteral("contentEncoding"), h.contentEncoding);
+    o.insert(QStringLiteral("contentLanguage"), h.contentLanguage);
+    o.insert(QStringLiteral("expires"), h.expires);
+    o.insert(QStringLiteral("websiteRedirectLocation"), h.websiteRedirectLocation);
+    QJsonObject meta;
+    for (auto it = h.userMetadata.cbegin(); it != h.userMetadata.cend(); ++it)
+        meta.insert(it.key(), it.value());
+    o.insert(QStringLiteral("userMetadata"), meta);
+    return o;
+}
+
+ObjectHeaders headersFrom(const QJsonObject& o)
+{
+    ObjectHeaders h;
+    h.contentType = o.value(QStringLiteral("contentType")).toString();
+    h.cacheControl = o.value(QStringLiteral("cacheControl")).toString();
+    h.contentDisposition = o.value(QStringLiteral("contentDisposition")).toString();
+    h.contentEncoding = o.value(QStringLiteral("contentEncoding")).toString();
+    h.contentLanguage = o.value(QStringLiteral("contentLanguage")).toString();
+    h.expires = o.value(QStringLiteral("expires")).toString();
+    h.websiteRedirectLocation = o.value(QStringLiteral("websiteRedirectLocation")).toString();
+    const QJsonObject meta = o.value(QStringLiteral("userMetadata")).toObject();
+    for (auto it = meta.begin(); it != meta.end(); ++it)
+        h.userMetadata.insert(it.key(), it.value().toString());
+    return h;
+}
+
 QJsonObject toJson(const TransferRecord& r)
 {
     QJsonObject o;
@@ -79,7 +112,12 @@ QJsonObject toJson(const TransferRecord& r)
     for (auto it = r.metadata.cbegin(); it != r.metadata.cend(); ++it)
         meta.insert(it.key(), it.value());
     o.insert(QStringLiteral("metadata"), meta);
+    if (r.headers)
+        o.insert(QStringLiteral("headers"), headersJson(*r.headers));
+    o.insert(QStringLiteral("serverSideEncryption"), r.serverSideEncryption);
+    o.insert(QStringLiteral("cannedAcl"), r.cannedAcl);
     o.insert(QStringLiteral("ifNoneMatch"), r.ifNoneMatch);
+    o.insert(QStringLiteral("ifMatch"), r.ifMatch);
     o.insert(QStringLiteral("overwrite"), r.overwrite);
     o.insert(QStringLiteral("extra"), r.extra);
     return o;
@@ -109,7 +147,12 @@ TransferRecord recordFrom(const QJsonObject& o)
     const QJsonObject meta = o.value(QStringLiteral("metadata")).toObject();
     for (auto it = meta.begin(); it != meta.end(); ++it)
         r.metadata.insert(it.key(), it.value().toString());
+    if (const QJsonValue h = o.value(QStringLiteral("headers")); h.isObject())
+        r.headers = headersFrom(h.toObject());
+    r.serverSideEncryption = o.value(QStringLiteral("serverSideEncryption")).toString();
+    r.cannedAcl = o.value(QStringLiteral("cannedAcl")).toString();
     r.ifNoneMatch = o.value(QStringLiteral("ifNoneMatch")).toBool();
+    r.ifMatch = o.value(QStringLiteral("ifMatch")).toString();
     r.overwrite = o.value(QStringLiteral("overwrite")).toBool();
     r.extra = o.value(QStringLiteral("extra")).toObject();
     return r;

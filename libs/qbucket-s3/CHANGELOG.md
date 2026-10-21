@@ -296,6 +296,26 @@ version bump may break the API.
   nbg1); a 404 NoSuchBucket with an empty message (one gateway that doesn't
   know a new bucket yet) is retryable.
 
+- Ranged reads into memory: `GetObjectParams` (range, version, If-Match) and
+  `Session::getObject(const GetObjectParams&, …)`; `ObjectData::objectSize`
+  (the whole object's size, from Content-Range). A range is size-checked
+  only; the server answering another range or ignoring Range is a Protocol
+  error.
+- Replacing an object only if it is unchanged: `PutObjectParams::ifMatch`,
+  `CompleteMultipartUploadParams::ifMatch` and the write-only feature
+  `ConditionalOverwrite` (`object.conditional-overwrite`; If-Match on a
+  write needs it, Unsupported refuses locally). `AwsProfile`: Supported;
+  `CephProfile` and `GarageProfile`: Unsupported (it_s3_backend
+  `conditionalOverwrite`, expectation `conditionalOverwrite`: RGW 19.2
+  compares If-Match on PUT with the unquoted ETag and ignores it on
+  Complete; Garage ignores it).
+- Every settable header on a PUT: `PutObjectParams::headers` (instead of
+  `contentType` / `metadata`), `serverSideEncryption`, `cannedAcl`; the same
+  on `transfer::UploadRequest` (`headers`, `serverSideEncryption`,
+  `cannedAcl`, `ifMatch`), kept in `TransferRecord` for a resumed upload.
+- `FakeObjectStore::setHonourIfMatch` (If-Match on PUT / Complete: 404
+  without an object, 412 on another ETag).
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced
@@ -345,6 +365,11 @@ version bump may break the API.
   `error() &&` returns by value.
 
 ### Safety
+
+- `Uploader`: a conditional single PUT (If-Match / If-None-Match) refused
+  with 412 is resolved by HEAD — a retry after a lost answer meets our own
+  object (same size and MD5) and is a success; anybody else's stays a
+  refusal.
 
 - A bucket configuration write that comes back like CreateBucket (a
   `Location` header, 409 BucketAlreadyOwnedByYou / BucketAlreadyExists) or a
