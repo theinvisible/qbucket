@@ -419,6 +419,25 @@
     </message>
 </context>
 <context>
+    <name>qbucket::ObjectLockPage</name>
+    <message numerus="yes">
+        <location filename="../../src/ui/ObjectLockPage.cpp" line="127"/>
+        <source>%n year(s)</source>
+        <translation>
+            <numerusform>%n year</numerusform>
+            <numerusform>%n years</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/ObjectLockPage.cpp" line="127"/>
+        <source>%n day(s)</source>
+        <translation>
+            <numerusform>%n day</numerusform>
+            <numerusform>%n days</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ObjectTableModel</name>
     <message numerus="yes">
         <location filename="../../src/models/ObjectTableModel.cpp" line="932"/>

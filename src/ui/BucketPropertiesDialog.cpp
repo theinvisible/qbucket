@@ -5,15 +5,27 @@
 #include "controllers/CapabilityController.h"
 #include "controllers/ConnectionTester.h"
 #include "controllers/OperationController.h"
+#include "controllers/FolderSizeTask.h"
 #include "controllers/SetBucketVersioningJob.h"
+#include "ui/AclSection.h"
+#include "ui/CorsPage.h"
+#include "ui/LifecyclePage.h"
+#include "ui/ObjectLockPage.h"
+#include "ui/OtherConfigPage.h"
+#include "ui/PolicyPage.h"
+#include "ui/PublicAccessBlockSection.h"
 
 #include <qbucket/s3/Session.h>
 
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
+#include <QGroupBox>
 #include <QLabel>
+#include <QLocale>
+#include <QMessageBox>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -53,7 +65,7 @@ BucketPropertiesDialog::BucketPropertiesDialog(const QUuid& account, const QStri
       m_caps(capabilities)
 {
     setWindowTitle(tr("Properties of “%1”").arg(bucket));
-    setMinimumSize(620, 380);
+    setMinimumSize(780, 520);
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(0, 0, 0, 0);
     root->setSpacing(0);
@@ -74,6 +86,23 @@ BucketPropertiesDialog::BucketPropertiesDialog(const QUuid& account, const QStri
 
     addCategory_(tr("General"), buildGeneralPage_());
     addCategory_(tr("Versioning"), buildVersioningPage_());
+    const BucketConfigPage::Context ctx{m_account, m_bucket, m_sessions, m_ops, m_caps};
+    m_policy = new PolicyPage(ctx);
+    addCategory_(tr("Policy"), framed_(tr("Bucket policy"),
+                                       tr("Who may do what with the bucket and its objects, as a JSON policy."), m_policy));
+    m_cors = new CorsPage(ctx);
+    addCategory_(tr("CORS"), framed_(tr("CORS"),
+                                     tr("Which other web sites may use the bucket from a browser."), m_cors));
+    m_lifecycle = new LifecyclePage(ctx);
+    addCategory_(tr("Lifecycle"),
+                 framed_(tr("Lifecycle rules"),
+                         tr("What the server deletes or moves by itself, after a time."), m_lifecycle));
+    addCategory_(tr("Access"), buildAccessPage_());
+    m_lock = new ObjectLockPage(ctx);
+    addCategory_(tr("Object Lock"),
+                 framed_(tr("Object lock"), tr("Retention that keeps versions from being deleted."), m_lock));
+    m_other = new OtherConfigPage(ctx);
+    addCategory_(tr("More"), framed_(tr("More settings"), QString(), m_other));
 
     auto* buttons = new QDialogButtonBox(QDialogButtonBox::Close);
     buttons->setContentsMargins(12, 10, 12, 12);
@@ -137,6 +166,17 @@ QWidget* BucketPropertiesDialog::buildGeneralPage_()
     form->addRow(tr("Versioning:"), m_generalVersioning);
     m_objectLock = valueLabel();
     form->addRow(tr("Object lock:"), m_objectLock);
+    m_created = valueLabel();
+    form->addRow(tr("Created:"), m_created);
+    auto* sizeRow = new QHBoxLayout;
+    m_size = new QLabel(tr("not counted"));
+    m_size->setObjectName(QStringLiteral("bucketSize"));
+    m_sizeButton = new QPushButton(tr("Calculate"));
+    m_sizeButton->setObjectName(QStringLiteral("bucketSizeButton"));
+    connect(m_sizeButton, &QPushButton::clicked, this, &BucketPropertiesDialog::calculateSize_);
+    sizeRow->addWidget(m_size, 1);
+    sizeRow->addWidget(m_sizeButton);
+    form->addRow(tr("Objects:"), sizeRow);
     lay->addLayout(form);
     auto* caps = new QPushButton(tr("Server Capabilities…"));
     connect(caps, &QPushButton::clicked, this, &BucketPropertiesDialog::capabilitiesRequested);
@@ -200,6 +240,17 @@ void BucketPropertiesDialog::load_()
         return;
     }
     m_run = std::make_unique<QObject>();
+    (*session)->listBuckets(m_run.get(), [this](const s3::Result<s3::BucketList>& r) {
+        if (!r) {
+            m_created->setText(ConnectionTester::describe(r.error()));
+            return;
+        }
+        m_created->setText(tr("not reported"));
+        for (const s3::BucketInfo& b : r->buckets) {
+            if (b.name == m_bucket && b.creationDate.isValid())
+                m_created->setText(QLocale().toString(b.creationDate.toLocalTime(), QLocale::LongFormat));
+        }
+    });
     (*session)->getBucketLocation(m_bucket, m_run.get(), [this](const s3::Result<QString>& r) {
         m_region->setText(r ? *r : ConnectionTester::describe(r.error()));
     });
@@ -249,6 +300,138 @@ void BucketPropertiesDialog::updateButtons_()
     m_suspend->setEnabled(suspendWhy.isEmpty() && m_current == s3::VersioningStatus::Enabled);
     m_reason->setText(suspendWhy);
     m_reason->setVisible(!suspendWhy.isEmpty());
+}
+
+QWidget* BucketPropertiesDialog::framed_(const QString& title, const QString& about, QWidget* content)
+{
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(20, 18, 20, 14);
+    auto* heading = new QLabel(title);
+    QFont f = heading->font();
+    f.setPointSizeF(f.pointSizeF() * 1.15);
+    f.setBold(true);
+    heading->setFont(f);
+    lay->addWidget(heading);
+    if (!about.isEmpty()) {
+        auto* line = new QLabel(about);
+        line->setObjectName(QStringLiteral("hint"));
+        line->setWordWrap(true);
+        lay->addWidget(line);
+    }
+    lay->addWidget(content, 1);
+    return page;
+}
+
+QWidget* BucketPropertiesDialog::buildAccessPage_()
+{
+    const BucketConfigPage::Context ctx{m_account, m_bucket, m_sessions, m_ops, m_caps};
+    auto* content = new QWidget;
+    auto* lay = new QVBoxLayout(content);
+    lay->setContentsMargins(0, 0, 0, 0);
+    auto* aclBox = new QGroupBox(tr("Bucket ACL"));
+    auto* aclLay = new QVBoxLayout(aclBox);
+    m_acl = new AclSection(ctx);
+    aclLay->addWidget(m_acl);
+    lay->addWidget(aclBox);
+    auto* statusRow = new QHBoxLayout;
+    statusRow->addWidget(new QLabel(tr("Public through the policy:")));
+    m_policyStatus = new QLabel(QStringLiteral("…"));
+    m_policyStatus->setObjectName(QStringLiteral("policyStatus"));
+    statusRow->addWidget(m_policyStatus, 1);
+    lay->addLayout(statusRow);
+    auto* pabBox = new QGroupBox(tr("Public access block"));
+    auto* pabLay = new QVBoxLayout(pabBox);
+    m_pab = new PublicAccessBlockSection(ctx);
+    pabLay->addWidget(m_pab);
+    lay->addWidget(pabBox);
+    lay->addStretch(1);
+    // The policy status follows the policy: read with the ACL, again after a change.
+    const auto readStatus = [this] {
+        const s3::Result<s3::Session*> session = m_sessions ? m_sessions->session(m_account)
+                                                            : s3::Result<s3::Session*>(s3::Error::make(
+                                                                  s3::ErrorCategory::Internal, tr("not connected")));
+        if (!session)
+            return;
+        (*session)->getBucketConfig(m_bucket, s3::BucketConfig::PolicyStatus, m_policyStatus,
+                                    [this](const s3::Result<s3::BucketConfigDocument>& r) {
+            if (!r) {
+                m_policyStatus->setText(r.error().category == s3::ErrorCategory::Unsupported
+                                            ? tr("not supported by this server")
+                                            : ConnectionTester::describe(r.error()));
+            } else if (!r->configured) {
+                m_policyStatus->setText(tr("no (no policy)"));
+            } else {
+                const s3::Result<bool> isPublic = s3::parsePolicyStatus(r->body);
+                m_policyStatus->setText(!isPublic ? tr("unknown") : (*isPublic ? tr("yes") : tr("no")));
+            }
+        });
+    };
+    connect(m_acl, &BucketConfigPage::loaded, this, readStatus);
+    connect(m_policy, &BucketConfigPage::loaded, this, readStatus);
+    auto* scroll = new QScrollArea;
+    scroll->setWidget(content);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    return framed_(tr("Access"), tr("Who may reach the bucket without its policy."), scroll);
+}
+
+void BucketPropertiesDialog::calculateSize_()
+{
+    if (m_sizeTask) {
+        m_sizeTask->cancel();
+        return;
+    }
+    const s3::Result<s3::Session*> session = m_sessions ? m_sessions->session(m_account)
+                                                        : s3::Result<s3::Session*>(s3::Error::make(
+                                                              s3::ErrorCategory::Internal, tr("not connected")));
+    if (!session) {
+        m_size->setText(ConnectionTester::describe(session.error()));
+        return;
+    }
+    m_sizeTask = new FolderSizeTask(*session, m_bucket, {QString()}, this);
+    m_sizeButton->setText(tr("Stop"));
+    const auto show = [this] {
+        const QLocale locale;
+        m_size->setText(tr("%1 — %2").arg(locale.toString(m_sizeTask->totals().objects),
+                                                   locale.formattedDataSize(m_sizeTask->totals().bytes)));
+    };
+    connect(m_sizeTask, &FolderSizeTask::progress, this, show);
+    connect(m_sizeTask, &FolderSizeTask::finished, this, [this, show] {
+        show();
+        if (!m_sizeTask->errorText().isEmpty())
+            m_size->setText(m_sizeTask->errorText());
+        else if (!m_sizeTask->isComplete())
+            m_size->setText(m_size->text() + tr(" (stopped)"));
+        else
+            m_size->setText(m_size->text() + tr(" — current versions"));
+        m_sizeButton->setText(tr("Calculate"));
+        m_sizeTask->deleteLater();
+        m_sizeTask = nullptr;
+    });
+    m_sizeTask->start();
+}
+
+bool BucketPropertiesDialog::hasUnsavedChanges() const
+{
+    for (const BucketConfigPage* page : findChildren<BucketConfigPage*>()) {
+        if (page->isDirty())
+            return true;
+    }
+    return false;
+}
+
+void BucketPropertiesDialog::reject()
+{
+    if (m_askBeforeDiscarding && hasUnsavedChanges()) {
+        const auto answer = QMessageBox::question(this, tr("Changes not applied"),
+                                                  tr("Some settings were changed but not applied. Close anyway and "
+                                                     "discard them?"),
+                                                  QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (answer != QMessageBox::Discard)
+            return;
+    }
+    QDialog::reject();
 }
 
 void BucketPropertiesDialog::setVersioning_(s3::VersioningStatus status)

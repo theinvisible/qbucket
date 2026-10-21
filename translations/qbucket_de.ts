@@ -401,150 +401,458 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
-    <name>qbucket::BucketPropertiesDialog</name>
+    <name>qbucket::AclSection</name>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="28"/>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="218"/>
-        <source>Enabled</source>
-        <translation>Aktiviert</translation>
+        <location filename="../src/ui/AclSection.cpp" line="19"/>
+        <source>Everyone (public)</source>
+        <translation>Alle (öffentlich)</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="29"/>
-        <source>Suspended</source>
-        <translation>Pausiert</translation>
+        <location filename="../src/ui/AclSection.cpp" line="21"/>
+        <source>Any authenticated account</source>
+        <translation>Jedes angemeldete Konto</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="32"/>
-        <source>Never enabled</source>
-        <translation>Nie aktiviert</translation>
+        <location filename="../src/ui/AclSection.cpp" line="39"/>
+        <source>Private</source>
+        <translation>Privat</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="55"/>
-        <source>Properties of “%1”</source>
-        <translation>Eigenschaften von „%1“</translation>
+        <location filename="../src/ui/AclSection.cpp" line="40"/>
+        <source>Public read (anyone may list)</source>
+        <translation>Öffentlich lesbar (jeder darf auflisten)</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="75"/>
-        <source>General</source>
-        <translation>Allgemein</translation>
+        <location filename="../src/ui/AclSection.cpp" line="41"/>
+        <source>Public read and write</source>
+        <translation>Öffentlich lesen und schreiben</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="76"/>
-        <source>Versioning</source>
-        <translation>Versionierung</translation>
+        <location filename="../src/ui/AclSection.cpp" line="42"/>
+        <source>Authenticated read</source>
+        <translation>Lesbar für angemeldete Konten</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="127"/>
-        <source>Name:</source>
-        <translation>Name:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="43"/>
+        <source>Canned ACL:</source>
+        <translation>Vordefinierte ACL:</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="133"/>
-        <source>Account:</source>
-        <translation>Account:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="47"/>
+        <source>Grantee</source>
+        <translation>Berechtigter</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="135"/>
-        <source>Region:</source>
-        <translation>Region:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="47"/>
+        <source>Permission</source>
+        <translation>Berechtigung</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="137"/>
-        <source>Versioning:</source>
-        <translation>Versionierung:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="68"/>
+        <source>(own grants)</source>
+        <translation>(eigene Berechtigungen)</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="139"/>
-        <source>Object lock:</source>
-        <translation>Object Lock:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="71"/>
+        <source>These grants are no canned ACL: choosing one replaces them.</source>
+        <translation>Diese Berechtigungen sind keine vordefinierte ACL: Eine Auswahl ersetzt sie.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="141"/>
-        <source>Server Capabilities…</source>
-        <translation>Server-Fähigkeiten…</translation>
+        <location filename="../src/ui/AclSection.cpp" line="79"/>
+        <source>Not readable</source>
+        <translation>Nicht lesbar</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="159"/>
-        <source>Status:</source>
-        <translation>Status:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="82"/>
+        <source>Own grants</source>
+        <translation>Eigene Berechtigungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="161"/>
-        <source>MFA delete:</source>
-        <translation>MFA Delete:</translation>
+        <location filename="../src/ui/AclSection.cpp" line="99"/>
+        <source>Choose a canned ACL.</source>
+        <translation>Eine vordefinierte ACL wählen.</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::BucketConfigPage</name>
+    <message>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="47"/>
+        <source>Apply…</source>
+        <translation>Übernehmen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="163"/>
-        <source>With versioning, overwriting or deleting an object keeps the earlier version: it can be restored from the Versions view. Once enabled, versioning can only be suspended.</source>
-        <translation>Mit Versionierung bleibt beim Überschreiben oder Löschen die frühere Version erhalten und lässt sich in der Versionsansicht wiederherstellen. Einmal aktiviert, lässt sich die Versionierung nur noch pausieren.</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="49"/>
+        <source>Revert</source>
+        <translation>Verwerfen</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="169"/>
-        <source>Enable Versioning…</source>
-        <translation>Versionierung aktivieren…</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="51"/>
+        <source>Remove…</source>
+        <translation>Entfernen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="171"/>
-        <source>Suspend Versioning…</source>
-        <translation>Versionierung pausieren…</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="194"/>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="102"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="209"/>
-        <source>not supported by this server</source>
-        <translation>von diesem Server nicht unterstützt</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="122"/>
+        <source>Not supported by this server.</source>
+        <translation>Von diesem Server nicht unterstützt.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="218"/>
-        <source>not reported</source>
-        <translation>nicht gemeldet</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="124"/>
+        <source>These credentials may not read it.</source>
+        <translation>Diese Zugangsdaten dürfen es nicht lesen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="218"/>
-        <source>Disabled</source>
-        <translation>Deaktiviert</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="142"/>
+        <source>Set</source>
+        <translation>Gesetzt</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="229"/>
-        <source>unknown</source>
-        <translation>unbekannt</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="142"/>
+        <source>Not set</source>
+        <translation>Nicht gesetzt</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="229"/>
-        <source>enabled</source>
-        <translation>aktiviert</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="154"/>
+        <source>Nothing to apply — use Remove to take it away.</source>
+        <translation>Nichts zu übernehmen – zum Entfernen „Entfernen“ verwenden.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="229"/>
-        <source>not enabled</source>
-        <translation>nicht aktiviert</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="155"/>
+        <source>Nothing to apply.</source>
+        <translation>Nichts zu übernehmen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="232"/>
-        <source>A change is under way.</source>
-        <translation>Eine Änderung läuft.</translation>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="177"/>
+        <source>QBucket shows this setting only.</source>
+        <translation>QBucket zeigt diese Einstellung nur an.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="234"/>
-        <source>The current setting is not known yet.</source>
-        <translation>Die aktuelle Einstellung ist noch nicht bekannt.</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="236"/>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="179"/>
         <source>Read-only here.</source>
         <translation>Hier nur lesend.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="243"/>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="191"/>
+        <source>Reading…</source>
+        <translation>Wird gelesen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketConfigPage.cpp" line="204"/>
+        <source>A change is under way.</source>
+        <translation>Eine Änderung läuft.</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::BucketPropertiesDialog</name>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="40"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="269"/>
+        <source>Enabled</source>
+        <translation>Aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="41"/>
+        <source>Suspended</source>
+        <translation>Pausiert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="44"/>
+        <source>Never enabled</source>
+        <translation>Nie aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="67"/>
+        <source>Properties of “%1”</source>
+        <translation>Eigenschaften von „%1“</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="87"/>
+        <source>General</source>
+        <translation>Allgemein</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="88"/>
+        <source>Versioning</source>
+        <translation>Versionierung</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="91"/>
+        <source>Policy</source>
+        <translation>Policy</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="91"/>
+        <source>Bucket policy</source>
+        <translation>Bucket-Richtlinie</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="92"/>
+        <source>Who may do what with the bucket and its objects, as a JSON policy.</source>
+        <translation>Wer was mit dem Bucket und seinen Objekten darf, als JSON-Policy.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="94"/>
+        <source>CORS</source>
+        <translation>CORS</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="95"/>
+        <source>Which other web sites may use the bucket from a browser.</source>
+        <translation>Welche anderen Websites den Bucket aus dem Browser nutzen dürfen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="97"/>
+        <source>Lifecycle</source>
+        <translation>Lifecycle</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="98"/>
+        <source>Lifecycle rules</source>
+        <translation>Lifecycle-Regeln</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="99"/>
+        <source>What the server deletes or moves by itself, after a time.</source>
+        <translation>Was der Server nach einer Zeit selbst löscht oder verschiebt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="100"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="376"/>
+        <source>Access</source>
+        <translation>Zugriff</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="102"/>
+        <source>Object Lock</source>
+        <translation>Object Lock</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="103"/>
+        <source>Object lock</source>
+        <translation>Object Lock</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="103"/>
+        <source>Retention that keeps versions from being deleted.</source>
+        <translation>Aufbewahrung, die Versionen vor dem Löschen schützt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="105"/>
+        <source>More</source>
+        <translation>Weitere</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="105"/>
+        <source>More settings</source>
+        <translation>Weitere Einstellungen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="156"/>
+        <source>Name:</source>
+        <translation>Name:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="162"/>
+        <source>Account:</source>
+        <translation>Account:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="164"/>
+        <source>Region:</source>
+        <translation>Region:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="166"/>
+        <source>Versioning:</source>
+        <translation>Versionierung:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="168"/>
+        <source>Object lock:</source>
+        <translation>Object Lock:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="170"/>
+        <source>Created:</source>
+        <translation>Angelegt:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="172"/>
+        <source>not counted</source>
+        <translation>nicht gezählt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="174"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="408"/>
+        <source>Calculate</source>
+        <translation>Berechnen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="179"/>
+        <source>Objects:</source>
+        <translation>Objekte:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="181"/>
+        <source>Server Capabilities…</source>
+        <translation>Server-Fähigkeiten…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="199"/>
+        <source>Status:</source>
+        <translation>Status:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="201"/>
+        <source>MFA delete:</source>
+        <translation>MFA Delete:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="203"/>
+        <source>With versioning, overwriting or deleting an object keeps the earlier version: it can be restored from the Versions view. Once enabled, versioning can only be suspended.</source>
+        <translation>Mit Versionierung bleibt beim Überschreiben oder Löschen die frühere Version erhalten und lässt sich in der Versionsansicht wiederherstellen. Einmal aktiviert, lässt sich die Versionierung nur noch pausieren.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="209"/>
+        <source>Enable Versioning…</source>
+        <translation>Versionierung aktivieren…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="211"/>
+        <source>Suspend Versioning…</source>
+        <translation>Versionierung pausieren…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="234"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="353"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="387"/>
+        <source>not connected</source>
+        <translation>nicht verbunden</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="260"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="360"/>
+        <source>not supported by this server</source>
+        <translation>von diesem Server nicht unterstützt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="332"/>
+        <source>Bucket ACL</source>
+        <translation>Bucket-ACL</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="338"/>
+        <source>Public through the policy:</source>
+        <translation>Öffentlich über die Policy:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="343"/>
+        <source>Public access block</source>
+        <translation>Öffentlichen Zugriff blockieren</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="363"/>
+        <source>no (no policy)</source>
+        <translation>nein (keine Policy)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="366"/>
+        <source>yes</source>
+        <translation>ja</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="366"/>
+        <source>no</source>
+        <translation>nein</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="376"/>
+        <source>Who may reach the bucket without its policy.</source>
+        <translation>Wer den Bucket ohne seine Policy erreichen darf.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="393"/>
+        <source>Stop</source>
+        <translation>Anhalten</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="396"/>
+        <source>%1 — %2</source>
+        <translation>%1 – %2</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="405"/>
+        <source> (stopped)</source>
+        <translation> (angehalten)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="407"/>
+        <source> — current versions</source>
+        <translation> – aktuelle Versionen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="427"/>
+        <source>Changes not applied</source>
+        <translation>Änderungen nicht übernommen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="428"/>
+        <source>Some settings were changed but not applied. Close anyway and discard them?</source>
+        <translation>Einige Einstellungen wurden geändert, aber nicht übernommen. Trotzdem schließen und verwerfen?</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="248"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="269"/>
+        <source>not reported</source>
+        <translation>nicht gemeldet</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="269"/>
+        <source>Disabled</source>
+        <translation>Deaktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="280"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="366"/>
+        <source>unknown</source>
+        <translation>unbekannt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="280"/>
+        <source>enabled</source>
+        <translation>aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="280"/>
+        <source>not enabled</source>
+        <translation>nicht aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="283"/>
+        <source>A change is under way.</source>
+        <translation>Eine Änderung läuft.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="285"/>
+        <source>The current setting is not known yet.</source>
+        <translation>Die aktuelle Einstellung ist noch nicht bekannt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="287"/>
+        <source>Read-only here.</source>
+        <translation>Hier nur lesend.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="294"/>
         <source>MFA delete is enabled: QBucket can&apos;t send the MFA code a change needs.</source>
         <translation>MFA Delete ist aktiv: QBucket kann den MFA-Code für eine Änderung nicht senden.</translation>
     </message>
     <message>
-        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="248"/>
+        <location filename="../src/ui/BucketPropertiesDialog.cpp" line="299"/>
         <source>The bucket has object lock: its versioning can&apos;t be suspended.</source>
         <translation>Der Bucket hat Object Lock: Seine Versionierung lässt sich nicht pausieren.</translation>
     </message>
@@ -1256,6 +1564,74 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/controllers/CopyJob.cpp" line="600"/>
         <source>not verified: %1</source>
         <translation>nicht geprüft: %1</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::CorsPage</name>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="42"/>
+        <source>ID</source>
+        <translation>ID</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="42"/>
+        <source>Origins</source>
+        <translation>Ursprünge</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="42"/>
+        <source>Methods</source>
+        <translation>Methoden</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="42"/>
+        <source>Allowed headers</source>
+        <translation>Erlaubte Header</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="43"/>
+        <source>Exposed headers</source>
+        <translation>Sichtbare Header</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="43"/>
+        <source>Max age (s)</source>
+        <translation>Max. Alter (s)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="52"/>
+        <source>Lists are separated by commas, e.g. “GET, PUT”.</source>
+        <translation>Listen werden durch Kommas getrennt, z. B. „GET, PUT“.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="55"/>
+        <source>Add Rule</source>
+        <translation>Regel hinzufügen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="56"/>
+        <source>Remove Rule</source>
+        <translation>Regel entfernen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="61"/>
+        <source>Rules</source>
+        <translation>Regeln</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="64"/>
+        <source>No CORS rules are set.</source>
+        <translation>Es sind keine CORS-Regeln gesetzt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="65"/>
+        <source>XML</source>
+        <translation>XML</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/CorsPage.cpp" line="154"/>
+        <source>These rules have parts the table can&apos;t show: edit them as XML.</source>
+        <translation>Diese Regeln haben Teile, die die Tabelle nicht zeigen kann: als XML bearbeiten.</translation>
     </message>
 </context>
 <context>
@@ -2835,6 +3211,144 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::LifecyclePage</name>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="53"/>
+        <source> days</source>
+        <translation> Tage</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="59"/>
+        <source>Rule %1</source>
+        <translation>Regel %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="61"/>
+        <source> (off)</source>
+        <translation> (aus)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="101"/>
+        <source>Add Rule</source>
+        <translation>Regel hinzufügen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="102"/>
+        <source>Remove Rule</source>
+        <translation>Regel entfernen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="110"/>
+        <source>Rules</source>
+        <translation>Regeln</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="113"/>
+        <source>No lifecycle rules are set.</source>
+        <translation>Es sind keine Lifecycle-Regeln gesetzt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="114"/>
+        <source>XML</source>
+        <translation>XML</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="152"/>
+        <source>ID:</source>
+        <translation>ID:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="153"/>
+        <source>Enabled</source>
+        <translation>Aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="157"/>
+        <source>every object</source>
+        <translation>alle Objekte</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="158"/>
+        <source>Prefix:</source>
+        <translation>Präfix:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="160"/>
+        <source>key=value, key2=value2</source>
+        <translation>schlüssel=wert, schlüssel2=wert2</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="161"/>
+        <source>Tags:</source>
+        <translation>Tags:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="163"/>
+        <source>Current versions</source>
+        <translation>Aktuelle Versionen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="166"/>
+        <source>Expire after</source>
+        <translation>Ablaufen nach</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="174"/>
+        <source>Expire on</source>
+        <translation>Ablaufen am</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="183"/>
+        <source>Remove delete markers no version is left under</source>
+        <translation>Löschmarker entfernen, unter denen keine Version mehr liegt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="188"/>
+        <source>Move after</source>
+        <translation>Verschieben nach</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="198"/>
+        <source>to</source>
+        <translation>nach</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="204"/>
+        <source>Earlier versions</source>
+        <translation>Frühere Versionen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="207"/>
+        <source>Delete for good after</source>
+        <translation>Endgültig löschen nach</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="217"/>
+        <source>none</source>
+        <translation>keine</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="219"/>
+        <source>But keep the newest:</source>
+        <translation>Die neuesten behalten:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="221"/>
+        <source>Unfinished uploads</source>
+        <translation>Unvollständige Uploads</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="224"/>
+        <source>Abort after</source>
+        <translation>Abbrechen nach</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/LifecyclePage.cpp" line="354"/>
+        <source>These rules have parts the form can&apos;t show: edit them as XML.</source>
+        <translation>Diese Regeln haben Teile, die das Formular nicht zeigen kann: als XML bearbeiten.</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::LocalPathMapper</name>
     <message>
         <location filename="../src/controllers/LocalPathMapper.cpp" line="50"/>
@@ -3834,6 +4348,96 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::ObjectLockPage</name>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="16"/>
+        <source>Give new versions a default retention</source>
+        <translation>Neuen Versionen eine Standard-Aufbewahrung geben</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="22"/>
+        <source>GOVERNANCE — can be lifted by someone allowed to bypass it</source>
+        <translation>GOVERNANCE – aufhebbar durch jemanden, der sie umgehen darf</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="23"/>
+        <source>COMPLIANCE — nobody can lift it, not even the account owner</source>
+        <translation>COMPLIANCE – niemand kann sie aufheben, nicht einmal der Kontoinhaber</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="24"/>
+        <source>Mode:</source>
+        <translation>Modus:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="31"/>
+        <source>days</source>
+        <translation>Tage</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="32"/>
+        <source>years</source>
+        <translation>Jahre</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="36"/>
+        <source>Period:</source>
+        <translation>Dauer:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="38"/>
+        <source>The retention runs from when a version is written. Deleting such a version, or shortening its retention, is refused until it has run out.</source>
+        <translation>Die Aufbewahrung läuft ab dem Schreiben einer Version. Löschen oder Verkürzen wird bis zu ihrem Ablauf verweigert.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="80"/>
+        <source>Object lock is not enabled on this bucket. It can only be enabled when a bucket is created.</source>
+        <translation>Object Lock ist bei diesem Bucket nicht aktiviert. Es lässt sich nur beim Anlegen eines Buckets aktivieren.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="82"/>
+        <source>The server reports more than QBucket shows; applying a change keeps only what is shown.</source>
+        <translation>Der Server meldet mehr, als QBucket zeigt; beim Übernehmen bleibt nur das Gezeigte.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="121"/>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="124"/>
+        <source>Object lock is not enabled</source>
+        <translation>Object Lock ist nicht aktiviert</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="126"/>
+        <source>Object lock is enabled, without a default retention</source>
+        <translation>Object Lock ist aktiviert, ohne Standard-Aufbewahrung</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/ObjectLockPage.cpp" line="127"/>
+        <source>%n year(s)</source>
+        <translation>
+            <numerusform>%n Jahr</numerusform>
+            <numerusform>%n Jahre</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/ObjectLockPage.cpp" line="127"/>
+        <source>%n day(s)</source>
+        <translation>
+            <numerusform>%n Tag</numerusform>
+            <numerusform>%n Tage</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="128"/>
+        <source>Object lock is enabled; new versions get %1 retention for %2</source>
+        <translation>Object Lock ist aktiviert; neue Versionen bekommen %1-Aufbewahrung für %2</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectLockPage.cpp" line="135"/>
+        <source>Not possible: %1</source>
+        <translation>Nicht möglich: %1</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ObjectPropertyJob</name>
     <message>
         <location filename="../src/controllers/ObjectPropertyJob.cpp" line="50"/>
@@ -4104,7 +4708,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/OperationController.cpp" line="196"/>
         <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
+        <translation>%1 – %2</translation>
     </message>
 </context>
 <context>
@@ -4112,7 +4716,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/ui/OperationPreviewDialog.cpp" line="29"/>
         <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
+        <translation>%1 – %2</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ui/OperationPreviewDialog.cpp" line="59"/>
@@ -4216,6 +4820,79 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::OtherConfigPage</name>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="27"/>
+        <source>Bucket tags</source>
+        <translation>Bucket-Tags</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="28"/>
+        <source>Static website</source>
+        <translation>Statische Website</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="29"/>
+        <source>Access logging</source>
+        <translation>Zugriffsprotokollierung</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="30"/>
+        <source>Replication</source>
+        <translation>Replikation</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="31"/>
+        <source>Default encryption</source>
+        <translation>Standardverschlüsselung</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="32"/>
+        <source>Event notifications</source>
+        <translation>Ereignisbenachrichtigungen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="33"/>
+        <source>Ownership controls</source>
+        <translation>Besitzkontrollen</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="47"/>
+        <source>Further settings of the bucket, as the server reports them. QBucket doesn&apos;t change them.</source>
+        <translation>Weitere Einstellungen des Buckets, wie der Server sie meldet. QBucket ändert sie nicht.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="55"/>
+        <source>Setting</source>
+        <translation>Einstellung</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="55"/>
+        <source>State</source>
+        <translation>Zustand</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="105"/>
+        <source>Not supported</source>
+        <translation>Nicht unterstützt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="106"/>
+        <source>No permission</source>
+        <translation>Keine Berechtigung</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="109"/>
+        <source>Set</source>
+        <translation>Gesetzt</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/OtherConfigPage.cpp" line="109"/>
+        <source>Not set</source>
+        <translation>Nicht gesetzt</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::PathBar</name>
     <message>
         <location filename="../src/ui/PathBar.cpp" line="59"/>
@@ -4232,6 +4909,54 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/ui/PathBar.cpp" line="174"/>
         <source>(empty name)</source>
         <translation>(leerer Name)</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::PolicyPage</name>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="21"/>
+        <source>Template:</source>
+        <translation>Vorlage:</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="24"/>
+        <source>Choose a template…</source>
+        <translation>Vorlage wählen…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="25"/>
+        <source>Public read of every object</source>
+        <translation>Jedes Objekt öffentlich lesbar</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="26"/>
+        <source>Deny requests without TLS</source>
+        <translation>Anfragen ohne TLS verbieten</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="27"/>
+        <source>Allow only from an IP range</source>
+        <translation>Nur aus einem IP-Bereich erlauben</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="32"/>
+        <source>No policy is set. Write one, or start from a template.</source>
+        <translation>Es ist keine Policy gesetzt. Eine schreiben oder mit einer Vorlage beginnen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="118"/>
+        <source>Anyone on the internet may write or delete with this policy.</source>
+        <translation>Mit dieser Policy darf jeder im Internet schreiben oder löschen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="120"/>
+        <source>Anyone on the internet may read what this policy names.</source>
+        <translation>Jeder im Internet darf lesen, was diese Policy nennt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PolicyPage.cpp" line="122"/>
+        <source>A Deny statement can lock out these credentials too.</source>
+        <translation>Eine Deny-Anweisung kann auch diese Zugangsdaten aussperren.</translation>
     </message>
 </context>
 <context>
@@ -4385,6 +5110,29 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/controllers/PresignService.cpp" line="67"/>
         <source>Nothing selected.</source>
         <translation>Nichts ausgewählt.</translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::PublicAccessBlockSection</name>
+    <message>
+        <location filename="../src/ui/PublicAccessBlockSection.cpp" line="11"/>
+        <source>Block new public ACLs</source>
+        <translation>Neue öffentliche ACLs blockieren</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PublicAccessBlockSection.cpp" line="12"/>
+        <source>Ignore existing public ACLs</source>
+        <translation>Bestehende öffentliche ACLs ignorieren</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PublicAccessBlockSection.cpp" line="13"/>
+        <source>Block new public bucket policies</source>
+        <translation>Neue öffentliche Bucket-Policies blockieren</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/PublicAccessBlockSection.cpp" line="14"/>
+        <source>Restrict access through public policies to the owner&apos;s account</source>
+        <translation>Zugriff über öffentliche Policies auf das Konto des Eigentümers beschränken</translation>
     </message>
 </context>
 <context>
@@ -4729,6 +5477,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/SetBucketConfigJob.cpp" line="149"/>
         <location filename="../src/controllers/SetBucketConfigJob.cpp" line="163"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="356"/>
         <source>QBucket doesn&apos;t change %1.</source>
         <translation>QBucket ändert %1 nicht.</translation>
     </message>
@@ -4928,52 +5677,52 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Öffentliche ACLs blockieren: %1; öffentliche ACLs ignorieren: %2; öffentliche Policies blockieren: %3; öffentliche Buckets einschränken: %4.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="368"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="374"/>
         <source>The server&apos;s answer doesn&apos;t fit the request (%1).</source>
         <translation>Die Antwort des Servers passt nicht zur Anfrage (%1).</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="371"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="377"/>
         <source>The server refused: %1</source>
         <translation>Der Server lehnte ab: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="406"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="412"/>
         <source>not checked (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="418"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="424"/>
         <source>not read back: %1</source>
         <translation>nicht zurückgelesen: %1</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="420"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="426"/>
         <source>read back: nothing is set</source>
         <translation>zurückgelesen: nichts gesetzt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="420"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="426"/>
         <source>read back: as sent</source>
         <translation>zurückgelesen: wie gesendet</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="422"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="428"/>
         <source>the server still reports something else — check again in a few minutes</source>
         <translation>der Server meldet noch etwas anderes – in ein paar Minuten erneut prüfen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="445"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="451"/>
         <source>The bucket “%1” is gone — the server may have deleted it instead of %2. %3</source>
         <translation>Der Bucket „%1“ ist weg – der Server hat ihn womöglich statt %2 gelöscht. %3</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="451"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="457"/>
         <source>The bucket is still there.</source>
         <translation>Der Bucket ist noch da.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="457"/>
+        <location filename="../src/controllers/SetBucketConfigJob.cpp" line="463"/>
         <source>; the bucket could not be looked up: %1</source>
         <translation>; der Bucket konnte nicht abgefragt werden: %1</translation>
     </message>

@@ -74,12 +74,13 @@ add_library(qbucket_controllers STATIC
     controllers/ObjectCopyRunner.cpp
     controllers/RestoreVersionsJob.h
     controllers/RestoreVersionsJob.cpp
-    controllers/SetBucketVersioningJob.h
-    controllers/SetBucketConfigJob.cpp
     controllers/SetBucketConfigJob.h
+    controllers/SetBucketConfigJob.cpp
+    controllers/SetBucketVersioningJob.h
     controllers/SetBucketVersioningJob.cpp
-    controllers/VersionWalk.h
+    controllers/VersionPurger.h
     controllers/VersionPurger.cpp
+    controllers/VersionWalk.h
     controllers/VersionWalk.cpp
     controllers/CopyJob.h
     controllers/CopyJob.cpp
@@ -169,7 +170,27 @@ add_library(qbucket_app_ui STATIC
     ui/AccountTreeDelegate.h
     ui/AccountTreeDelegate.cpp
     ui/BucketPropertiesDialog.h
+    ui/AclSection.h
+    ui/AclSection.cpp
+    ui/BucketConfigPage.h
+    ui/BucketConfigPage.cpp
     ui/BucketPropertiesDialog.cpp
+    ui/CodeEditor.h
+    ui/CodeEditor.cpp
+    ui/CodeHighlighter.h
+    ui/CodeHighlighter.cpp
+    ui/CorsPage.h
+    ui/CorsPage.cpp
+    ui/LifecyclePage.h
+    ui/LifecyclePage.cpp
+    ui/ObjectLockPage.h
+    ui/ObjectLockPage.cpp
+    ui/OtherConfigPage.h
+    ui/OtherConfigPage.cpp
+    ui/PolicyPage.h
+    ui/PolicyPage.cpp
+    ui/PublicAccessBlockSection.h
+    ui/PublicAccessBlockSection.cpp
     ui/CapabilitiesDialog.h
     ui/CapabilitiesDialog.cpp
     ui/DetailPane.h
