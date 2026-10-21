@@ -491,6 +491,12 @@ void RequestPipeline::onFinished(const std::shared_ptr<Call>& call)
         Error e = errorFromResponse(status, raw.body, QString::fromLatin1(requestId),
                                     QString::fromLatin1(raw.header("x-amz-id-2")));
         e = withContext(e);
+        if (raw.header("x-amz-delete-marker") == "true") {
+            e.deleteMarker = true;
+            e.versionId = QString::fromLatin1(raw.header("x-amz-version-id"));
+            if (status == 405)   // HEAD / GET on a delete-marker version
+                e.category = ErrorCategory::NotFound;
+        }
         m_config.profile->mapError(e);
         result = e;
     }

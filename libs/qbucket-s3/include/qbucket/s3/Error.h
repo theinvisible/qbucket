@@ -57,6 +57,12 @@ struct QBUCKET_S3_EXPORT Error {
     // Retried for idempotent requests only; the category stays as it is.
     bool retryable = false;
 
+    // The key's current version, or the version asked for, is a delete
+    // marker (x-amz-delete-marker: true on a 404 / 405). A 405 on a marker
+    // version is mapped to NotFound. versionId is the marker's, if reported.
+    bool deleteMarker = false;
+    QString versionId;
+
     [[nodiscard]] bool isTransient() const noexcept
     {
         return category == ErrorCategory::Transient;

@@ -58,6 +58,44 @@ struct ListPage {
     QString nextContinuationToken; // set when isTruncated
 };
 
+// --- Versions ----------------------------------------------------------------
+
+// One entry of ListObjectVersions: a version of an object or a delete marker.
+// The server sorts by key, then newest first; isLatest marks the current one.
+struct VersionEntry {
+    QString key;              // decoded
+    QString versionId;        // "null" for the version written while versioning was off
+    bool isLatest = false;
+    bool isDeleteMarker = false;
+    qint64 size = 0;          // 0 for delete markers
+    QDateTime lastModified;   // UTC
+    QString etag;             // quoted; empty for delete markers
+    QString storageClass;     // empty for delete markers or if not reported
+};
+
+struct ListObjectVersionsParams {
+    QString bucket;
+    QString prefix;
+    QString delimiter;        // "/" for folder-style browsing, empty for flat
+    QString keyMarker;
+    QString versionIdMarker;  // only together with keyMarker
+    int maxKeys = 1000;
+};
+
+// One page of ListObjectVersions. Versions and delete markers in the order
+// the server sent them (key, then newest first) — a key's versions may
+// continue on the next page.
+struct ListObjectVersionsPage {
+    QString bucket;
+    QString prefix;
+    QString delimiter;
+    QList<VersionEntry> entries;
+    QStringList commonPrefixes;    // decoded, with the trailing delimiter
+    bool isTruncated = false;
+    QString nextKeyMarker;         // set when isTruncated
+    QString nextVersionIdMarker;
+};
+
 // --- Objects -----------------------------------------------------------------
 
 struct ObjectMeta {

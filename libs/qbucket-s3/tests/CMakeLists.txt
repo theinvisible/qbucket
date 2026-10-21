@@ -114,6 +114,10 @@ qbucket_s3_add_test(test_copier
     SOURCES test_copier.cpp
     LIBS    qbucket::s3_transfer qbucket::s3_testsupport
 )
+qbucket_s3_add_test(test_versioning
+    SOURCES test_versioning.cpp
+    LIBS    qbucket::s3_testsupport
+)
 
 # The crash test kills s3cp mid-upload; build it even without the examples.
 if(NOT TARGET s3cp)

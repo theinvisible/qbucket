@@ -22,6 +22,10 @@
 // GET/HEAD, If-Match / If-None-Match, CopyObject and UploadPartCopy,
 // ListObjectsV2, DeleteObject(s), Content-MD5 checks (BadDigest) and
 // composite multipart ETags, object tags (?tagging) and canned ACLs (?acl).
+// Versioning per bucket (?versioning): versions and delete markers per key,
+// ListObjectVersions, versionId on GET / HEAD / DELETE / copy sources /
+// tags / ACLs, the "null" version while versioning is off or suspended,
+// x-amz-version-id / x-amz-delete-marker headers, locked versions.
 // Any other object subresource on PUT / POST / DELETE answers 501 — never
 // an upload or a delete. Faults are scripted per operation, before or after
 // the store executed the request.
@@ -53,6 +57,14 @@ public:
         QList<qint64> partSizes;      // multipart objects: the part layout
     };
 
+    // One entry of a key's history, newest first.
+    struct Version {
+        QString versionId;            // "null" while versioning is off / suspended
+        bool deleteMarker = false;
+        bool locked = false;          // DELETE ?versionId= answers 403 AccessDenied
+        Object object;                // empty for delete markers
+    };
+
     struct Fault {
         QString operation;            // operationName(), e.g. "UploadPart", "CompleteMultipartUpload"
         int partNumber = 0;           // 0: any part / not a part operation
@@ -68,13 +80,25 @@ public:
     FakeObjectStore& operator=(const FakeObjectStore&) = delete;
 
     void createBucket(const QString& bucket);
-    // Seeds an object (single-part, ETag = MD5).
-    void putObject(const QString& bucket, const QString& key, const QByteArray& data,
-                   const QString& contentType = QStringLiteral("application/octet-stream"));
+    // Seeds an object (single-part, ETag = MD5). Returns its version id
+    // ("null" unless versioning is enabled).
+    QString putObject(const QString& bucket, const QString& key, const QByteArray& data,
+                      const QString& contentType = QStringLiteral("application/octet-stream"));
 
     // An object of `size` bytes without data (for copies and listings of
     // huge objects; GET answers 501 for it).
-    void putSyntheticObject(const QString& bucket, const QString& key, qint64 size);
+    QString putSyntheticObject(const QString& bucket, const QString& key, qint64 size);
+
+    // Versioning of a bucket: "Enabled", "Suspended" or "" (never enabled —
+    // it can't go back to that once set, as on S3).
+    void setVersioning(const QString& bucket, const QString& status);
+    // MfaDelete shown by GET ?versioning (nothing enforces it).
+    void setMfaDelete(const QString& bucket, bool enabled);
+    // Seeds a delete of the current object (a delete marker when versioned);
+    // returns the marker's version id, empty when nothing was versioned.
+    QString deleteObject(const QString& bucket, const QString& key);
+    // Object lock on one version: deleting it answers 403 AccessDenied.
+    void lockVersion(const QString& bucket, const QString& key, const QString& versionId);
 
     // Bodies are hashed, not kept: uploads of any size. GET answers 501.
     void setDiscardData(bool discard);
@@ -106,8 +130,15 @@ public:
     // Answers of this operation wait `ms` (after the store executed them).
     void setDelay(const QString& operation, int ms);
 
+    // The current object (not when the newest entry is a delete marker).
     [[nodiscard]] std::optional<Object> object(const QString& bucket, const QString& key) const;
+    // Keys with a current object.
     [[nodiscard]] QStringList keys(const QString& bucket) const;
+    // A key's history, newest first (one "null" entry when unversioned).
+    [[nodiscard]] QList<Version> versions(const QString& bucket, const QString& key) const;
+    // Every key with any history (also those whose newest entry is a marker).
+    [[nodiscard]] QStringList versionedKeys(const QString& bucket) const;
+    [[nodiscard]] QString versioning(const QString& bucket) const;
     [[nodiscard]] QStringList uploadIds(const QString& bucket) const;
     // Parts of an unfinished upload: number → size.
     [[nodiscard]] QMap<int, qint64> uploadParts(const QString& uploadId) const;

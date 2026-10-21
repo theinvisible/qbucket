@@ -68,6 +68,11 @@ QBUCKET_S3_EXPORT Result<ListPartsPage> parseListParts(const QByteArray& body);
 QBUCKET_S3_EXPORT Result<ListMultipartUploadsPage> parseListMultipartUploads(const QByteArray& body,
                                                                              bool plusIsSpace);
 
+// <ListVersionsResult> of ListObjectVersions: <Version> and <DeleteMarker>
+// in document order; keys and markers decoded for encoding-type=url. A
+// truncated page without NextKeyMarker continues after its last entry.
+QBUCKET_S3_EXPORT Result<ListObjectVersionsPage> parseListVersions(const QByteArray& body, bool plusIsSpace);
+
 // <CopyPartResult> of UploadPartCopy (ETag, LastModified).
 QBUCKET_S3_EXPORT Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body);
 

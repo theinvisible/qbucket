@@ -967,6 +967,43 @@ quint64 S3Client::listParts(const ListPartsParams& params, Done<ListPartsPage> d
     });
 }
 
+quint64 S3Client::listObjectVersions(const ListObjectVersionsParams& params, Done<ListObjectVersionsPage> done)
+{
+    if (params.bucket.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("bucket is missing")));
+    if (params.keyMarker.isEmpty() && !params.versionIdMarker.isEmpty())
+        return failLater(std::move(done), invalid(QStringLiteral("version-id-marker without key-marker")));
+    RequestSpec spec;
+    spec.operation = Operation::ListObjectVersions;
+    spec.bucket = params.bucket;
+    spec.query.append({"versions", {}, true});
+    // Always url-encoded: keys may hold characters XML can't carry.
+    spec.query.append({"encoding-type", "url", false});
+    spec.query.append({"max-keys", QByteArray::number(std::clamp(params.maxKeys, 1,
+                                                                 config().profile->maxKeysPerList())), false});
+    spec.query.append({"prefix", params.prefix.toUtf8(), false});
+    if (!params.delimiter.isEmpty())
+        spec.query.append({"delimiter", params.delimiter.toUtf8(), false});
+    if (!params.keyMarker.isEmpty())
+        spec.query.append({"key-marker", params.keyMarker.toUtf8(), false});
+    if (!params.versionIdMarker.isEmpty())
+        spec.query.append({"version-id-marker", params.versionIdMarker.toUtf8(), false});
+    return single(std::move(spec), std::move(done), [this, params](const RawResponse& r) -> Result<ListObjectVersionsPage> {
+        Result<ListObjectVersionsPage> page =
+            xml::parseListVersions(r.body, config().profile->listingDecodesPlusAsSpace());
+        if (!page)
+            return page;
+        if (page->isTruncated && !params.keyMarker.isEmpty() && page->nextKeyMarker == params.keyMarker
+            && page->nextVersionIdMarker == params.versionIdMarker) {
+            return Error::make(ErrorCategory::Protocol,
+                               QStringLiteral("ListObjectVersions returned the same markers again (listing loop)"));
+        }
+        if (page->bucket.isEmpty())
+            page->bucket = params.bucket;
+        return page;
+    });
+}
+
 quint64 S3Client::listMultipartUploads(const ListMultipartUploadsParams& params, Done<ListMultipartUploadsPage> done)
 {
     if (params.bucket.isEmpty())

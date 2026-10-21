@@ -137,6 +137,10 @@ QList<Feature> featuresFor(Operation op)
         return {Feature::ObjectAcl};
     case Operation::PutObjectAcl:
         return {Feature::ObjectAclWrite, Feature::ObjectAcl};
+    case Operation::ListObjectVersions:
+        return {Feature::ObjectVersionsListing};
+    case Operation::GetBucketVersioning:
+        return {Feature::BucketVersioning};
     default:
         return {};
     }

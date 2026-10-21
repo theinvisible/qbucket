@@ -176,8 +176,14 @@ QString cannedAcl(const RecordedRequest& req)
 } // namespace
 
 struct FakeObjectStore::Impl {
+    struct BucketData {
+        std::map<QByteArray, std::vector<Version>> keys;   // UTF-8 byte order; newest first
+        QString versioning;                                 // "", "Enabled", "Suspended"
+        bool mfaDelete = false;
+    };
+
     QPointer<FakeS3Server> server;
-    std::map<QString, std::map<QByteArray, Object>> buckets;   // keys in UTF-8 byte order
+    std::map<QString, BucketData> buckets;
     std::map<QString, Upload> uploads;                          // by id (sortable)
     QList<QPair<QString, int>> partUploads;
     QHash<QString, int> counts;
@@ -185,6 +191,7 @@ struct FakeObjectStore::Impl {
     QList<int> faultHits;   // matches per fault
     QHash<QString, int> delays;
     int nextUpload = 1;
+    int nextVersion = 1;
     bool discard = false;
     qint64 minPartSize = Q_INT64_C(5) * 1024 * 1024;
     bool honourIfNoneMatch = true;
@@ -193,13 +200,108 @@ struct FakeObjectStore::Impl {
     bool dropObjectSubresources = false;
     bool dropTagsOnReplace = false;
 
-    Object* find(const QString& bucket, const QString& key)
+    std::vector<Version>* history(const QString& bucket, const QString& key)
     {
         auto b = buckets.find(bucket);
         if (b == buckets.end())
             return nullptr;
-        auto o = b->second.find(key.toUtf8());
-        return o == b->second.end() ? nullptr : &o->second;
+        auto h = b->second.keys.find(key.toUtf8());
+        return h == b->second.keys.end() || h->second.empty() ? nullptr : &h->second;
+    }
+
+    Version* findVersion(const QString& bucket, const QString& key, const QString& versionId)
+    {
+        std::vector<Version>* h = history(bucket, key);
+        if (!h)
+            return nullptr;
+        for (Version& v : *h) {
+            if (v.versionId == versionId)
+                return &v;
+        }
+        return nullptr;
+    }
+
+    // The current object; none when the newest entry is a delete marker.
+    Object* find(const QString& bucket, const QString& key)
+    {
+        std::vector<Version>* h = history(bucket, key);
+        return h && !h->front().deleteMarker ? &h->front().object : nullptr;
+    }
+
+    bool versioned(const QString& bucket) const
+    {
+        const auto b = buckets.find(bucket);
+        return b != buckets.end() && !b->second.versioning.isEmpty();
+    }
+
+    // The entry a write or a delete adds: a new version id while versioning
+    // is enabled, else "null" — replacing the earlier "null" entry.
+    QString addEntry(const QString& bucket, const QString& key, Version v)
+    {
+        BucketData& b = buckets[bucket];
+        std::vector<Version>& h = b.keys[key.toUtf8()];
+        if (b.versioning == QLatin1String("Enabled")) {
+            v.versionId = QStringLiteral("v%1").arg(nextVersion++, 8, 10, QLatin1Char('0'));
+        } else {
+            v.versionId = QStringLiteral("null");
+            std::erase_if(h, [](const Version& e) { return e.versionId == QLatin1String("null"); });
+        }
+        h.insert(h.begin(), std::move(v));
+        return h.front().versionId;
+    }
+
+    QString store(const QString& bucket, const QString& key, const Object& o)
+    {
+        Version v;
+        v.object = o;
+        return addEntry(bucket, key, std::move(v));
+    }
+
+    // DeleteObject without a version: a delete marker when versioned, else
+    // the object is gone. Returns the marker's id (empty without one).
+    QString deleteCurrent(const QString& bucket, const QString& key)
+    {
+        if (!versioned(bucket)) {
+            buckets[bucket].keys.erase(key.toUtf8());
+            return {};
+        }
+        Version m;
+        m.deleteMarker = true;
+        m.object.lastModified = QDateTime::currentDateTimeUtc();
+        return addEntry(bucket, key, std::move(m));
+    }
+
+    struct VersionDelete {
+        bool found = false;
+        bool locked = false;
+        bool marker = false;
+    };
+
+    VersionDelete deleteVersion(const QString& bucket, const QString& key, const QString& versionId)
+    {
+        VersionDelete out;
+        std::vector<Version>* h = history(bucket, key);
+        if (!h)
+            return out;
+        const auto it = std::find_if(h->begin(), h->end(), [&](const Version& v) { return v.versionId == versionId; });
+        if (it == h->end())
+            return out;
+        out.found = true;
+        out.locked = it->locked;
+        out.marker = it->deleteMarker;
+        if (out.locked)
+            return out;
+        h->erase(it);
+        if (h->empty())
+            buckets[bucket].keys.erase(key.toUtf8());
+        return out;
+    }
+
+    FakeResponse withVersion(FakeResponse r, const QString& bucket, const QString& versionId)
+    {
+        if (versioned(bucket) && !versionId.isEmpty())
+            r.withHeader("x-amz-version-id", versionId.toLatin1());
+        return r;
     }
 
     QString operationOf(const RecordedRequest& req, const QString& key) const
@@ -210,6 +312,10 @@ struct FakeObjectStore::Impl {
         if (key.isEmpty()) {
             if (m == "GET" && req.hasQueryItem("uploads"))
                 return QStringLiteral("ListMultipartUploads");
+            if (m == "GET" && req.hasQueryItem("versions"))
+                return QStringLiteral("ListObjectVersions");
+            if (m == "PUT" && req.hasQueryItem("versioning"))
+                return QStringLiteral("PutBucketVersioning");
             if (m == "POST" && req.hasQueryItem("delete"))
                 return QStringLiteral("DeleteObjects");
             if (m == "HEAD")
@@ -312,11 +418,21 @@ struct FakeObjectStore::Impl {
             return listObjects(req, bucket);
         if (op == QLatin1String("ListMultipartUploads"))
             return listUploads(req, bucket);
+        if (op == QLatin1String("ListObjectVersions"))
+            return listVersions(req, bucket);
+        if (op == QLatin1String("PutBucketVersioning"))
+            return putVersioning(req, bucket);
         if (op == QLatin1String("DeleteObjects"))
             return deleteObjects(req, bucket);
         if (op == QLatin1String("GetBucketSubresource")) {
-            if (req.hasQueryItem("versioning"))
-                return xmlResponse("<VersioningConfiguration/>");
+            if (req.hasQueryItem("versioning")) {
+                const BucketData& b = buckets[bucket];
+                if (b.versioning.isEmpty())
+                    return xmlResponse("<VersioningConfiguration/>");
+                return xmlResponse("<VersioningConfiguration><Status>" + b.versioning.toLatin1() + "</Status><MfaDelete>"
+                                   + QByteArray(b.mfaDelete ? "Enabled" : "Disabled")
+                                   + "</MfaDelete></VersioningConfiguration>");
+            }
             return error(501, "NotImplemented", "not implemented by FakeObjectStore");
         }
         if (op == QLatin1String("PutObject"))
@@ -325,12 +441,8 @@ struct FakeObjectStore::Impl {
             return copyObject(req, bucket, key);
         if (op == QLatin1String("GetObject") || op == QLatin1String("HeadObject"))
             return getObject(req, bucket, key, op == QLatin1String("HeadObject"));
-        if (op == QLatin1String("DeleteObject")) {
-            buckets[bucket].erase(key.toUtf8());
-            FakeResponse r;
-            r.status = 204;
-            return r;
-        }
+        if (op == QLatin1String("DeleteObject"))
+            return deleteObject(req, bucket, key);
         if (op == QLatin1String("CreateMultipartUpload"))
             return createUpload(req, bucket, key);
         if (op == QLatin1String("UploadPart") || op == QLatin1String("UploadPartCopy"))
@@ -356,7 +468,17 @@ struct FakeObjectStore::Impl {
 
     FakeResponse subresource(const QString& op, const RecordedRequest& req, const QString& bucket, const QString& key)
     {
-        Object* o = find(bucket, key);
+        Object* o = nullptr;
+        if (req.hasQueryItem("versionId")) {
+            Version* v = findVersion(bucket, key, decode(req.queryItem("versionId")));
+            if (!v)
+                return error(404, "NoSuchVersion", "The specified version does not exist.");
+            if (v->deleteMarker)
+                return markerAnswer(error(405, "MethodNotAllowed", "The specified method is not allowed against this resource."), *v);
+            o = &v->object;
+        } else {
+            o = find(bucket, key);
+        }
         if (!o)
             return error(404, "NoSuchKey", "The specified key does not exist.");
         if (op == QLatin1String("GetObjectTagging")) {
@@ -427,9 +549,16 @@ struct FakeObjectStore::Impl {
         return honourIfNoneMatch && req.header("if-none-match") == "*" && find(bucket, key);
     }
 
-    FakeResponse stored(const Object& o)
+    FakeResponse stored(const Object& o, const QString& bucket, const QString& versionId)
     {
-        return FakeResponse::ok().withHeader("ETag", o.etag.toLatin1());
+        return withVersion(FakeResponse::ok().withHeader("ETag", o.etag.toLatin1()), bucket, versionId);
+    }
+
+    static FakeResponse markerAnswer(FakeResponse r, const Version& marker)
+    {
+        r.withHeader("x-amz-delete-marker", "true");
+        r.withHeader("x-amz-version-id", marker.versionId.toLatin1());
+        return r;
     }
 
     FakeResponse putObject(const RecordedRequest& req, const QString& bucket, const QString& key)
@@ -451,48 +580,82 @@ struct FakeObjectStore::Impl {
         o.headers = storedHeaders(req);
         o.acl = cannedAcl(req);
         o.tags = taggingHeader(req);
-        buckets[bucket][key.toUtf8()] = o;
-        return stored(o);
+        const QString versionId = store(bucket, key, o);
+        return stored(o, bucket, versionId);
     }
 
-    // x-amz-copy-source → (bucket, key), the source object.
-    std::optional<std::pair<QString, Object*>> copySource(const RecordedRequest& req)
+    struct Source {
+        QString bucket;
+        const Object* object = nullptr;
+        QString versionId;            // as asked for ("" without ?versionId=)
+        QString foundVersionId;       // of the version copied
+        std::optional<FakeResponse> failure;
+    };
+
+    // x-amz-copy-source → the source object (a version with ?versionId=).
+    Source copySource(const RecordedRequest& req)
     {
+        Source out;
         QByteArray raw = req.header("x-amz-copy-source");
-        if (const qsizetype q = raw.indexOf('?'); q >= 0)
+        QByteArray query;
+        if (const qsizetype q = raw.indexOf('?'); q >= 0) {
+            query = raw.mid(q + 1);
             raw = raw.left(q);
+        }
         if (raw.startsWith('/'))
             raw = raw.mid(1);
         const qsizetype slash = raw.indexOf('/');
-        if (slash <= 0)
-            return std::nullopt;
-        const QString bucket = decode(raw.left(slash));
+        if (slash <= 0) {
+            out.failure = error(400, "InvalidArgument", "Copy Source must mention the source bucket and key");
+            return out;
+        }
+        out.bucket = decode(raw.left(slash));
         const QString key = decode(raw.mid(slash + 1));
-        Object* o = find(bucket, key);
-        if (!o)
-            return std::nullopt;
-        return std::pair{bucket, o};
+        if (query.startsWith("versionId=")) {
+            out.versionId = decode(query.mid(10));
+            const Version* v = findVersion(out.bucket, key, out.versionId);
+            if (!v) {
+                out.failure = error(404, "NoSuchVersion", "The specified version does not exist.");
+                return out;
+            }
+            if (v->deleteMarker) {
+                out.failure = error(400, "InvalidRequest",
+                                    "The source of a copy request may not specifically refer to a delete marker by version id.");
+                return out;
+            }
+            out.object = &v->object;
+            out.foundVersionId = v->versionId;
+            return out;
+        }
+        out.object = find(out.bucket, key);
+        if (!out.object) {
+            out.failure = error(404, "NoSuchKey", "The specified key does not exist.");
+            return out;
+        }
+        out.foundVersionId = history(out.bucket, key)->front().versionId;
+        return out;
     }
 
     FakeResponse copyObject(const RecordedRequest& req, const QString& bucket, const QString& key)
     {
-        const auto source = copySource(req);
-        if (!source)
-            return error(404, "NoSuchKey", "The specified key does not exist.");
+        const Source source = copySource(req);
+        if (source.failure)
+            return *source.failure;
         const QByteArray ifMatch = req.header("x-amz-copy-source-if-match");
-        if (!ifMatch.isNull() && unquoted(QString::fromLatin1(ifMatch)) != unquoted(source->second->etag))
+        if (!ifMatch.isNull() && unquoted(QString::fromLatin1(ifMatch)) != unquoted(source.object->etag))
             return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
         const bool replace = req.header("x-amz-metadata-directive").compare("REPLACE", Qt::CaseInsensitive) == 0;
         const QString storageClass = QString::fromLatin1(req.header("x-amz-storage-class"));
+        const bool ontoItself = source.bucket == bucket && source.object == find(bucket, key);
         // AWS refuses a copy onto itself that changes nothing.
-        if (source->first == bucket && source->second == find(bucket, key) && !replace && storageClass.isEmpty()
+        if (ontoItself && !replace && storageClass.isEmpty()
             && req.header("x-amz-server-side-encryption").isNull()) {
             return error(400, "InvalidRequest",
                          "This copy request is illegal because it is trying to copy an object to itself without "
                          "changing the object's metadata, storage class, website redirect location or encryption "
                          "attributes.");
         }
-        Object copy = *source->second;
+        Object copy = *source.object;
         copy.lastModified = QDateTime::currentDateTimeUtc();
         copy.storageClass = storageClass;
         // The encryption comes from the request (or the bucket default), not the source.
@@ -501,7 +664,7 @@ struct FakeObjectStore::Impl {
             copy.contentType = QString::fromUtf8(req.header("content-type"));
             copy.metadata = userMetadata(req);
             copy.headers = storedHeaders(req);
-            if (dropTagsOnReplace && source->second == find(bucket, key))
+            if (dropTagsOnReplace && ontoItself)
                 copy.tags.clear();
         } else if (const QByteArray sse = req.header("x-amz-server-side-encryption"); !sse.isNull()) {
             copy.headers.insert(QStringLiteral("x-amz-server-side-encryption"), QString::fromLatin1(sse));
@@ -509,16 +672,38 @@ struct FakeObjectStore::Impl {
         copy.acl = cannedAcl(req);   // never copied
         if (req.header("x-amz-tagging-directive").compare("REPLACE", Qt::CaseInsensitive) == 0)
             copy.tags = taggingHeader(req);
-        buckets[bucket][key.toUtf8()] = copy;
-        return xmlResponse("<CopyObjectResult><LastModified>" + iso(copy.lastModified) + "</LastModified><ETag>"
-                           + xmlEscape(copy.etag) + "</ETag></CopyObjectResult>");
+        const QString versionId = store(bucket, key, copy);
+        FakeResponse r = withVersion(xmlResponse("<CopyObjectResult><LastModified>" + iso(copy.lastModified)
+                                                 + "</LastModified><ETag>" + xmlEscape(copy.etag)
+                                                 + "</ETag></CopyObjectResult>"),
+                                     bucket, versionId);
+        if (versioned(source.bucket))
+            r.withHeader("x-amz-copy-source-version-id", source.foundVersionId.toLatin1());
+        return r;
     }
 
     FakeResponse getObject(const RecordedRequest& req, const QString& bucket, const QString& key, bool head)
     {
-        const Object* o = find(bucket, key);
-        if (!o)
+        const Version* version = nullptr;
+        if (req.hasQueryItem("versionId")) {
+            version = findVersion(bucket, key, decode(req.queryItem("versionId")));
+            if (!version)
+                return head ? error(404, "", "") : error(404, "NoSuchVersion", "The specified version does not exist.");
+            if (version->deleteMarker) {
+                return markerAnswer(head ? error(405, "", "")
+                                         : error(405, "MethodNotAllowed",
+                                                 "The specified method is not allowed against this resource."),
+                                    *version);
+            }
+        } else if (const std::vector<Version>* h = history(bucket, key)) {
+            version = &h->front();
+            if (version->deleteMarker)
+                return markerAnswer(head ? error(404, "", "") : error(404, "NoSuchKey", "The specified key does not exist."),
+                                    *version);
+        }
+        if (!version)
             return head ? error(404, "", "") : error(404, "NoSuchKey", "The specified key does not exist.");
+        const Object* o = &version->object;
         const QByteArray ifMatch = req.header("if-match");
         if (!ifMatch.isNull() && unquoted(QString::fromLatin1(ifMatch)) != unquoted(o->etag))
             return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
@@ -562,6 +747,8 @@ struct FakeObjectStore::Impl {
         }
         r.withHeader("ETag", o->etag.toLatin1());
         r.withHeader("Last-Modified", formatHttpDate(o->lastModified));
+        if (versioned(bucket))
+            r.withHeader("x-amz-version-id", version->versionId.toLatin1());
         if (req.hasQueryItem("response-content-disposition"))
             r.withHeader("Content-Disposition", QUrl::fromPercentEncoding(req.queryItem("response-content-disposition")).toUtf8());
         r.withHeader("Content-Type", o->contentType.isEmpty() ? QByteArray("binary/octet-stream") : o->contentType.toUtf8());
@@ -618,10 +805,10 @@ struct FakeObjectStore::Impl {
             return error(400, "InvalidArgument", "Part number must be an integer between 1 and 10000");
         Part p;
         if (copy) {
-            const auto source = copySource(req);
-            if (!source)
-                return error(404, "NoSuchKey", "The specified key does not exist.");
-            const Object& src = *source->second;
+            const Source source = copySource(req);
+            if (source.failure)
+                return *source.failure;
+            const Object& src = *source.object;
             const QByteArray ifMatch = req.header("x-amz-copy-source-if-match");
             if (!ifMatch.isNull() && unquoted(QString::fromLatin1(ifMatch)) != unquoted(src.etag))
                 return error(412, "PreconditionFailed", "At least one of the pre-conditions you specified did not hold");
@@ -721,12 +908,13 @@ struct FakeObjectStore::Impl {
         o.acl = u->acl;
         o.tags = u->tags;
         o.partSizes = sizes;
-        buckets[bucket][key.toUtf8()] = o;
+        const QString versionId = store(bucket, key, o);
         uploads.erase(u->id);
-        return xmlResponse("<CompleteMultipartUploadResult><Location>http://fake/" + xmlEscape(bucket) + '/'
+        return withVersion(xmlResponse("<CompleteMultipartUploadResult><Location>http://fake/" + xmlEscape(bucket) + '/'
                            + xmlEscape(key) + "</Location><Bucket>" + xmlEscape(bucket) + "</Bucket><Key>"
                            + xmlEscape(key) + "</Key><ETag>" + xmlEscape(o.etag)
-                           + "</ETag></CompleteMultipartUploadResult>");
+                           + "</ETag></CompleteMultipartUploadResult>"),
+                           bucket, versionId);
     }
 
     FakeResponse listParts(const RecordedRequest& req, const QString& bucket, const QString& key)
@@ -822,7 +1010,7 @@ struct FakeObjectStore::Impl {
             return encode ? uriEncodeText(text, SlashMode::Keep) : xmlEscape(text);
         };
 
-        const auto& objects = buckets[bucket];
+        const auto& objects = buckets[bucket].keys;
         const QByteArray p = prefix.toUtf8();
         QByteArray body = "<ListBucketResult><Name>" + xmlEscape(bucket) + "</Name><Prefix>" + enc(prefix)
                         + "</Prefix><MaxKeys>" + QByteArray::number(maxKeys) + "</MaxKeys>";
@@ -845,6 +1033,10 @@ struct FakeObjectStore::Impl {
             const QByteArray& k = it->first;
             if (!k.startsWith(p))
                 break;
+            if (it->second.empty() || it->second.front().deleteMarker) {   // deleted: not listed
+                ++it;
+                continue;
+            }
             QByteArray common;
             if (!delimiter.isEmpty()) {
                 const qsizetype at = k.indexOf(delimiter.toUtf8(), p.size());
@@ -863,7 +1055,7 @@ struct FakeObjectStore::Impl {
                     ++it;
                 continue;
             }
-            const Object& o = it->second;
+            const Object& o = it->second.front().object;
             contents += "<Contents><Key>" + enc(QString::fromUtf8(k)) + "</Key><LastModified>" + iso(o.lastModified)
                       + "</LastModified><ETag>" + xmlEscape(o.etag) + "</ETag><Size>" + QByteArray::number(o.size)
                       + "</Size><StorageClass>"
@@ -882,19 +1074,208 @@ struct FakeObjectStore::Impl {
 
     FakeResponse deleteObjects(const RecordedRequest& req, const QString& bucket)
     {
-        QByteArray body = "<DeleteResult>";
+        QList<QPair<QString, std::optional<QString>>> objects;   // key, version id
         QXmlStreamReader r(req.body);
         while (!r.atEnd()) {
             r.readNext();
-            if (r.isStartElement() && r.name() == QLatin1String("Key")) {
-                const QString key = r.readElementText();
-                buckets[bucket].erase(key.toUtf8());
-                body += "<Deleted><Key>" + xmlEscape(key) + "</Key></Deleted>";
+            if (r.isStartElement() && r.name() == QLatin1String("Object")) {
+                QString key;
+                std::optional<QString> versionId;
+                while (r.readNextStartElement()) {
+                    if (r.name() == QLatin1String("Key"))
+                        key = r.readElementText();
+                    else if (r.name() == QLatin1String("VersionId"))
+                        versionId = r.readElementText();
+                    else
+                        r.skipCurrentElement();
+                }
+                objects.append({key, versionId});
             }
         }
         if (r.hasError())
             return error(400, "MalformedXML", "The XML you provided was not well-formed");
+        QByteArray body = "<DeleteResult>";
+        for (const auto& [key, versionId] : std::as_const(objects)) {
+            const QByteArray k = "<Key>" + xmlEscape(key) + "</Key>";
+            if (versionId) {
+                const VersionDelete del = deleteVersion(bucket, key, *versionId);
+                const QByteArray v = "<VersionId>" + xmlEscape(*versionId) + "</VersionId>";
+                if (del.locked) {
+                    body += "<Error>" + k + v + "<Code>AccessDenied</Code><Message>Access Denied because object "
+                                              "protected by object lock.</Message></Error>";
+                    continue;
+                }
+                body += "<Deleted>" + k + v;
+                if (del.marker)
+                    body += "<DeleteMarker>true</DeleteMarker><DeleteMarkerVersionId>" + xmlEscape(*versionId)
+                          + "</DeleteMarkerVersionId>";
+                body += "</Deleted>";
+                continue;
+            }
+            const QString marker = deleteCurrent(bucket, key);
+            body += "<Deleted>" + k;
+            if (!marker.isEmpty())
+                body += "<DeleteMarker>true</DeleteMarker><DeleteMarkerVersionId>" + marker.toLatin1()
+                      + "</DeleteMarkerVersionId>";
+            body += "</Deleted>";
+        }
         return xmlResponse(body + "</DeleteResult>");
+    }
+
+    FakeResponse deleteObject(const RecordedRequest& req, const QString& bucket, const QString& key)
+    {
+        FakeResponse r;
+        r.status = 204;
+        if (req.hasQueryItem("versionId")) {
+            const QString versionId = decode(req.queryItem("versionId"));
+            const VersionDelete del = deleteVersion(bucket, key, versionId);
+            if (del.locked)
+                return error(403, "AccessDenied", "Access Denied because object protected by object lock.");
+            if (del.found) {
+                r.withHeader("x-amz-version-id", versionId.toLatin1());
+                if (del.marker)
+                    r.withHeader("x-amz-delete-marker", "true");
+            }
+            return r;
+        }
+        const QString marker = deleteCurrent(bucket, key);
+        if (!marker.isEmpty()) {
+            r.withHeader("x-amz-delete-marker", "true");
+            r.withHeader("x-amz-version-id", marker.toLatin1());
+        }
+        return r;
+    }
+
+    FakeResponse putVersioning(const RecordedRequest& req, const QString& bucket)
+    {
+        if (std::optional<FakeResponse> bad = checkMd5(req))
+            return *bad;
+        QString status;
+        QString mfa;
+        QXmlStreamReader r(req.body);
+        if (!r.readNextStartElement() || r.name() != QLatin1String("VersioningConfiguration"))
+            return error(400, "MalformedXML", "The XML you provided was not well-formed");
+        while (r.readNextStartElement()) {
+            if (r.name() == QLatin1String("Status"))
+                status = r.readElementText();
+            else if (r.name() == QLatin1String("MfaDelete"))
+                mfa = r.readElementText();
+            else
+                r.skipCurrentElement();
+        }
+        if (r.hasError() || (status != QLatin1String("Enabled") && status != QLatin1String("Suspended")))
+            return error(400, "MalformedXML", "The XML you provided was not well-formed");
+        if (!mfa.isEmpty() && req.header("x-amz-mfa").isNull())
+            return error(400, "InvalidRequest", "MFA Delete can only be changed with MFA authentication");
+        buckets[bucket].versioning = status;
+        return FakeResponse::ok();
+    }
+
+    FakeResponse listVersions(const RecordedRequest& req, const QString& bucket)
+    {
+        const QString prefix = decode(req.queryItem("prefix"));
+        const QString delimiter = decode(req.queryItem("delimiter"));
+        const QByteArray keyMarker = decode(req.queryItem("key-marker")).toUtf8();
+        const QString versionIdMarker = decode(req.queryItem("version-id-marker"));
+        const int maxKeys = req.hasQueryItem("max-keys") ? std::clamp(req.queryItem("max-keys").toInt(), 1, 1000) : 1000;
+        const bool encode = req.queryItem("encoding-type") == "url";
+        const auto enc = [encode](const QString& text) {
+            return encode ? uriEncodeText(text, SlashMode::Keep) : xmlEscape(text);
+        };
+        const QByteArray p = prefix.toUtf8();
+        const QByteArray delim = delimiter.toUtf8();
+        const auto& keys = buckets[bucket].keys;
+
+        QByteArray body = "<ListVersionsResult><Name>" + xmlEscape(bucket) + "</Name><Prefix>" + enc(prefix)
+                        + "</Prefix><KeyMarker>" + enc(QString::fromUtf8(keyMarker)) + "</KeyMarker><VersionIdMarker>"
+                        + xmlEscape(versionIdMarker) + "</VersionIdMarker><MaxKeys>" + QByteArray::number(maxKeys)
+                        + "</MaxKeys>";
+        if (!delimiter.isEmpty())
+            body += "<Delimiter>" + enc(delimiter) + "</Delimiter>";
+        if (encode)
+            body += "<EncodingType>url</EncodingType>";
+        QByteArray entries;
+        QByteArray prefixes;
+        int returned = 0;
+        bool truncated = false;
+        QByteArray nextKey;
+        QString nextVersionId;
+
+        auto it = keys.lower_bound(keyMarker.isEmpty() ? p : keyMarker);
+        // Continuing after a common prefix: nothing under it again.
+        if (!delim.isEmpty() && !keyMarker.isEmpty() && keyMarker.endsWith(delim)) {
+            while (it != keys.end() && it->first.startsWith(keyMarker))
+                ++it;
+        }
+        while (it != keys.end() && !truncated) {
+            const QByteArray& k = it->first;
+            if (!k.startsWith(p)) {
+                if (k > p)
+                    break;
+                ++it;
+                continue;
+            }
+            std::size_t first = 0;
+            if (!keyMarker.isEmpty() && k == keyMarker) {
+                if (versionIdMarker.isEmpty()) {   // the marker key itself is done
+                    ++it;
+                    continue;
+                }
+                const auto& h = it->second;
+                while (first < h.size() && h[first].versionId != versionIdMarker)
+                    ++first;
+                ++first;   // after the marker version
+            }
+            QByteArray common;
+            if (!delim.isEmpty()) {
+                const qsizetype at = k.indexOf(delim, p.size());
+                if (at >= 0)
+                    common = k.left(at + delim.size());
+            }
+            if (!common.isEmpty()) {
+                if (returned == maxKeys) {
+                    truncated = true;
+                    break;
+                }
+                prefixes += "<CommonPrefixes><Prefix>" + enc(QString::fromUtf8(common)) + "</Prefix></CommonPrefixes>";
+                nextKey = common;
+                nextVersionId.clear();
+                ++returned;
+                while (it != keys.end() && it->first.startsWith(common))
+                    ++it;
+                continue;
+            }
+            const auto& h = it->second;
+            for (std::size_t i = first; i < h.size(); ++i) {
+                if (returned == maxKeys) {
+                    truncated = true;
+                    break;
+                }
+                const Version& v = h[i];
+                const QByteArray fields = "<Key>" + enc(QString::fromUtf8(k)) + "</Key><VersionId>"
+                                        + xmlEscape(v.versionId) + "</VersionId><IsLatest>"
+                                        + QByteArray(i == 0 ? "true" : "false") + "</IsLatest><LastModified>"
+                                        + iso(v.object.lastModified) + "</LastModified>";
+                if (v.deleteMarker) {
+                    entries += "<DeleteMarker>" + fields + "</DeleteMarker>";
+                } else {
+                    entries += "<Version>" + fields + "<ETag>" + xmlEscape(v.object.etag) + "</ETag><Size>"
+                             + QByteArray::number(v.object.size) + "</Size><StorageClass>"
+                             + (v.object.storageClass.isEmpty() ? QByteArray("STANDARD") : v.object.storageClass.toLatin1())
+                             + "</StorageClass></Version>";
+                }
+                nextKey = k;
+                nextVersionId = v.versionId;
+                ++returned;
+            }
+            ++it;
+        }
+        body += "<IsTruncated>" + QByteArray(truncated ? "true" : "false") + "</IsTruncated>";
+        if (truncated) {
+            body += "<NextKeyMarker>" + enc(QString::fromUtf8(nextKey)) + "</NextKeyMarker><NextVersionIdMarker>"
+                  + xmlEscape(nextVersionId) + "</NextVersionIdMarker>";
+        }
+        return xmlResponse(body + entries + prefixes + "</ListVersionsResult>");
     }
 };
 
@@ -916,8 +1297,8 @@ void FakeObjectStore::createBucket(const QString& bucket)
     d->buckets[bucket];
 }
 
-void FakeObjectStore::putObject(const QString& bucket, const QString& key, const QByteArray& data,
-                                const QString& contentType)
+QString FakeObjectStore::putObject(const QString& bucket, const QString& key, const QByteArray& data,
+                                   const QString& contentType)
 {
     Object o;
     o.data = data;
@@ -926,17 +1307,38 @@ void FakeObjectStore::putObject(const QString& bucket, const QString& key, const
     o.etag = quoted(o.md5);
     o.lastModified = QDateTime::currentDateTimeUtc();
     o.contentType = contentType;
-    d->buckets[bucket][key.toUtf8()] = o;
+    return d->store(bucket, key, o);
 }
 
-void FakeObjectStore::putSyntheticObject(const QString& bucket, const QString& key, qint64 size)
+QString FakeObjectStore::putSyntheticObject(const QString& bucket, const QString& key, qint64 size)
 {
     Object o;
     o.size = size;
     o.etag = quoted(md5(key.toUtf8() + QByteArray::number(size)));
     o.lastModified = QDateTime::currentDateTimeUtc();
     o.contentType = QStringLiteral("application/octet-stream");
-    d->buckets[bucket][key.toUtf8()] = o;
+    return d->store(bucket, key, o);
+}
+
+void FakeObjectStore::setVersioning(const QString& bucket, const QString& status)
+{
+    d->buckets[bucket].versioning = status;
+}
+
+void FakeObjectStore::setMfaDelete(const QString& bucket, bool enabled)
+{
+    d->buckets[bucket].mfaDelete = enabled;
+}
+
+QString FakeObjectStore::deleteObject(const QString& bucket, const QString& key)
+{
+    return d->deleteCurrent(bucket, key);
+}
+
+void FakeObjectStore::lockVersion(const QString& bucket, const QString& key, const QString& versionId)
+{
+    if (Version* v = d->findVersion(bucket, key, versionId))
+        v->locked = true;
 }
 
 void FakeObjectStore::setDiscardData(bool discard)
@@ -1029,9 +1431,38 @@ QStringList FakeObjectStore::keys(const QString& bucket) const
     const auto b = d->buckets.find(bucket);
     if (b == d->buckets.end())
         return out;
-    for (const auto& [key, o] : b->second)
-        out.append(QString::fromUtf8(key));
+    for (const auto& [key, h] : b->second.keys) {
+        if (!h.empty() && !h.front().deleteMarker)
+            out.append(QString::fromUtf8(key));
+    }
     return out;
+}
+
+QList<FakeObjectStore::Version> FakeObjectStore::versions(const QString& bucket, const QString& key) const
+{
+    QList<Version> out;
+    if (const std::vector<Version>* h = d->history(bucket, key))
+        out.assign(h->begin(), h->end());
+    return out;
+}
+
+QStringList FakeObjectStore::versionedKeys(const QString& bucket) const
+{
+    QStringList out;
+    const auto b = d->buckets.find(bucket);
+    if (b == d->buckets.end())
+        return out;
+    for (const auto& [key, h] : b->second.keys) {
+        if (!h.empty())
+            out.append(QString::fromUtf8(key));
+    }
+    return out;
+}
+
+QString FakeObjectStore::versioning(const QString& bucket) const
+{
+    const auto b = d->buckets.find(bucket);
+    return b == d->buckets.end() ? QString() : b->second.versioning;
 }
 
 QStringList FakeObjectStore::uploadIds(const QString& bucket) const

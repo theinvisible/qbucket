@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListVersionsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Name>bucket</Name>
+  <Prefix></Prefix>
+  <MaxKeys>2</MaxKeys>
+  <IsTruncated>true</IsTruncated>
+  <Version>
+    <Key>a</Key>
+    <VersionId>v2</VersionId>
+    <IsLatest>true</IsLatest>
+    <LastModified>2026-10-20T17:50:30.000Z</LastModified>
+    <ETag>"aa"</ETag>
+    <Size>1</Size>
+  </Version>
+  <Version>
+    <Key>a</Key>
+    <VersionId>v1</VersionId>
+    <IsLatest>false</IsLatest>
+    <LastModified>2026-10-19T17:50:30.000Z</LastModified>
+    <ETag>"bb"</ETag>
+    <Size>2</Size>
+  </Version>
+</ListVersionsResult>

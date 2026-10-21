@@ -52,6 +52,7 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/Endpoint.h
     include/qbucket/s3/Error.h
     include/qbucket/s3/ListObjectsPager.h
+    include/qbucket/s3/ListObjectVersionsPager.h
     include/qbucket/s3/Logging.h
     include/qbucket/s3/Operation.h
     include/qbucket/s3/Presigner.h
@@ -102,6 +103,7 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/providers/HetznerProfile.cpp
     src/providers/ProviderProfile.cpp
     src/providers/ProviderRegistry.cpp
+    src/session/ListObjectVersionsPager.cpp
     src/session/ListObjectsPager.cpp
     src/session/Session.cpp
     src/signing/SigV4Signer.cpp

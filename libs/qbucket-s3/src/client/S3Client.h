@@ -43,6 +43,7 @@ public:
     // Each returns an operation id for abort().
     quint64 listBuckets(Done<BucketList> done);
     quint64 listObjects(const ListObjectsParams& params, Done<ListPage> done);
+    quint64 listObjectVersions(const ListObjectVersionsParams& params, Done<ListObjectVersionsPage> done);
     quint64 headBucket(const QString& bucket, Done<void> done);
     // Region of the bucket, already mapped through the provider profile.
     quint64 getBucketLocation(const QString& bucket, Done<QString> done);

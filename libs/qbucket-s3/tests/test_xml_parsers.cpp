@@ -314,6 +314,55 @@ private Q_SLOTS:
         QVERIFY(!hetzner->isTruncated);
     }
 
+    void listVersions()
+    {
+        const auto r = xml::parseListVersions(fixture("list-versions.xml"), false);
+        QVERIFY(r);
+        QCOMPARE(r->bucket, QStringLiteral("bucket"));
+        QCOMPARE(r->prefix, QStringLiteral("docs/"));
+        QCOMPARE(r->delimiter, QStringLiteral("/"));
+        QCOMPARE(r->entries.size(), 3);   // versions and delete markers in document order
+        const VersionEntry& a = r->entries[0];
+        QCOMPARE(a.key, QStringLiteral("docs/a.txt"));
+        QCOMPARE(a.versionId, QStringLiteral("null"));
+        QVERIFY(a.isLatest && !a.isDeleteMarker);
+        QCOMPARE(a.size, 434234);
+        QCOMPARE(a.etag, QStringLiteral("\"fba9dede5f27731c9771645a39863328\""));
+        QCOMPARE(a.storageClass, QStringLiteral("STANDARD"));
+        QVERIFY(a.lastModified.isValid());
+        const VersionEntry& marker = r->entries[1];
+        QCOMPARE(marker.key, QStringLiteral("docs/my file.txt"));   // url-decoded
+        QVERIFY(marker.isDeleteMarker && marker.isLatest);
+        QCOMPARE(marker.size, 0);
+        QVERIFY(marker.etag.isEmpty());
+        const VersionEntry& older = r->entries[2];
+        QVERIFY(!older.isLatest && !older.isDeleteMarker);
+        // Version ids are never url-encoded.
+        QCOMPARE(older.versionId, QStringLiteral("3/L4kqtJlcpXroDTDmJ+rmSpXd3dIbrHY+MTRCxf3vjVBH40Nr8X8gdRQBpUMLUo"));
+        QCOMPARE(r->commonPrefixes, QStringList{QStringLiteral("docs/old+/")});
+        QVERIFY(r->isTruncated);
+        QCOMPARE(r->nextKeyMarker, QStringLiteral("docs/my file.txt"));
+        QCOMPARE(r->nextVersionIdMarker, older.versionId);
+
+        // Truncated without NextKeyMarker: continue after the last entry.
+        const auto noMarker = xml::parseListVersions(fixture("list-versions-no-next-marker.xml"), false);
+        QVERIFY(noMarker);
+        QCOMPARE(noMarker->nextKeyMarker, QStringLiteral("a"));
+        QCOMPARE(noMarker->nextVersionIdMarker, QStringLiteral("v1"));
+
+        // Hetzner's answer to the capability probe (max-keys=1, empty bucket).
+        QFile f(QStringLiteral(TEST_DATA_DIR "/hetzner/probe-versions-200.xml"));
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        const auto hetzner = xml::parseListVersions(f.readAll(), false);
+        QVERIFY(hetzner);
+        QVERIFY(hetzner->entries.isEmpty());
+        QVERIFY(!hetzner->isTruncated);
+
+        QVERIFY(!xml::parseListVersions(fixture("list-v2.xml"), false));   // wrong root
+        QVERIFY(!xml::parseListVersions("<ListVersionsResult><Version><Key>a</Key></Version></ListVersionsResult>",
+                                        false));   // no VersionId
+    }
+
     void copyPartResult()
     {
         const auto r = xml::parseCopyPartResult(fixture("copy-part-result.xml"));

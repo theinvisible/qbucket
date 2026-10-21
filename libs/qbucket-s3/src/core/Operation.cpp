@@ -31,6 +31,9 @@ QString operationName(Operation op)
     case Operation::PutObjectTagging:        return QStringLiteral("PutObjectTagging");
     case Operation::GetObjectAcl:            return QStringLiteral("GetObjectAcl");
     case Operation::PutObjectAcl:            return QStringLiteral("PutObjectAcl");
+    case Operation::ListObjectVersions:      return QStringLiteral("ListObjectVersions");
+    case Operation::GetBucketVersioning:     return QStringLiteral("GetBucketVersioning");
+    case Operation::PutBucketVersioning:     return QStringLiteral("PutBucketVersioning");
     }
     return QStringLiteral("Unknown");
 }
@@ -51,6 +54,7 @@ bool isMutating(Operation op)
     case Operation::UploadPartCopy:
     case Operation::PutObjectTagging:
     case Operation::PutObjectAcl:
+    case Operation::PutBucketVersioning:
         return true;
     default:
         return false;

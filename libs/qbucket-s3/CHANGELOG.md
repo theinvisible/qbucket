@@ -192,6 +192,26 @@ version bump may break the API.
   lock headers are kept with an object. Presigned GETs (only X-Amz-* and
   response-* parameters) are served, with response-content-disposition.
 
+- Object versions: `Operation::ListObjectVersions`, `GetBucketVersioning`,
+  `PutBucketVersioning` (appended); `VersionEntry`,
+  `ListObjectVersionsParams`, `ListObjectVersionsPage` (versions and delete
+  markers in server order, a key's versions may continue on the next page);
+  `Session::listObjectVersions` (Feature::ObjectVersionsListing; the same
+  markers again are a Protocol error) and `ListObjectVersionsPager` (loop
+  detection on the (key, version id) marker pair across pages).
+- `Error::deleteMarker` / `Error::versionId`: a 404 / 405 with
+  `x-amz-delete-marker: true` says the key's current entry, or the version
+  asked for, is a delete marker; a 405 on a marker version is NotFound.
+- `FakeObjectStore` keeps versions: versioning per bucket (`setVersioning`,
+  `setMfaDelete`, GET / PUT `?versioning`), versions and delete markers per
+  key, the "null" version while off or suspended, versionId on GET / HEAD /
+  DELETE / copy sources / tags / ACLs and in DeleteObjects,
+  x-amz-version-id / x-amz-delete-marker headers, ListObjectVersions
+  (prefix, delimiter, markers, max-keys), locked versions (`lockVersion`:
+  403 on delete). `putObject` / `putSyntheticObject` return the version id;
+  `deleteObject`, `versions`, `versionedKeys`, `versioning` for tests.
+  `GET ?versions&prefix=` is no longer taken for ListObjectsV2.
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced

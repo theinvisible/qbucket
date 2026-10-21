@@ -559,6 +559,15 @@ RequestId Session::abortMultipartUpload(const QString& bucket, const QString& ke
                            });
 }
 
+RequestId Session::listObjectVersions(const ListObjectVersionsParams& params, QObject* context,
+                                      Callback<ListObjectVersionsPage> callback)
+{
+    return d->submit<ListObjectVersionsPage>(context, std::move(callback),
+                                             [params](S3Client* c, auto done, auto /*progress*/) {
+                                                 return c->listObjectVersions(params, std::move(done));
+                                             });
+}
+
 RequestId Session::listParts(const ListPartsParams& params, QObject* context, Callback<ListPartsPage> callback)
 {
     return d->submit<ListPartsPage>(context, std::move(callback), [params](S3Client* c, auto done, auto /*progress*/) {

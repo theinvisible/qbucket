@@ -202,6 +202,90 @@ private Q_SLOTS:
         QVERIFY(r.error().message.contains(QLatin1String("loop")));
     }
 
+    void listObjectVersionsQueryAndLoop()
+    {
+        const QByteArray body = "<ListVersionsResult><Name>bkt</Name><EncodingType>url</EncodingType>"
+                                "<IsTruncated>true</IsTruncated>"
+                                "<Version><Key>a%20b/c</Key><VersionId>v+2</VersionId><IsLatest>true</IsLatest>"
+                                "<Size>3</Size><ETag>\"abc\"</ETag></Version>"
+                                "<NextKeyMarker>a%20b/c</NextKeyMarker><NextVersionIdMarker>v+2</NextVersionIdMarker>"
+                                "</ListVersionsResult>";
+        m_server->on("GET", QStringLiteral("^/bkt$"), FakeResponse::ok(body, kXml));
+        auto client = makeClient();
+        ListObjectVersionsParams p;
+        p.bucket = QStringLiteral("bkt");
+        p.prefix = QStringLiteral("a b/");
+        p.delimiter = QStringLiteral("/");
+        p.keyMarker = QStringLiteral("a b/a");
+        p.versionIdMarker = QStringLiteral("v/1");
+        p.maxKeys = 5000;   // clamped to the profile limit
+        Result<ListObjectVersionsPage> r =
+            await<ListObjectVersionsPage>([&](auto cb) { client->listObjectVersions(p, std::move(cb)); });
+        QVERIFY2(r, qPrintable(r ? QString() : r.error().toString()));
+        QCOMPARE(r->entries.first().key, QStringLiteral("a b/c"));
+        QCOMPARE(r->entries.first().versionId, QStringLiteral("v+2"));
+        QCOMPARE(r->nextKeyMarker, QStringLiteral("a b/c"));
+        QCOMPARE(r->bucket, QStringLiteral("bkt"));
+
+        const RecordedRequest req = m_server->requests().first();
+        QVERIFY(req.hasQueryItem("versions"));
+        QCOMPARE(req.queryItem("encoding-type"), QByteArray("url"));
+        QCOMPARE(req.queryItem("prefix"), QByteArray("a%20b%2F"));
+        QCOMPARE(req.queryItem("delimiter"), QByteArray("%2F"));
+        QCOMPARE(req.queryItem("key-marker"), QByteArray("a%20b%2Fa"));
+        QCOMPARE(req.queryItem("version-id-marker"), QByteArray("v%2F1"));
+        QCOMPARE(req.queryItem("max-keys"), QByteArray("1000"));
+
+        // The same markers again: a listing loop, not an endless folder.
+        p.keyMarker = QStringLiteral("a b/c");
+        p.versionIdMarker = QStringLiteral("v+2");
+        r = await<ListObjectVersionsPage>([&](auto cb) { client->listObjectVersions(p, std::move(cb)); });
+        QVERIFY(!r);
+        QCOMPARE(r.error().category, ErrorCategory::Protocol);
+        QVERIFY(r.error().message.contains(QLatin1String("loop")));
+
+        // A version marker needs its key marker; refused before sending.
+        p.keyMarker.clear();
+        const int sent = m_server->requestCount();
+        r = await<ListObjectVersionsPage>([&](auto cb) { client->listObjectVersions(p, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        QCOMPARE(m_server->requestCount(), sent);
+    }
+
+    void deleteMarkersAreReported()
+    {
+        FakeResponse current;   // the key's newest entry is a delete marker
+        current.status = 404;
+        current.withHeader("x-amz-delete-marker", "true").withHeader("x-amz-version-id", "m1");
+        m_server->on("HEAD", QStringLiteral("^/bkt/gone$"), current);
+        FakeResponse version;   // asking for the marker version itself
+        version.status = 405;
+        version.withHeader("x-amz-delete-marker", "true").withHeader("x-amz-version-id", "m1");
+        m_server->on("HEAD", QStringLiteral("^/bkt/marker$"), version);
+        FakeResponse notAllowed;   // a 405 without a marker stays what it was
+        notAllowed.status = 405;
+        m_server->on("HEAD", QStringLiteral("^/bkt/other$"), notAllowed);
+        auto client = makeClient();
+
+        Result<ObjectMeta> r = await<ObjectMeta>(
+            [&](auto cb) { client->headObject(QStringLiteral("bkt"), QStringLiteral("gone"), {}, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::NotFound);
+        QVERIFY(r.error().deleteMarker);
+        QCOMPARE(r.error().versionId, QStringLiteral("m1"));
+
+        r = await<ObjectMeta>([&](auto cb) {
+            client->headObject(QStringLiteral("bkt"), QStringLiteral("marker"), QStringLiteral("m1"), std::move(cb));
+        });
+        QCOMPARE(r.error().category, ErrorCategory::NotFound);
+        QVERIFY(r.error().deleteMarker);
+        QCOMPARE(m_server->requests().last().queryItem("versionId"), QByteArray("m1"));
+
+        r = await<ObjectMeta>(
+            [&](auto cb) { client->headObject(QStringLiteral("bkt"), QStringLiteral("other"), {}, std::move(cb)); });
+        QCOMPARE(r.error().category, ErrorCategory::InvalidRequest);
+        QVERIFY(!r.error().deleteMarker);
+    }
+
     void headObjectWithNastyKeys_data()
     {
         QTest::addColumn<QString>("key");

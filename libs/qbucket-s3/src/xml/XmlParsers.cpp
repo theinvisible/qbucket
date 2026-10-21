@@ -468,6 +468,109 @@ Result<ListMultipartUploadsPage> parseListMultipartUploads(const QByteArray& bod
     return out;
 }
 
+Result<ListObjectVersionsPage> parseListVersions(const QByteArray& body, bool plusIsSpace)
+{
+    QXmlStreamReader r(body);
+    if (auto err = openRoot(r, QLatin1StringView("ListVersionsResult")))
+        return *err;
+    ListObjectVersionsPage out;
+    QString encodingType;
+    QString prefix;
+    QString delimiter;
+    QString nextKeyMarker;
+    QStringList commonPrefixes;
+    while (r.readNextStartElement()) {
+        const auto n = r.name();
+        if (n == QLatin1String("Version") || n == QLatin1String("DeleteMarker")) {
+            VersionEntry v;
+            v.isDeleteMarker = n == QLatin1String("DeleteMarker");
+            while (r.readNextStartElement()) {
+                const auto c = r.name();
+                if (c == QLatin1String("Key"))
+                    v.key = r.readElementText();
+                else if (c == QLatin1String("VersionId"))
+                    v.versionId = r.readElementText();
+                else if (c == QLatin1String("IsLatest"))
+                    v.isLatest = parseBool(r.readElementText());
+                else if (c == QLatin1String("Size"))
+                    v.size = r.readElementText().toLongLong();
+                else if (c == QLatin1String("LastModified"))
+                    v.lastModified = parseIsoTimestamp(r.readElementText());
+                else if (c == QLatin1String("ETag"))
+                    v.etag = r.readElementText();
+                else if (c == QLatin1String("StorageClass"))
+                    v.storageClass = r.readElementText();
+                else
+                    r.skipCurrentElement();
+            }
+            if (v.versionId.isEmpty())
+                return protocolError(QStringLiteral("ListVersionsResult entry without a VersionId"));
+            out.entries.append(v);
+        } else if (n == QLatin1String("CommonPrefixes")) {
+            while (r.readNextStartElement()) {
+                if (r.name() == QLatin1String("Prefix"))
+                    commonPrefixes.append(r.readElementText());
+                else
+                    r.skipCurrentElement();
+            }
+        } else if (n == QLatin1String("Name")) {
+            out.bucket = r.readElementText();
+        } else if (n == QLatin1String("Prefix")) {
+            prefix = r.readElementText();
+        } else if (n == QLatin1String("Delimiter")) {
+            delimiter = r.readElementText();
+        } else if (n == QLatin1String("IsTruncated")) {
+            out.isTruncated = parseBool(r.readElementText());
+        } else if (n == QLatin1String("NextKeyMarker")) {
+            nextKeyMarker = r.readElementText();
+        } else if (n == QLatin1String("NextVersionIdMarker")) {
+            out.nextVersionIdMarker = r.readElementText();
+        } else if (n == QLatin1String("EncodingType")) {
+            encodingType = r.readElementText();
+        } else {
+            r.skipCurrentElement();
+        }
+    }
+    if (auto err = finish(r))
+        return *err;
+    const bool encoded = encodingType.compare(QLatin1String("url"), Qt::CaseInsensitive) == 0;
+    const auto decodeError = [](const QString& what) {
+        return protocolError(QStringLiteral("invalid url-encoded %1 in ListVersionsResult").arg(what));
+    };
+    for (VersionEntry& v : out.entries) {
+        if (!decodeValue(v.key, encoded, plusIsSpace, &v.key))
+            return decodeError(QStringLiteral("key"));
+    }
+    out.commonPrefixes.reserve(commonPrefixes.size());
+    for (const QString& p : std::as_const(commonPrefixes)) {
+        QString decoded;
+        if (!decodeValue(p, encoded, plusIsSpace, &decoded))
+            return decodeError(QStringLiteral("common prefix"));
+        out.commonPrefixes.append(decoded);
+    }
+    if (!decodeValue(prefix, encoded, plusIsSpace, &out.prefix))
+        return decodeError(QStringLiteral("prefix"));
+    if (!decodeValue(delimiter, encoded, plusIsSpace, &out.delimiter))
+        return decodeError(QStringLiteral("delimiter"));
+    if (!decodeValue(nextKeyMarker, encoded, plusIsSpace, &out.nextKeyMarker))
+        return decodeError(QStringLiteral("NextKeyMarker"));
+    if (out.isTruncated && out.nextKeyMarker.isEmpty()) {
+        // Continue after whatever sorts last: the last entry or common prefix.
+        const QString lastKey = out.entries.isEmpty() ? QString() : out.entries.last().key;
+        const QString lastPrefix = out.commonPrefixes.isEmpty() ? QString() : out.commonPrefixes.last();
+        if (lastKey.isEmpty() && lastPrefix.isEmpty())
+            return protocolError(QStringLiteral("truncated ListVersionsResult without NextKeyMarker"));
+        if (lastPrefix > lastKey) {
+            out.nextKeyMarker = lastPrefix;
+            out.nextVersionIdMarker.clear();
+        } else {
+            out.nextKeyMarker = lastKey;
+            out.nextVersionIdMarker = out.entries.last().versionId;
+        }
+    }
+    return out;
+}
+
 Result<UploadPartCopyResult> parseCopyPartResult(const QByteArray& body)
 {
     QXmlStreamReader r(body);

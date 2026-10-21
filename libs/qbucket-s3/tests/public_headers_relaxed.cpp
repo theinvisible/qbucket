@@ -6,6 +6,7 @@
 #include <qbucket/s3/Endpoint.h>
 #include <qbucket/s3/Error.h>
 #include <qbucket/s3/Export.h>
+#include <qbucket/s3/ListObjectVersionsPager.h>
 #include <qbucket/s3/ListObjectsPager.h>
 #include <qbucket/s3/Logging.h>
 #include <qbucket/s3/Operation.h>

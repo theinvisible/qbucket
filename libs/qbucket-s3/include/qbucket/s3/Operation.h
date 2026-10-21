@@ -38,6 +38,9 @@ enum class Operation : quint16 {
     PutObjectTagging,       // no DeleteObjectTagging: an empty tag set is written instead
     GetObjectAcl,
     PutObjectAcl,
+    ListObjectVersions,
+    GetBucketVersioning,
+    PutBucketVersioning,
 };
 
 // Stable English name, e.g. "ListObjectsV2".

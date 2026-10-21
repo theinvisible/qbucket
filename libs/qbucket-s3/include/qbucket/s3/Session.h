@@ -87,6 +87,10 @@ public:
     RequestId listBuckets(QObject* context, Callback<BucketList> callback);
     RequestId listObjects(const ListObjectsParams& params, QObject* context,
                           Callback<ListPage> callback);
+    // One page of ListObjectVersions (Feature::ObjectVersionsListing); a
+    // page that makes no progress is a Protocol error.
+    RequestId listObjectVersions(const ListObjectVersionsParams& params, QObject* context,
+                                 Callback<ListObjectVersionsPage> callback);
     RequestId headBucket(const QString& bucket, QObject* context, Callback<void> callback);
     RequestId getBucketLocation(const QString& bucket, QObject* context, Callback<QString> callback);
     RequestId headObject(const QString& bucket, const QString& key, const QString& versionId,
