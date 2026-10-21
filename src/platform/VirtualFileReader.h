@@ -3,6 +3,8 @@
 #include "controllers/DragStaging.h"
 #include "platform/VirtualFileSource.h"
 
+#include <qbucket/s3/Session.h>
+
 #include <QByteArray>
 #include <QCryptographicHash>
 #include <QDateTime>
@@ -15,12 +17,12 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 
 namespace qbucket {
 
 namespace s3 {
 class ListObjectsPager;
-class Session;
 }
 
 // A VirtualFileSource over an account's Session: the selection is listed
@@ -90,6 +92,8 @@ private:
     void head_(std::size_t index);                  // worker thread
     void fetch_(std::size_t index, qint64 chunk);   // worker thread
     Status fail_(const QString& why);               // with the lock held
+    void track_(s3::RequestId id);                  // worker thread
+    void answered_(s3::RequestId id);               // worker thread
     void note_(const QString& line);                // with the lock held
     [[nodiscard]] bool onGuiThread_() const;
 
@@ -106,6 +110,7 @@ private:
     std::vector<Entry> m_entries;                   // final order
     std::vector<Entry> m_found;                     // while listing
     std::map<std::size_t, FileState> m_files;
+    std::set<quint64> m_inFlight;                   // request ids still under way
     bool m_cancelled = false;
     QString m_error;
     QStringList m_summary;

@@ -9,6 +9,7 @@
 #include <QSet>
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 namespace qbucket {
@@ -49,11 +50,48 @@ VirtualFileReader::VirtualFileReader(s3::Session* session, DragStaging::Selectio
 VirtualFileReader::~VirtualFileReader()
 {
     cancel();
+    // Requests still under way are cancelled and their answers taken while
+    // the worker still runs: the Session's relays for them live on it, and
+    // one whose thread has ended is never deleted (LeakSanitizer).
+    QMetaObject::invokeMethod(m_ctx, [this] {
+        std::set<quint64> ids;
+        {
+            const std::lock_guard<std::mutex> lock(m_mutex);
+            ids = m_inFlight;
+            if (!m_session)
+                m_inFlight.clear();   // no answers will come
+        }
+        if (s3::Session* session = m_session.data()) {
+            for (const quint64 id : ids)
+                session->cancel(s3::RequestId(id));
+        }
+    }, Qt::BlockingQueuedConnection);
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        m_wake.wait_for(lock, std::chrono::seconds(5), [this] { return m_inFlight.empty(); });
+    }
     // The pager lives on the worker: dropped there before it ends.
     QMetaObject::invokeMethod(m_ctx, [this] { m_pager.reset(); }, Qt::BlockingQueuedConnection);
     m_thread.quit();
     m_thread.wait();
     delete m_ctx;   // the thread has ended: no deleteLater (lesson in CLAUDE.md)
+}
+
+void VirtualFileReader::track_(s3::RequestId id)
+{
+    if (id == s3::RequestId::Invalid)
+        return;
+    const std::lock_guard<std::mutex> lock(m_mutex);
+    m_inFlight.insert(quint64(id));
+}
+
+void VirtualFileReader::answered_(s3::RequestId id)
+{
+    {
+        const std::lock_guard<std::mutex> lock(m_mutex);
+        m_inFlight.erase(quint64(id));
+    }
+    m_wake.notify_all();
 }
 
 bool VirtualFileReader::onGuiThread_() const
@@ -125,8 +163,10 @@ void VirtualFileReader::listNext_(int item)
     const DragStaging::Item& it = m_selection.items.at(item);
     const QString parent = parentOf(it.key);
     if (!it.folder) {
-        session->headObject(m_selection.bucket, it.key, QString(), m_ctx,
-                            [this, item, key = it.key, parent](const s3::Result<s3::ObjectMeta>& head) {
+        const auto id = std::make_shared<s3::RequestId>();
+        *id = session->headObject(m_selection.bucket, it.key, QString(), m_ctx,
+                                  [this, id, item, key = it.key, parent](const s3::Result<s3::ObjectMeta>& head) {
+            answered_(*id);
             if (!head) {
                 listed_(QCoreApplication::translate("VirtualFileReader", "“%1” could not be read: %2")
                             .arg(key, head.error().toString()));
@@ -143,6 +183,7 @@ void VirtualFileReader::listNext_(int item)
             m_found.push_back(e);
             listNext_(item + 1);
         });
+        track_(*id);
         return;
     }
     // A folder: everything under it, page by page.
@@ -162,7 +203,9 @@ void VirtualFileReader::fetchPage_(int item, const QString& parent)
 {
     if (!m_pager)
         return;
-    m_pager->fetchNext(m_ctx, [this, item, parent](const s3::Result<s3::ListPage>& r) {
+    const auto id = std::make_shared<s3::RequestId>();
+    *id = m_pager->fetchNext(m_ctx, [this, id, item, parent](const s3::Result<s3::ListPage>& r) {
+        answered_(*id);
         if (!r) {
             listed_(QCoreApplication::translate("VirtualFileReader", "The folder could not be listed: %1")
                         .arg(r.error().toString()));
@@ -191,6 +234,7 @@ void VirtualFileReader::fetchPage_(int item, const QString& parent)
         m_pager.reset();
         listNext_(item + 1);
     });
+    track_(*id);
 }
 
 void VirtualFileReader::listed_(const QString& error)
@@ -313,7 +357,9 @@ void VirtualFileReader::head_(std::size_t index)
     p.bucket = m_selection.bucket;
     p.key = key;
     p.ifMatch = etag;
-    session->headObject(p, m_ctx, [this, index](const s3::Result<s3::ObjectMeta>& head) {
+    const auto id = std::make_shared<s3::RequestId>();
+    *id = session->headObject(p, m_ctx, [this, id, index](const s3::Result<s3::ObjectMeta>& head) {
+        answered_(*id);
         {
             const std::lock_guard<std::mutex> lock(m_mutex);
             FileState& f = m_files[index];
@@ -330,6 +376,7 @@ void VirtualFileReader::head_(std::size_t index)
         }
         m_wake.notify_all();
     });
+    track_(*id);
 }
 
 void VirtualFileReader::fetch_(std::size_t index, qint64 chunk)
@@ -353,7 +400,9 @@ void VirtualFileReader::fetch_(std::size_t index, qint64 chunk)
         m_wake.notify_all();
         return;
     }
-    session->getObject(p, m_ctx, [this, index, chunk](const s3::Result<s3::ObjectData>& r) {
+    const auto id = std::make_shared<s3::RequestId>();
+    *id = session->getObject(p, m_ctx, [this, id, index, chunk](const s3::Result<s3::ObjectData>& r) {
+        answered_(*id);
         {
             const std::lock_guard<std::mutex> lock(m_mutex);
             const auto f = m_files.find(index);
@@ -370,6 +419,7 @@ void VirtualFileReader::fetch_(std::size_t index, qint64 chunk)
         }
         m_wake.notify_all();
     });
+    track_(*id);
 }
 
 VirtualFileSource::Status VirtualFileReader::read(std::size_t index, std::int64_t offset, void* buffer,
