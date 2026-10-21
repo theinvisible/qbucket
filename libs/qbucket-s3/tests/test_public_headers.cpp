@@ -1,6 +1,7 @@
 // Every public header, compiled with the library's full strictness
 // (QT_NO_KEYWORDS, QT_NO_CAST_FROM_ASCII, …). The relaxed counterpart lives
 // in public_headers_relaxed.cpp. Keep both include lists in sync.
+#include <qbucket/s3/AwsConfigFiles.h>
 #include <qbucket/s3/BucketConfig.h>
 #include <qbucket/s3/Capabilities.h>
 #include <qbucket/s3/Credentials.h>

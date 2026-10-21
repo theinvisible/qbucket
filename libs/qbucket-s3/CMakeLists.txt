@@ -60,6 +60,7 @@ add_library(qbucket_s3 ${_s3_lib_type}
     include/qbucket/s3/Result.h
     include/qbucket/s3/Session.h
     include/qbucket/s3/Types.h
+    include/qbucket/s3/AwsConfigFiles.h
     include/qbucket/s3/BucketConfig.h
     include/qbucket/s3/providers/AwsProfile.h
     include/qbucket/s3/providers/CephProfile.h
@@ -81,6 +82,8 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/client/S3Client.h
     src/client/S3Client.cpp
     src/config/BucketConfig.cpp
+    src/core/AwsConfigFiles.cpp
+    src/core/AwsIni.h
     src/core/Credentials.cpp
     src/core/Endpoint.cpp
     src/core/Error.cpp

@@ -1,0 +1,44 @@
+# Test fixture.
+[default]
+region = eu-central-1
+
+[profile hetzner-nbg]
+region = nbg1
+services = hetzner
+s3 =
+  addressing_style = virtual
+
+[services hetzner]
+s3 =
+  endpoint_url = https://nbg1.your-objectstorage.com
+
+[profile minio]
+aws_access_key_id = MINIOKEY
+aws_secret_access_key = minio-secret
+endpoint_url = http://localhost:9000
+s3 =
+    addressing_style = path
+
+[profile legacy-plugin]
+aws_access_key_id = LEGACYKEY
+aws_secret_access_key = legacy-secret
+endpoint_url = https://global.example.com
+s3 =
+  endpoint_url = https://s3.example.com
+
+[profile sso]
+sso_session = corp
+sso_account_id = 111122223333
+sso_role_name = ReadOnly
+region = us-east-1
+
+[profile assumed]
+role_arn = arn:aws:iam::111122223333:role/Admin
+source_profile = default
+
+[sso-session corp]
+sso_start_url = https://corp.awsapps.com/start
+sso_region = us-east-1
+
+[not-a-profile]
+region = ignored

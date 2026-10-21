@@ -71,6 +71,7 @@ qbucket_s3_add_test(test_s3client_write
 qbucket_s3_add_test(test_retry_policy SOURCES test_retry_policy.cpp)
 qbucket_s3_add_test(test_credentials  SOURCES test_credentials.cpp)
 qbucket_s3_add_test(test_provider_generic SOURCES test_provider_generic.cpp)
+qbucket_s3_add_test(test_provider_registry SOURCES test_provider_registry.cpp)
 qbucket_s3_add_test(test_provider_hetzner SOURCES test_provider_hetzner.cpp)
 qbucket_s3_add_test(test_provider_aws     SOURCES test_provider_aws.cpp)
 qbucket_s3_add_test(test_provider_garage  SOURCES test_provider_garage.cpp)

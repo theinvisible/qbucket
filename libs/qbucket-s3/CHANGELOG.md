@@ -315,6 +315,16 @@ version bump may break the API.
   `cannedAcl`, `ifMatch`), kept in `TransferRecord` for a resumed upload.
 - `FakeObjectStore::setHonourIfMatch` (If-Match on PUT / Complete: 404
   without an object, 412 on another ETag).
+- `AwsConfigFiles` (`AwsConfigFiles.h`): every profile of `~/.aws/credentials`
+  and `~/.aws/config` (`$AWS_SHARED_CREDENTIALS_FILE`, `$AWS_CONFIG_FILE`) as
+  `AwsProfileEntry` — keys, session token, region, the S3 endpoint (nested
+  `s3 = endpoint_url`, `[services]` sections, `endpoint_url`), the
+  addressing style, and which keys make a profile get its credentials
+  elsewhere (SSO, roles, processes). `AwsSharedFileCredentialsProvider::parse`
+  shares its parser.
+- `ProviderRegistry::matchEndpoint`: the profile and region whose preset
+  endpoint a URL is, exactly — a suggestion for setting an account up,
+  never consulted by the protocol core.
 
 ### Changed
 

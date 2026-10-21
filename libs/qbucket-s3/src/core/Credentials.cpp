@@ -1,5 +1,7 @@
 #include <qbucket/s3/Credentials.h>
 
+#include "core/AwsIni.h"
+
 #include <QDir>
 #include <QFile>
 #include <QtGlobal>
@@ -55,35 +57,21 @@ QString AwsSharedFileCredentialsProvider::defaultPath()
 Result<Credentials> AwsSharedFileCredentialsProvider::parse(const QByteArray& content,
                                                             const QString& profile)
 {
-    // Own parser: QSettings is off limits here, and its INI escaping would
-    // mangle secrets containing '/', '+' or '\'.
-    QString section;
+    // Own parser (AwsIni.h): QSettings is off limits here, and its INI
+    // escaping would mangle secrets containing '/', '+' or '\'.
     bool found = false;
     Credentials c;
-    for (QByteArray line : content.split('\n')) {
-        line = line.trimmed();
-        if (line.isEmpty() || line.startsWith('#') || line.startsWith(';'))
+    for (const detail::AwsIniSection& s : detail::parseAwsIni(content, false)) {
+        if (s.name != profile)
             continue;
-        if (line.startsWith('[') && line.endsWith(']')) {
-            section = QString::fromUtf8(line.mid(1, line.size() - 2)).trimmed();
-            if (section.startsWith(QLatin1String("profile ")))   // ~/.aws/config spelling
-                section = section.mid(8).trimmed();
-            found = found || section == profile;
-            continue;
-        }
-        if (section != profile)
-            continue;
-        const qsizetype eq = line.indexOf('=');
-        if (eq < 0)
-            continue;
-        const QByteArray name = line.left(eq).trimmed().toLower();
-        const QString value = QString::fromUtf8(line.mid(eq + 1).trimmed());
-        if (name == "aws_access_key_id")
-            c.accessKeyId = value;
-        else if (name == "aws_secret_access_key")
-            c.secretAccessKey = value;
-        else if (name == "aws_session_token")
-            c.sessionToken = value;
+        found = true;
+        const auto take = [&s](QString* field, const char* key) {
+            if (s.values.contains(QByteArray(key)))
+                *field = s.values.value(QByteArray(key));
+        };
+        take(&c.accessKeyId, "aws_access_key_id");
+        take(&c.secretAccessKey, "aws_secret_access_key");
+        take(&c.sessionToken, "aws_session_token");
     }
     if (!found) {
         return Error::make(ErrorCategory::Credentials,

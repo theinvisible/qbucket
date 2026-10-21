@@ -1,5 +1,7 @@
+#include <qbucket/s3/AwsConfigFiles.h>
 #include <qbucket/s3/Credentials.h>
 
+#include <QFile>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -44,6 +46,77 @@ private Q_SLOTS:
         QCOMPARE(c.error().category, ErrorCategory::Credentials);
         c = AwsSharedFileCredentialsProvider::parse(kFile, QStringLiteral("missing"));
         QCOMPARE(c.error().category, ErrorCategory::Credentials);
+    }
+
+    void enumeratesTheProfilesOfBothFiles()
+    {
+        const auto read = [](const char* name) {
+            QFile f(QStringLiteral(TEST_DATA_DIR "/aws-config/") + QLatin1String(name));
+            return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        };
+        const QList<AwsProfileEntry> all = AwsConfigFiles::parse(read("credentials"), read("config"));
+        QStringList names;
+        for (const AwsProfileEntry& e : all)
+            names.append(e.name);
+        QCOMPARE(names, (QStringList{QStringLiteral("default"), QStringLiteral("hetzner-nbg"),
+                                     QStringLiteral("temporary"), QStringLiteral("minio"),
+                                     QStringLiteral("legacy-plugin"), QStringLiteral("sso"),
+                                     QStringLiteral("assumed")}));
+        const auto entry = [&](const QString& name) {
+            for (const AwsProfileEntry& e : all) {
+                if (e.name == name)
+                    return e;
+            }
+            return AwsProfileEntry{};
+        };
+
+        AwsProfileEntry e = entry(QStringLiteral("default"));
+        QCOMPARE(e.accessKeyId, QStringLiteral("AKIDDEFAULT"));
+        QCOMPARE(e.secretAccessKey, QStringLiteral("se/cr+et\\\\with=equals=="));
+        QCOMPARE(e.region, QStringLiteral("eu-central-1"));
+        QVERIFY(e.endpointUrl.isEmpty());
+
+        e = entry(QStringLiteral("hetzner-nbg"));
+        QCOMPARE(e.accessKeyId, QStringLiteral("HETZNERKEY"));
+        QCOMPARE(e.region, QStringLiteral("nbg1"));
+        QCOMPARE(e.endpointUrl, QStringLiteral("https://nbg1.your-objectstorage.com"));   // [services hetzner]
+        QCOMPARE(e.addressingStyle, QStringLiteral("virtual"));
+        QVERIFY(e.indirectCredentials.isEmpty());
+
+        e = entry(QStringLiteral("temporary"));
+        QCOMPARE(e.sessionToken, QStringLiteral("FwoGZXIvYXdzE-token"));
+
+        e = entry(QStringLiteral("minio"));
+        QCOMPARE(e.accessKeyId, QStringLiteral("MINIOKEY"));   // keys in the config file
+        QCOMPARE(e.endpointUrl, QStringLiteral("http://localhost:9000"));
+        QCOMPARE(e.addressingStyle, QStringLiteral("path"));
+
+        // The nested s3 endpoint wins over the profile's global one.
+        QCOMPARE(entry(QStringLiteral("legacy-plugin")).endpointUrl, QStringLiteral("https://s3.example.com"));
+
+        e = entry(QStringLiteral("sso"));
+        QVERIFY(e.accessKeyId.isEmpty());
+        QCOMPARE(e.indirectCredentials,
+                 (QStringList{QStringLiteral("sso_session"), QStringLiteral("sso_account_id"), QStringLiteral("sso_role_name")}));
+        QCOMPARE(entry(QStringLiteral("assumed")).indirectCredentials,
+                 (QStringList{QStringLiteral("role_arn"), QStringLiteral("source_profile")}));
+
+        // Either file alone.
+        QCOMPARE(AwsConfigFiles::parse(read("credentials"), {}).size(), 3);
+        QCOMPARE(AwsConfigFiles::parse({}, read("config")).size(), 6);
+        QVERIFY(AwsConfigFiles::parse({}, {}).isEmpty());
+    }
+
+    void configPathsFollowTheEnvironment()
+    {
+        qputenv("AWS_CONFIG_FILE", "/tmp/qbucket-test-config");
+        qputenv("AWS_SHARED_CREDENTIALS_FILE", "/tmp/qbucket-test-credentials");
+        QCOMPARE(AwsConfigFiles::configPath(), QStringLiteral("/tmp/qbucket-test-config"));
+        QCOMPARE(AwsConfigFiles::credentialsPath(), QStringLiteral("/tmp/qbucket-test-credentials"));
+        qunsetenv("AWS_CONFIG_FILE");
+        qunsetenv("AWS_SHARED_CREDENTIALS_FILE");
+        QVERIFY(AwsConfigFiles::configPath().endsWith(QLatin1String("/.aws/config")));
+        QVERIFY(AwsConfigFiles::credentialsPath().endsWith(QLatin1String("/.aws/credentials")));
     }
 
     void readsTheFileOnEveryFetch()
