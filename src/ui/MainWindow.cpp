@@ -1107,6 +1107,8 @@ QWidget* MainWindow::buildObjectArea_()
 QWidget* MainWindow::buildDetailPane_()
 {
     m_details = new DetailPane(m_sessions);
+    m_details->setControllers(m_operations, m_capabilities);
+    connect(m_details, &DetailPane::editMetadataRequested, this, &MainWindow::editMetadata_);
     return m_details;
 }
 

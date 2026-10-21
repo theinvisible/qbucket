@@ -223,6 +223,12 @@ qbucket_add_test(test_edit_metadata_dialog
     qbucket_app_ui
 )
 
+qbucket_add_test(test_object_properties
+    test_object_properties.cpp
+    qbucket_app_ui
+    qbucket::s3_testsupport
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

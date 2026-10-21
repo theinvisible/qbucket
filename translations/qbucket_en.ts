@@ -97,7 +97,7 @@
 <context>
     <name>qbucket::DetailPane</name>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="140"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="447"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -105,7 +105,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="143"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="450"/>
         <source>%n folder(s), their contents not counted</source>
         <translation>
             <numerusform>%n folder, their contents not counted</numerusform>

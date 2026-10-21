@@ -15,6 +15,7 @@
 #include "controllers/DeleteJob.h"
 #include "controllers/DownloadJob.h"
 #include "controllers/EditObjectsJob.h"
+#include "controllers/ObjectPropertyJob.h"
 #include "controllers/RenameJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -355,6 +356,31 @@ private slots:
         std::optional<bool> privateOk;
         session()->putObjectAcl(back, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>& r) { privateOk = bool(r); });
         QVERIFY(QTest::qWaitFor([&] { return privateOk.has_value(); }, 30000) && *privateOk);
+    }
+
+    // Tags and a canned ACL through their jobs — where the provider confirms
+    // such writes; refused elsewhere (a generic server).
+    void tagAndAclAnObject()
+    {
+        const QString k = m_root + QStringLiteral("props/obj.txt");
+        QVERIFY(put(k, "props"));
+        const auto profile = s3::ProviderRegistry::builtin().findOrGeneric(m_account.providerId);
+        const bool confirmed = profile->capabilities().state(s3::Feature::ObjectTaggingWrite) == s3::CapabilityState::Supported;
+        Job* job = run(ObjectPropertyJob::tags(m_account, m_bucket, k, {{QStringLiteral("it"), QStringLiteral("yes")}}));
+        if (!confirmed) {
+            QCOMPARE(job->outcome(), Job::Outcome::Refused);
+            return;
+        }
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        job = run(ObjectPropertyJob::acl(m_account, m_bucket, k, QStringLiteral("public-read")));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY(job->report().verified);
+        job = run(ObjectPropertyJob::acl(m_account, m_bucket, k, QStringLiteral("private")));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        job = run(ObjectPropertyJob::tags(m_account, m_bucket, k, {}));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(meta(k)->size, qint64(5));   // the data never changed
     }
 
     // A folder tree with an empty folder and a large file (multipart;

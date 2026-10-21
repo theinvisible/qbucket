@@ -1,10 +1,21 @@
 #include "ui/DetailPane.h"
 
+#include "accounts/AccountStore.h"
 #include "controllers/AccountSessions.h"
+#include "controllers/CapabilityController.h"
 #include "controllers/ConnectionTester.h"
+#include "controllers/ObjectPropertyJob.h"
+#include "controllers/OperationController.h"
 #include "models/ObjectTableModel.h"
 
+#include <qbucket/s3/Session.h>
+#include <qbucket/s3/providers/ProviderRegistry.h>
+
+#include <QComboBox>
 #include <QFormLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QTableWidget>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLocale>
@@ -83,16 +94,303 @@ DetailPane::DetailPane(AccountSessions* sessions, QWidget* parent)
     m_headers->setUniformRowHeights(true);
     m_headers->header()->setSectionResizeMode(0, QHeaderView::Interactive);
     m_headers->header()->resizeSection(0, 150);
-    m_metaStack->addWidget(m_headers);
+    auto* metaPage = new QWidget;
+    auto* metaLay = new QVBoxLayout(metaPage);
+    metaLay->setContentsMargins(0, 0, 0, 0);
+    metaLay->addWidget(m_headers, 1);
+    m_editMetadata = new QPushButton(tr("Edit…"));
+    m_editMetadata->setObjectName(QStringLiteral("editMetadata"));
+    connect(m_editMetadata, &QPushButton::clicked, this, &DetailPane::editMetadataRequested);
+    auto* editRow = new QHBoxLayout;
+    editRow->setContentsMargins(8, 4, 8, 6);
+    editRow->addStretch(1);
+    editRow->addWidget(m_editMetadata);
+    metaLay->addLayout(editRow);
+    m_metaStack->addWidget(metaPage);
     m_tabs->addTab(m_metaStack, tr("Metadata"));
 
-    for (const QString& name : {tr("Tags"), tr("Versions"), tr("Access")})
-        m_tabs->addTab(makeHint(tr("Not available yet.")), name);
+    buildTagsTab_();
+    m_tabs->addTab(makeHint(tr("Versions arrive with a later version.")), tr("Versions"));
+    buildAccessTab_();
+    connect(m_tabs, &QTabWidget::currentChanged, this, &DetailPane::loadVisibleTab_);
     lay->addWidget(m_tabs, 1);
 
     m_headDelay.setSingleShot(true);
     m_headDelay.setInterval(kHeadDelayMs);
     connect(&m_headDelay, &QTimer::timeout, this, &DetailPane::requestHead_);
+}
+
+void DetailPane::setControllers(OperationController* operations, CapabilityController* capabilities)
+{
+    m_ops = operations;
+    m_caps = capabilities;
+    if (m_caps) {
+        connect(m_caps, &CapabilityController::capabilitiesUpdated, this, [this] {
+            updateFeatureTabs_();
+        });
+    }
+}
+
+void DetailPane::buildTagsTab_()
+{
+    m_tagsStack = new QStackedWidget;
+    m_tagsHint = makeHint(tr("Select an object to see its tags."));
+    m_tagsStack->addWidget(m_tagsHint);
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(8, 8, 8, 8);
+    m_tagTable = new QTableWidget(0, 2);
+    m_tagTable->setObjectName(QStringLiteral("tagTable"));
+    m_tagTable->setHorizontalHeaderLabels({tr("Key"), tr("Value")});
+    m_tagTable->horizontalHeader()->setStretchLastSection(true);
+    m_tagTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Interactive);
+    m_tagTable->setColumnWidth(0, 120);
+    m_tagTable->verticalHeader()->hide();
+    lay->addWidget(m_tagTable, 1);
+    auto* row = new QHBoxLayout;
+    auto* add = new QPushButton(tr("Add"));
+    connect(add, &QPushButton::clicked, this, [this] {
+        addTagRow_(QString(), QString());
+        m_tagTable->editItem(m_tagTable->item(m_tagTable->rowCount() - 1, 0));
+    });
+    auto* remove = new QPushButton(tr("Remove"));
+    connect(remove, &QPushButton::clicked, this, [this] {
+        if (m_tagTable->currentRow() >= 0)
+            m_tagTable->removeRow(m_tagTable->currentRow());
+    });
+    m_applyTags = new QPushButton(tr("Apply…"));
+    m_applyTags->setObjectName(QStringLiteral("applyTags"));
+    connect(m_applyTags, &QPushButton::clicked, this, &DetailPane::applyTags_);
+    row->addWidget(add);
+    row->addWidget(remove);
+    row->addStretch(1);
+    row->addWidget(m_applyTags);
+    lay->addLayout(row);
+    m_tagsReason = new QLabel;
+    m_tagsReason->setWordWrap(true);
+    m_tagsReason->setObjectName(QStringLiteral("hint"));
+    lay->addWidget(m_tagsReason);
+    m_tagsStack->addWidget(page);
+    m_tabs->addTab(m_tagsStack, tr("Tags"));
+}
+
+void DetailPane::buildAccessTab_()
+{
+    m_accessStack = new QStackedWidget;
+    m_accessHint = makeHint(tr("Select an object to see who may access it."));
+    m_accessStack->addWidget(m_accessHint);
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(8, 8, 8, 8);
+    m_owner = new QLabel;
+    m_owner->setWordWrap(true);
+    m_owner->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    lay->addWidget(m_owner);
+    m_grants = new QTreeWidget;
+    m_grants->setObjectName(QStringLiteral("grantList"));
+    m_grants->setColumnCount(2);
+    m_grants->setHeaderLabels({tr("Grantee"), tr("Permission")});
+    m_grants->setRootIsDecorated(false);
+    m_grants->header()->setSectionResizeMode(0, QHeaderView::Interactive);
+    m_grants->header()->resizeSection(0, 170);
+    lay->addWidget(m_grants, 1);
+    auto* row = new QHBoxLayout;
+    row->addWidget(new QLabel(tr("Access:")));
+    m_canned = new QComboBox;
+    m_canned->setObjectName(QStringLiteral("cannedAcl"));
+    row->addWidget(m_canned, 1);
+    m_applyAccess = new QPushButton(tr("Apply…"));
+    m_applyAccess->setObjectName(QStringLiteral("applyAccess"));
+    connect(m_applyAccess, &QPushButton::clicked, this, &DetailPane::applyAccess_);
+    row->addWidget(m_applyAccess);
+    lay->addLayout(row);
+    m_accessReason = new QLabel;
+    m_accessReason->setWordWrap(true);
+    m_accessReason->setObjectName(QStringLiteral("hint"));
+    lay->addWidget(m_accessReason);
+    m_accessStack->addWidget(page);
+    m_tabs->addTab(m_accessStack, tr("Access"));
+}
+
+void DetailPane::addTagRow_(const QString& key, const QString& value)
+{
+    const int row = m_tagTable->rowCount();
+    m_tagTable->insertRow(row);
+    m_tagTable->setItem(row, 0, new QTableWidgetItem(key));
+    m_tagTable->setItem(row, 1, new QTableWidgetItem(value));
+}
+
+// Tabs of features the server doesn't have are hidden.
+void DetailPane::updateFeatureTabs_()
+{
+    if (!m_caps || m_account.isNull() || m_bucket.isEmpty())
+        return;
+    const auto unsupported = [this](s3::Feature f) {
+        return m_caps->entry(m_account, m_bucket, f).state == s3::CapabilityState::Unsupported;
+    };
+    m_tabs->setTabVisible(TagsTab, !unsupported(s3::Feature::ObjectTagging));
+    m_tabs->setTabVisible(AccessTab, !unsupported(s3::Feature::ObjectAcl));
+}
+
+void DetailPane::loadVisibleTab_()
+{
+    if (m_key.isEmpty())
+        return;
+    if (m_tabs->currentIndex() == TagsTab && m_tagsFor != m_key)
+        loadTags_();
+    else if (m_tabs->currentIndex() == AccessTab && m_accessFor != m_key)
+        loadAccess_();
+}
+
+void DetailPane::loadTags_()
+{
+    m_tagsFor = m_key;
+    m_tagsRun = std::make_unique<QObject>();
+    m_tagsHint->setText(tr("Loading…"));
+    m_tagsStack->setCurrentIndex(0);
+    const s3::Result<s3::Session*> session = m_sessions ? m_sessions->session(m_account) : s3::Result<s3::Session*>(
+        s3::Error::make(s3::ErrorCategory::Internal, tr("not connected")));
+    if (!session) {
+        m_tagsHint->setText(ConnectionTester::describe(session.error()));
+        return;
+    }
+    const QString key = m_key;
+    (*session)->getObjectTagging(m_bucket, key, QString(), m_tagsRun.get(), [this, key](const s3::Result<s3::ObjectTagging>& r) {
+        if (key != m_key)
+            return;
+        if (!r) {
+            m_tagsHint->setText(r.error().category == s3::ErrorCategory::Unsupported
+                                    ? tr("This server has no object tags.")
+                                    : ConnectionTester::describe(r.error()));
+            updateFeatureTabs_();
+            emit tagsLoaded();
+            return;
+        }
+        m_tagTable->setRowCount(0);
+        for (const s3::Tag& t : r->tags)
+            addTagRow_(t.key, t.value);
+        OperationController::Check gate{false, tr("Read-only here.")};
+        if (m_ops)
+            gate = m_ops->check(m_account, m_bucket, {s3::Feature::ObjectTaggingWrite}, true);
+        m_applyTags->setEnabled(gate.allowed);
+        m_tagsReason->setText(gate.allowed ? QString() : gate.reason);
+        m_tagsReason->setVisible(!gate.allowed);
+        m_tagTable->setEditTriggers(gate.allowed ? QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed
+                                                 : QAbstractItemView::NoEditTriggers);
+        m_tagsStack->setCurrentIndex(1);
+        emit tagsLoaded();
+    });
+}
+
+void DetailPane::loadAccess_()
+{
+    m_accessFor = m_key;
+    m_accessRun = std::make_unique<QObject>();
+    m_accessHint->setText(tr("Loading…"));
+    m_accessStack->setCurrentIndex(0);
+    const s3::Result<s3::Session*> session = m_sessions ? m_sessions->session(m_account) : s3::Result<s3::Session*>(
+        s3::Error::make(s3::ErrorCategory::Internal, tr("not connected")));
+    if (!session) {
+        m_accessHint->setText(ConnectionTester::describe(session.error()));
+        return;
+    }
+    const QString key = m_key;
+    (*session)->getObjectAcl(m_bucket, key, QString(), m_accessRun.get(), [this, key](const s3::Result<s3::AccessControlPolicy>& r) {
+        if (key != m_key)
+            return;
+        if (!r) {
+            m_accessHint->setText(r.error().category == s3::ErrorCategory::Unsupported
+                                      ? tr("This server has no object permissions (ACLs).")
+                                      : ConnectionTester::describe(r.error()));
+            updateFeatureTabs_();
+            emit accessLoaded();
+            return;
+        }
+        m_owner->setText(tr("Owner: %1").arg(r->ownerName.isEmpty() ? r->ownerId : r->ownerName));
+        m_grants->clear();
+        for (const s3::Grant& g : r->grants) {
+            QString who;
+            switch (g.grantee) {
+            case s3::Grant::Grantee::Group:
+                who = g.uri.section(u'/', -1);   // AllUsers, AuthenticatedUsers, …
+                break;
+            case s3::Grant::Grantee::Email:
+                who = g.email;
+                break;
+            case s3::Grant::Grantee::CanonicalUser:
+                who = g.id == r->ownerId ? tr("Owner") : (g.displayName.isEmpty() ? g.id : g.displayName);
+                break;
+            }
+            auto* item = new QTreeWidgetItem(m_grants, {who, g.permission});
+            item->setToolTip(0, g.grantee == s3::Grant::Grantee::Group ? g.uri : g.id);
+        }
+        // The canned ACLs the provider offers; a custom ACL can only be replaced.
+        QStringList canned = QStringList{QStringLiteral("private"), QStringLiteral("public-read")};
+        if (m_ops) {
+            if (const std::optional<Account> a = m_ops->accounts()->account(m_account))
+                canned = s3::ProviderRegistry::builtin().findOrGeneric(a->providerId)->cannedObjectAcls();
+        }
+        const std::optional<QString> current = s3::cannedAclOf(*r);
+        m_canned->clear();
+        m_canned->addItems(canned);
+        if (current && canned.contains(*current)) {
+            m_canned->setCurrentText(*current);
+        } else {
+            m_canned->insertItem(0, tr("custom (grants above)"));
+            m_canned->setCurrentIndex(0);
+        }
+        OperationController::Check gate{false, tr("Read-only here.")};
+        if (m_ops)
+            gate = m_ops->check(m_account, m_bucket, {s3::Feature::ObjectAclWrite}, true);
+        m_canned->setEnabled(gate.allowed);
+        m_applyAccess->setEnabled(gate.allowed);
+        m_accessReason->setText(gate.allowed ? QString() : gate.reason);
+        m_accessReason->setVisible(!gate.allowed);
+        m_accessStack->setCurrentIndex(1);
+        emit accessLoaded();
+    });
+}
+
+void DetailPane::applyTags_()
+{
+    if (!m_ops || m_tagsFor.isEmpty())
+        return;
+    const std::optional<Account> account = m_ops->accounts()->account(m_account);
+    if (!account)
+        return;
+    s3::TagSet tags;
+    for (int row = 0; row < m_tagTable->rowCount(); ++row) {
+        const QString key = m_tagTable->item(row, 0) ? m_tagTable->item(row, 0)->text().trimmed() : QString();
+        if (!key.isEmpty())
+            tags.append({key, m_tagTable->item(row, 1) ? m_tagTable->item(row, 1)->text() : QString()});
+    }
+    if (const QString problem = s3::tagSetProblem(tags); !problem.isEmpty()) {
+        m_tagsReason->setText(problem);
+        m_tagsReason->setVisible(true);
+        return;
+    }
+    Job* job = ObjectPropertyJob::tags(*account, m_bucket, m_tagsFor, tags);
+    connect(job, &Job::finished, this, [this, job, key = m_tagsFor] {
+        if (key == m_key && job->phase() == Job::Phase::Finished && job->outcome() != Job::Outcome::Refused)
+            loadTags_();
+    });
+    m_ops->start(job);
+}
+
+void DetailPane::applyAccess_()
+{
+    if (!m_ops || m_accessFor.isEmpty())
+        return;
+    const std::optional<Account> account = m_ops->accounts()->account(m_account);
+    const QString canned = m_canned->currentText();
+    if (!account || canned.startsWith(tr("custom")))
+        return;
+    Job* job = ObjectPropertyJob::acl(*account, m_bucket, m_accessFor, canned);
+    connect(job, &Job::finished, this, [this, job, key = m_accessFor] {
+        if (key == m_key && job->phase() == Job::Phase::Finished && job->outcome() != Job::Outcome::Refused)
+            loadAccess_();
+    });
+    m_ops->start(job);
 }
 
 void DetailPane::clear()
@@ -108,10 +406,19 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
 {
     m_headDelay.stop();
     m_run.reset();   // an answer for the previous selection is dropped
+    m_tagsRun.reset();
+    m_accessRun.reset();
+    m_tagsFor.clear();
+    m_accessFor.clear();
     m_account = account;
     m_bucket = bucket;
     m_key.clear();
     m_meta = s3::ObjectMeta();
+    updateFeatureTabs_();
+    m_tagsHint->setText(tr("Select a single object to see its tags."));
+    m_tagsStack->setCurrentIndex(0);
+    m_accessHint->setText(tr("Select a single object to see who may access it."));
+    m_accessStack->setCurrentIndex(0);
 
     QModelIndexList unique;
     QSet<int> seen;
@@ -181,6 +488,7 @@ void DetailPane::requestHead_()
             return;
         if (r) {
             showMeta_(*r);
+            loadVisibleTab_();
         } else {
             resetFields_();
             addField_(tr("Location"), QStringLiteral("s3://%1/%2").arg(m_bucket, key));

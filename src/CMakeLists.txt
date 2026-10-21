@@ -74,6 +74,8 @@ add_library(qbucket_controllers STATIC
     controllers/ObjectSnapshot.cpp
     controllers/EditObjectsJob.h
     controllers/EditObjectsJob.cpp
+    controllers/ObjectPropertyJob.h
+    controllers/ObjectPropertyJob.cpp
     controllers/CreateFolderJob.h
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h
