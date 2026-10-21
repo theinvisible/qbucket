@@ -97,7 +97,7 @@
 <context>
     <name>qbucket::DeleteVersionsJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="100"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="108"/>
         <source>Delete %n version(s) permanently</source>
         <translation>
             <numerusform>Delete %n version permanently</numerusform>
@@ -105,7 +105,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="103"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="111"/>
         <source>Delete every version of %n item(s)</source>
         <translation>
             <numerusform>Delete every version of %n item</numerusform>
@@ -113,7 +113,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="109"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="117"/>
         <source>Restore %n deleted item(s)</source>
         <translation>
             <numerusform>Restore %n deleted item</numerusform>
@@ -121,7 +121,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="316"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="324"/>
         <source>s3://%1 — %n selected item(s)</source>
         <translation>
             <numerusform>s3://%1 — %n selected item</numerusform>
@@ -129,7 +129,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="318"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="326"/>
         <source>%n selected item(s) are skipped — see the report.</source>
         <translation>
             <numerusform>%n selected item is skipped — see the report.</numerusform>
@@ -137,7 +137,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="324"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="332"/>
         <source>%n object(s) come back: the delete markers over their newest version are removed (%1 marker(s)).</source>
         <translation>
             <numerusform>%n object comes back: the delete markers over its newest version are removed (%1 marker(s)).</numerusform>
@@ -145,7 +145,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="332"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="340"/>
         <source>%1 version(s) and %2 delete marker(s) of %n object(s).</source>
         <translation>
             <numerusform>%1 version(s) and %2 delete marker(s) of %n object.</numerusform>
@@ -153,7 +153,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="338"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="346"/>
         <source>%n current version(s) are among them: the previous version becomes current, or the object disappears when none is left.</source>
         <translation>
             <numerusform>A current version is among them: the previous version becomes current, or the object disappears when none is left.</numerusform>
@@ -161,7 +161,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="641"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="649"/>
         <source>%n object(s) looked up: they are back</source>
         <translation>
             <numerusform>%n object looked up: it is back</numerusform>
@@ -169,7 +169,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="642"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="650"/>
         <source>%n object(s) are still not back: %1</source>
         <translation>
             <numerusform>%n object is still not back: %1</numerusform>
@@ -177,7 +177,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="646"/>
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="654"/>
         <source>%n version(s) are still listed: %1</source>
         <translation>
             <numerusform>%n version is still listed: %1</numerusform>
@@ -188,7 +188,7 @@
 <context>
     <name>qbucket::DetailPane</name>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="371"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="443"/>
         <source>Showing the newest %n version(s); open the versions view for all.</source>
         <translation>
             <numerusform>Showing the newest version; open the versions view for all.</numerusform>
@@ -196,7 +196,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="373"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="445"/>
         <source>%n version(s), newest first.</source>
         <translation>
             <numerusform>%n version.</numerusform>
@@ -204,7 +204,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="603"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="676"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -212,7 +212,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="606"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="679"/>
         <source>%n folder(s), their contents not counted yet</source>
         <translation>
             <numerusform>%n folder, its contents not counted yet</numerusform>
@@ -220,7 +220,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="775"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="848"/>
         <source>counting… %n object(s), %1 so far</source>
         <translation>
             <numerusform>counting… %n object, %1 so far</numerusform>
@@ -228,7 +228,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="785"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="858"/>
         <source>%n object(s), %1</source>
         <translation>
             <numerusform>%n object, %1</numerusform>
@@ -339,7 +339,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="228"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="231"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -347,7 +347,15 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="624"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="620"/>
+        <source>%n folder(s) of s3://%1</source>
+        <translation>
+            <numerusform>%n folder of s3://%1</numerusform>
+            <numerusform>%n folders of s3://%1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/MainWindow.cpp" line="763"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -358,7 +366,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="735"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="817"/>
         <source>%n version(s)</source>
         <translation>
             <numerusform>%n version</numerusform>
@@ -366,7 +374,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="736"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="818"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -378,7 +386,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="738"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="820"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -386,7 +394,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="744"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="826"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>

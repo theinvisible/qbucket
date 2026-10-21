@@ -10,8 +10,10 @@
 #include "controllers/ConnectionTester.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
+#include "controllers/DeleteVersionsJob.h"
 #include "controllers/EditObjectsJob.h"
 #include "controllers/RenameJob.h"
+#include "controllers/RestoreVersionsJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -39,6 +41,7 @@
 #include "models/TransferModel.h"
 #include "ui/Theme.h"
 #include "ui/ThemeManager.h"
+#include "ui/UndeleteDialog.h"
 
 #include <qbucket/s3/transfer/ResumeStore.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
@@ -338,6 +341,8 @@ void MainWindow::updateMutationActions_()
     const QString versionsTip = versions.allowed ? tr("Every version and delete marker of the objects here") : versions.reason;
     m_actVersions->setEnabled(versions.allowed);
     m_actVersions->setToolTip(versionsTip);
+    // Version actions write: the account must too, and versions be listable.
+    m_browser->setVersionActionsAllowed(versions.allowed && del.allowed, !del.allowed ? del.reason : versions.reason);
     for (QAbstractButton* btn : m_browseSeg->buttons()) {
         if (btn->property("browseMode").toString() == QLatin1String("versions")) {
             btn->setEnabled(versions.allowed);
@@ -418,6 +423,23 @@ void MainWindow::presign_()
     const Location here = m_browser->navigation()->current();
     if (!m_presign || !here.hasBucket())
         return;
+    if (m_browser->mode() == ObjectTableModel::Mode::Versions) {
+        QStringList keys;
+        QStringList ids;
+        for (const ObjectBrowser::VersionRow& v : m_browser->selectedVersions()) {
+            if (!v.deleteMarker) {
+                keys.append(v.key);
+                ids.append(v.versionId);
+            }
+        }
+        if (keys.isEmpty())
+            return;
+        auto* dlg = new PresignDialog(m_presign, here.account, here.bucket, keys, 0, this);
+        dlg->setVersionIds(ids);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        dlg->open();
+        return;
+    }
     QStringList keys;
     int folders = 0;
     for (const QModelIndex& r : m_browser->selectedRows()) {
@@ -507,12 +529,117 @@ void MainWindow::deleteSelection_()
     const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
     if (!m_operations || !account || !here.hasBucket())
         return;
+    if (m_browser->mode() == ObjectTableModel::Mode::Versions) {
+        // The versions view: the selected versions and markers, for good.
+        QStringList keys;
+        QStringList ids;
+        for (const ObjectBrowser::VersionRow& v : m_browser->selectedVersions()) {
+            keys.append(v.key);
+            ids.append(v.versionId);
+        }
+        deleteVersions_(keys, ids);
+        return;
+    }
     QList<DeleteJob::Item> items;
     for (const QModelIndex& row : m_browser->selectedRows())
         items.append({row.data(ObjectTableModel::KeyRole).toString(), row.data(ObjectTableModel::IsFolderRole).toBool()});
     if (items.isEmpty())
         return;
     m_operations->start(new DeleteJob(*account, here.bucket, items, m_operations->planDir()));
+}
+
+// --- versions (M5) ------------------------------------------------------------
+
+void MainWindow::restoreVersions_(const QStringList& keys, const QStringList& versionIds)
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket() || keys.isEmpty())
+        return;
+    QList<RestoreVersionsJob::VersionRef> refs;
+    for (qsizetype i = 0; i < keys.size(); ++i)
+        refs.append({keys[i], versionIds.value(i)});
+    m_operations->start(new RestoreVersionsJob(*account, here.bucket, refs, m_operations->planDir()));
+}
+
+void MainWindow::deleteVersions_(const QStringList& keys, const QStringList& versionIds)
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket() || keys.isEmpty())
+        return;
+    QList<DeleteVersionsJob::VersionRef> refs;
+    for (qsizetype i = 0; i < keys.size(); ++i)
+        refs.append({keys[i], versionIds.value(i)});
+    m_operations->start(DeleteVersionsJob::versions(*account, here.bucket, refs, m_operations->planDir()));
+}
+
+void MainWindow::removeMarkers_(const QStringList& keys)
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket() || keys.isEmpty())
+        return;
+    QList<DeleteVersionsJob::Item> items;
+    for (const QString& k : keys)
+        items.append({k, false});
+    m_operations->start(DeleteVersionsJob::undelete(*account, here.bucket, items, m_operations->planDir()));
+}
+
+// Every version of the selection — objects (also from the versions view)
+// and folders.
+void MainWindow::deleteAllVersions_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket())
+        return;
+    QList<DeleteVersionsJob::Item> items;
+    for (const QModelIndex& row : m_browser->selectedRows())
+        items.append({row.data(ObjectTableModel::KeyRole).toString(), row.data(ObjectTableModel::IsFolderRole).toBool()});
+    if (items.isEmpty())
+        return;
+    m_operations->start(DeleteVersionsJob::everything(*account, here.bucket, items, m_operations->planDir()));
+}
+
+// What was deleted in the selected folders — or in the current one.
+void MainWindow::restoreDeleted_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket())
+        return;
+    QList<DeleteVersionsJob::Item> items;
+    for (const QModelIndex& row : m_browser->selectedRows()) {
+        if (row.data(ObjectTableModel::IsFolderRole).toBool())
+            items.append({row.data(ObjectTableModel::KeyRole).toString(), true});
+    }
+    if (items.isEmpty())
+        items.append({here.prefix, true});
+    const QString scope = items.size() == 1 ? QStringLiteral("s3://%1/%2").arg(here.bucket, items.first().key)
+                                            : tr("%n folder(s) of s3://%1", nullptr, int(items.size())).arg(here.bucket);
+    auto* dlg = new UndeleteDialog(scope, this);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QDialog::accepted, this, [this, dlg, account, bucket = here.bucket, items] {
+        m_operations->start(
+            DeleteVersionsJob::undelete(*account, bucket, items, m_operations->planDir(), dlg->deletedAfter()));
+    });
+    dlg->open();
+}
+
+void MainWindow::downloadVersions_(const QStringList& keys, const QStringList& versionIds, const QString& folder)
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    if (!m_operations || !account || !here.hasBucket() || keys.isEmpty())
+        return;
+    QList<DownloadJob::Item> items;
+    for (qsizetype i = 0; i < keys.size(); ++i)
+        items.append({keys[i], false, {}, versionIds.value(i)});
+    DownloadJob::Options options;
+    options.alwaysConfirm = true;   // an earlier version: always shown first
+    const QString target = folder.isEmpty() ? m_settings->downloadDirectory() : folder;
+    m_operations->start(new DownloadJob(*account, here.bucket, items, target, m_operations->planDir(), options));
 }
 
 void MainWindow::chooseUploadFiles_()
@@ -561,6 +688,18 @@ void MainWindow::downloadSelection_(const QString& folder)
     const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
     if (!m_operations || !account || !here.hasBucket())
         return;
+    if (m_browser->mode() == ObjectTableModel::Mode::Versions) {
+        QStringList keys;
+        QStringList ids;
+        for (const ObjectBrowser::VersionRow& v : m_browser->selectedVersions()) {
+            if (!v.deleteMarker) {
+                keys.append(v.key);
+                ids.append(v.versionId);
+            }
+        }
+        downloadVersions_(keys, ids, folder);
+        return;
+    }
     QList<DownloadJob::Item> items;
     for (const QModelIndex& row : m_browser->selectedRows())
         items.append({row.data(ObjectTableModel::KeyRole).toString(), row.data(ObjectTableModel::IsFolderRole).toBool(), {}});
@@ -735,6 +874,39 @@ void MainWindow::connectBrowser_()
     m_editMenu->addAction(m_browser->downloadAction());
     m_editMenu->addAction(m_browser->downloadToAction());
     m_editMenu->addAction(m_browser->presignAction());
+    m_editMenu->addSeparator();
+    m_editMenu->addAction(m_browser->restoreVersionAction());
+    m_editMenu->addAction(m_browser->removeMarkerAction());
+    m_editMenu->addAction(m_browser->deleteAllVersionsAction());
+    m_editMenu->addAction(m_browser->restoreDeletedAction());
+    connect(m_browser->restoreVersionAction(), &QAction::triggered, this, [this] {
+        QStringList keys;
+        QStringList ids;
+        for (const ObjectBrowser::VersionRow& v : m_browser->selectedVersions()) {
+            if (!v.deleteMarker && !v.latest) {
+                keys.append(v.key);
+                ids.append(v.versionId);
+            }
+        }
+        restoreVersions_(keys, ids);
+    });
+    connect(m_browser->removeMarkerAction(), &QAction::triggered, this, [this] {
+        QStringList keys;
+        for (const ObjectBrowser::VersionRow& v : m_browser->selectedVersions()) {
+            if (v.deleteMarker && v.latest && !keys.contains(v.key))
+                keys.append(v.key);
+        }
+        removeMarkers_(keys);
+    });
+    connect(m_browser->deleteAllVersionsAction(), &QAction::triggered, this, &MainWindow::deleteAllVersions_);
+    if (m_details) {
+        connect(m_details, &DetailPane::downloadVersionsRequested, this,
+                [this](const QStringList& keys, const QStringList& ids) { downloadVersions_(keys, ids, QString()); });
+        connect(m_details, &DetailPane::restoreVersionsRequested, this, &MainWindow::restoreVersions_);
+        connect(m_details, &DetailPane::deleteVersionsRequested, this, &MainWindow::deleteVersions_);
+        connect(m_details, &DetailPane::removeMarkersRequested, this, &MainWindow::removeMarkers_);
+    }
+    connect(m_browser->restoreDeletedAction(), &QAction::triggered, this, &MainWindow::restoreDeleted_);
     connect(m_browser->downloadAction(), &QAction::triggered, this, [this] { downloadSelection_(QString()); });
     connect(m_browser->downloadToAction(), &QAction::triggered, this, [this] {
         auto* dlg = new QFileDialog(this, tr("Download To"), m_settings->downloadDirectory());

@@ -56,6 +56,10 @@ public:
     [[nodiscard]] QPushButton* applyAccessButton() const { return m_applyAccess; }
     [[nodiscard]] QTreeWidget* grantList() const { return m_grants; }
     [[nodiscard]] QTreeWidget* versionList() const { return m_versionList; }
+    [[nodiscard]] QPushButton* downloadVersionButton() const { return m_versionDownload; }
+    [[nodiscard]] QPushButton* restoreVersionButton() const { return m_versionRestore; }
+    [[nodiscard]] QPushButton* deleteVersionButton() const { return m_versionDelete; }
+    [[nodiscard]] QPushButton* removeMarkerButton() const { return m_versionUndelete; }
     // The version shown (a row of the versions view); empty: the current object.
     [[nodiscard]] QString versionId() const { return m_versionId; }
     // A folder (or several rows with folders): what they hold, on request.
@@ -79,6 +83,11 @@ signals:
     void versionsLoaded();
     // The Metadata tab's "Edit…".
     void editMetadataRequested();
+    // The Versions tab's buttons, for the selected versions of one key.
+    void downloadVersionsRequested(const QStringList& keys, const QStringList& versionIds);
+    void restoreVersionsRequested(const QStringList& keys, const QStringList& versionIds);
+    void deleteVersionsRequested(const QStringList& keys, const QStringList& versionIds);
+    void removeMarkersRequested(const QStringList& keys);
 
 private:
     void requestHead_();
@@ -96,6 +105,7 @@ private:
     void loadVersions_();
     void fetchVersions_();
     void showVersions_();
+    void updateVersionButtons_();
     // Editing applies to the current version only.
     [[nodiscard]] bool showsOlderVersion_() const { return !m_versionId.isEmpty() && !m_latest; }
     void updateFeatureTabs_();
@@ -153,6 +163,10 @@ private:
     QLabel* m_versionsHint = nullptr;
     QTreeWidget* m_versionList = nullptr;
     QLabel* m_versionsNote = nullptr;
+    QPushButton* m_versionDownload = nullptr;
+    QPushButton* m_versionRestore = nullptr;
+    QPushButton* m_versionDelete = nullptr;
+    QPushButton* m_versionUndelete = nullptr;
     std::unique_ptr<FolderSizeTask> m_sizeTask;
     QPushButton* m_sizeButton = nullptr;   // in the form; gone with its rows
     QLabel* m_sizeLabel = nullptr;

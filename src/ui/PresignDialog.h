@@ -26,6 +26,10 @@ public:
     PresignDialog(PresignService* service, const QUuid& account, const QString& bucket, const QStringList& keys,
                   int folders, QWidget* parent = nullptr);
 
+    // Links to these versions of the keys (same order): GET only — a PUT
+    // link always writes the current version.
+    void setVersionIds(const QStringList& versionIds);
+
     // For tests.
     [[nodiscard]] QComboBox* methodBox() const { return m_method; }
     [[nodiscard]] QSpinBox* amountBox() const { return m_amount; }
@@ -49,6 +53,7 @@ private:
     QUuid m_account;
     QString m_bucket;
     QStringList m_keys;
+    QStringList m_versionIds;
     QStringList m_csv;   // key,link,expires per line, for Save
     QComboBox* m_method = nullptr;
     QSpinBox* m_amount = nullptr;

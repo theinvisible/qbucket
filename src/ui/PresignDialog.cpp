@@ -118,6 +118,17 @@ int PresignDialog::expiresSeconds() const
     return int(std::min<qint64>(secs, m_service->maxExpirySeconds(m_account)));
 }
 
+void PresignDialog::setVersionIds(const QStringList& versionIds)
+{
+    m_versionIds = versionIds;
+    m_method->setCurrentIndex(m_method->findData(QByteArray("GET")));
+    m_method->setEnabled(versionIds.isEmpty());
+    m_method->setToolTip(versionIds.isEmpty() ? QString()
+                                              : tr("Earlier versions can only be downloaded: an upload link writes "
+                                                   "the current version."));
+    update_();
+}
+
 void PresignDialog::update_()
 {
     const QByteArray method = m_method->currentData().toByteArray();
@@ -140,6 +151,7 @@ void PresignDialog::generate_()
     r.account = m_account;
     r.bucket = m_bucket;
     r.keys = m_keys;
+    r.versionIds = m_versionIds;
     r.method = m_method->currentData().toByteArray();
     r.expiresSeconds = expiresSeconds();
     r.download = m_download->isChecked() && m_download->isEnabled();

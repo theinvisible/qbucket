@@ -76,6 +76,8 @@ void PresignService::presign(const Request& request, QObject* context, std::func
         p.method = request.method;
         p.bucket = request.bucket;
         p.key = request.keys[i];
+        if (request.method == "GET")
+            p.versionId = request.versionIds.value(i);
         p.expiresSeconds = request.expiresSeconds;
         if (request.download && request.method == "GET") {
             const QString name = p.key.mid(p.key.lastIndexOf(u'/') + 1);

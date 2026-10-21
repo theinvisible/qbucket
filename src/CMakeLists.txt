@@ -145,6 +145,8 @@ add_library(qbucket_ui_foundation STATIC
     ui/IconFactory.h
     ui/IconFactory.cpp
     ui/ThemeManager.h
+    ui/UndeleteDialog.h
+    ui/UndeleteDialog.cpp
     ui/ThemeManager.cpp
 )
 target_include_directories(qbucket_ui_foundation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

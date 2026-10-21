@@ -234,12 +234,84 @@ void DetailPane::buildVersionsTab_()
     m_versionList->header()->resizeSection(0, 140);
     m_versionList->header()->resizeSection(1, 80);
     lay->addWidget(m_versionList, 1);
+    // The selected versions: what a role of the list says they are.
+    const auto selected = [this](bool markers, bool current) {
+        QStringList ids;
+        for (QTreeWidgetItem* item : m_versionList->selectedItems()) {
+            const s3::VersionEntry& v = m_versions.at(m_versionList->indexOfTopLevelItem(item));
+            if (v.isDeleteMarker == markers && (current || !v.isLatest))
+                ids.append(v.versionId);
+        }
+        return ids;
+    };
+    auto* row = new QHBoxLayout;
+    m_versionDownload = new QPushButton(tr("Download"));
+    m_versionRestore = new QPushButton(tr("Restore…"));
+    m_versionDelete = new QPushButton(tr("Delete…"));
+    m_versionUndelete = new QPushButton(tr("Undelete…"));
+    m_versionDownload->setToolTip(tr("Download the selected versions"));
+    m_versionRestore->setToolTip(tr("Copy the selected earlier version over the current one"));
+    m_versionDelete->setToolTip(tr("Delete the selected versions and markers for good"));
+    m_versionUndelete->setToolTip(tr("Remove the delete marker: the newest version becomes current"));
+    connect(m_versionDownload, &QPushButton::clicked, this, [this, selected] {
+        const QStringList ids = selected(false, true);
+        emit downloadVersionsRequested(QStringList(ids.size(), m_versionsFor), ids);
+    });
+    connect(m_versionRestore, &QPushButton::clicked, this, [this, selected] {
+        const QStringList ids = selected(false, false);
+        emit restoreVersionsRequested(QStringList(ids.size(), m_versionsFor), ids);
+    });
+    connect(m_versionDelete, &QPushButton::clicked, this, [this, selected] {
+        const QStringList ids = selected(false, true) + selected(true, true);
+        emit deleteVersionsRequested(QStringList(ids.size(), m_versionsFor), ids);
+    });
+    connect(m_versionUndelete, &QPushButton::clicked, this, [this] { emit removeMarkersRequested({m_versionsFor}); });
+    for (QPushButton* b : {m_versionDownload, m_versionRestore, m_versionDelete, m_versionUndelete})
+        row->addWidget(b);
+    row->addStretch(1);
+    lay->addLayout(row);
+    connect(m_versionList, &QTreeWidget::itemSelectionChanged, this, &DetailPane::updateVersionButtons_);
     m_versionsNote = new QLabel;
     m_versionsNote->setWordWrap(true);
     m_versionsNote->setObjectName(QStringLiteral("hint"));
     lay->addWidget(m_versionsNote);
     m_versionsStack->addWidget(page);
     m_tabs->addTab(m_versionsStack, tr("Versions"));
+    updateVersionButtons_();
+}
+
+// Reads where the account reads; writes where it writes and versions can be
+// listed — the jobs check everything again.
+void DetailPane::updateVersionButtons_()
+{
+    int versions = 0;
+    int earlier = 0;
+    int entries = 0;
+    for (QTreeWidgetItem* item : m_versionList->selectedItems()) {
+        const int i = m_versionList->indexOfTopLevelItem(item);
+        if (i < 0 || i >= m_versions.size())
+            continue;
+        ++entries;
+        if (!m_versions[i].isDeleteMarker) {
+            ++versions;
+            earlier += m_versions[i].isLatest ? 0 : 1;
+        }
+    }
+    const bool hidden = !m_versions.isEmpty() && m_versions.first().isDeleteMarker;
+    OperationController::Check read{false, tr("Read-only here.")};
+    OperationController::Check write{false, tr("Read-only here.")};
+    if (m_ops && !m_versionsFor.isEmpty()) {
+        read = m_ops->check(m_account, m_bucket, {s3::Feature::ObjectVersionsListing}, false, false);
+        write = m_ops->check(m_account, m_bucket, {s3::Feature::ObjectVersionsListing}, true);
+    }
+    m_versionDownload->setEnabled(read.allowed && versions > 0);
+    m_versionRestore->setEnabled(write.allowed && earlier > 0);
+    m_versionDelete->setEnabled(write.allowed && entries > 0);
+    m_versionUndelete->setEnabled(write.allowed && hidden);
+    for (QPushButton* b : {m_versionRestore, m_versionDelete, m_versionUndelete}) {
+        if (!write.allowed)
+            b->setToolTip(write.reason);
+    }
 }
 
 void DetailPane::addTagRow_(const QString& key, const QString& value)
@@ -373,6 +445,7 @@ void DetailPane::showVersions_()
         note = tr("%n version(s), newest first.", nullptr, int(m_versions.size()));
     m_versionsNote->setText(note);
     m_versionsStack->setCurrentIndex(1);
+    updateVersionButtons_();
     emit versionsLoaded();
 }
 

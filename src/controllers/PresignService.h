@@ -27,6 +27,8 @@ public:
         QUuid account;
         QString bucket;
         QStringList keys;
+        // GET: a version of each key (same order; empty: the current one).
+        QStringList versionIds;
         QByteArray method = "GET";
         int expiresSeconds = 3600;
         // GET: the browser saves instead of showing (Content-Disposition

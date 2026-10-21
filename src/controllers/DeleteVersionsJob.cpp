@@ -21,6 +21,13 @@ QString lastSegment(QString key)
     return key.mid(key.lastIndexOf(u'/') + 1);
 }
 
+// A folder's name, or the bucket's for its root.
+QString nameOf(const QString& key, const QString& bucket)
+{
+    const QString name = lastSegment(key);
+    return name.isEmpty() ? bucket : name;
+}
+
 QString refId(const QString& key, const QString& versionId)
 {
     return key + QChar(u'\0') + versionId;
@@ -72,16 +79,17 @@ DeleteVersionsJob* DeleteVersionsJob::undelete(const Account& account, const QSt
     return job;
 }
 
-// A key inside a selected folder is covered by the folder: walked once.
+// A key inside a selected folder is covered by the folder: walked once. A
+// folder with an empty prefix is the whole bucket.
 void DeleteVersionsJob::addItems_(const QList<Item>& items)
 {
     QStringList folders;
     for (const Item& i : items) {
-        if (i.folder && !i.key.isEmpty())
+        if (i.folder)
             folders.append(i.key);
     }
     for (const Item& i : items) {
-        if (i.key.isEmpty())
+        if (i.key.isEmpty() && !i.folder)
             continue;
         const bool covered = std::any_of(folders.cbegin(), folders.cend(),
                                          [&](const QString& f) { return i.key != f && i.key.startsWith(f); });
@@ -99,11 +107,11 @@ QString DeleteVersionsJob::title() const
     case Kind::Versions:
         return tr("Delete %n version(s) permanently", nullptr, int(m_refs.size()));
     case Kind::Everything:
-        return m_items.size() == 1 ? tr("Delete every version of “%1”").arg(lastSegment(m_items.first().key))
+        return m_items.size() == 1 ? tr("Delete every version of “%1”").arg(nameOf(m_items.first().key, bucket()))
                                    : tr("Delete every version of %n item(s)", nullptr, int(m_items.size()));
     case Kind::Undelete:
         if (m_items.size() == 1) {
-            return m_items.first().folder ? tr("Restore what was deleted in “%1”").arg(lastSegment(m_items.first().key))
+            return m_items.first().folder ? tr("Restore what was deleted in “%1”").arg(nameOf(m_items.first().key, bucket()))
                                           : tr("Restore “%1”").arg(lastSegment(m_items.first().key));
         }
         return tr("Restore %n deleted item(s)", nullptr, int(m_items.size()));
@@ -344,7 +352,7 @@ void DeleteVersionsJob::planDone_()
             }
             // Always typed: nothing of it can be undone.
             if (m_items.size() == 1)
-                p.typeToConfirm = lastSegment(m_items.first().key);
+                p.typeToConfirm = nameOf(m_items.first().key, bucket());
             else if (m_kind == Kind::Versions && m_walks.size() == 1)
                 p.typeToConfirm = lastSegment(m_walks.first().prefix);
             else

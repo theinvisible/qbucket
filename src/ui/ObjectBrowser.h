@@ -65,6 +65,13 @@ public:
     [[nodiscard]] QAction* deleteAction() const { return m_actDelete; }
     [[nodiscard]] QAction* downloadAction() const { return m_actDownload; }
     [[nodiscard]] QAction* downloadToAction() const { return m_actDownloadTo; }
+    // Versions (M5): restore the selected version, remove a delete marker
+    // (versions view); every version of the selection for good (Shift+Del);
+    // bring back what was deleted in the selected / current folder.
+    [[nodiscard]] QAction* restoreVersionAction() const { return m_actRestoreVersion; }
+    [[nodiscard]] QAction* removeMarkerAction() const { return m_actRemoveMarker; }
+    [[nodiscard]] QAction* deleteAllVersionsAction() const { return m_actDeleteAllVersions; }
+    [[nodiscard]] QAction* restoreDeletedAction() const { return m_actRestoreDeleted; }
 
     // The gate's verdict for the mutating actions (MainWindow decides).
     void setMutationsAllowed(bool allowed, const QString& reason);
@@ -74,12 +81,22 @@ public:
     void setStorageClassesAllowed(bool allowed, const QString& reason);
     // Local files may be dropped here (and onto folder rows).
     void setUploadsAllowed(bool allowed);
+    // The gate's verdict for the version actions (MainWindow decides).
+    void setVersionActionsAllowed(bool allowed, const QString& reason);
     // The local files of a drag, or empty when it isn't one of only local
     // files and folders.
     [[nodiscard]] static QStringList localPaths(const QMimeData* mime);
 
     // Selected rows (column 0), in view order.
     [[nodiscard]] QModelIndexList selectedRows() const;
+    // The selected rows of the versions view.
+    struct VersionRow {
+        QString key;
+        QString versionId;
+        bool latest = false;
+        bool deleteMarker = false;
+    };
+    [[nodiscard]] QList<VersionRow> selectedVersions() const;
     // The selection as objects (keys only) for a copy, a cut or a drag.
     [[nodiscard]] ObjectSelection selection(ObjectSelection::Intent intent) const;
 
@@ -157,6 +174,12 @@ private:
     QAction* m_actDelete = nullptr;
     QAction* m_actDownload = nullptr;
     QAction* m_actDownloadTo = nullptr;
+    QAction* m_actRestoreVersion = nullptr;
+    QAction* m_actRemoveMarker = nullptr;
+    QAction* m_actDeleteAllVersions = nullptr;
+    QAction* m_actRestoreDeleted = nullptr;
+    bool m_versionsAllowed = false;
+    QString m_versionsReason;
     bool m_downloadsAllowed = false;
     bool m_uploadsAllowed = false;
     ObjectRowDelegate* m_delegate = nullptr;

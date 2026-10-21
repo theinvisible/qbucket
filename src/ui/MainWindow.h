@@ -68,6 +68,13 @@ private:
     void updateStatus_();
     void showCapabilities_();
     void showBucketProperties_(const QUuid& account, const QString& bucket);
+    // Versions (M5).
+    void restoreVersions_(const QStringList& keys, const QStringList& versionIds);
+    void deleteVersions_(const QStringList& keys, const QStringList& versionIds);
+    void removeMarkers_(const QStringList& keys);
+    void deleteAllVersions_();
+    void restoreDeleted_();
+    void downloadVersions_(const QStringList& keys, const QStringList& versionIds, const QString& folder);
     void showIncompleteUploads_();
     void connectOperations_();
     void updateJobStatus_();

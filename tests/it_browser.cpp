@@ -141,6 +141,24 @@ private slots:
         QVERIFY(!browser->changeClassAction()->isEnabled());
         QVERIFY(browser->copyAction()->isEnabled());
         QVERIFY(browser->presignAction()->isEnabled());
+        QVERIFY(!browser->deleteAllVersionsAction()->isEnabled());
+        QVERIFY(!browser->restoreDeletedAction()->isEnabled());
+
+        // The versions view lists (where the server can), and changes nothing.
+        m_settings->setBrowseMode(QStringLiteral("versions"));
+        if (browser->mode() == ObjectTableModel::Mode::Versions) {
+            QTRY_VERIFY_WITH_TIMEOUT(browser->model()->state() == ObjectTableModel::State::Complete
+                                         || browser->model()->state() == ObjectTableModel::State::Ready, 30000);
+            QVERIFY(browser->model()->rowCount() > 0);
+            browser->view()->clearSelection();
+            browser->view()->selectRow(0);
+            for (QAction* a : {browser->restoreVersionAction(), browser->removeMarkerAction(), browser->deleteAction(),
+                               browser->deleteAllVersionsAction(), browser->restoreDeletedAction()})
+                QVERIFY2(!a->isEnabled(), qPrintable(a->text()));
+            if (!browser->model()->index(0, 0).data(ObjectTableModel::IsDeleteMarkerRole).toBool())
+                QVERIFY(browser->downloadAction()->isEnabled());   // reading a version is fine
+        }
+        m_settings->setBrowseMode(QStringLiteral("folders"));
 
         QTest::qWait(1500);   // capability probes, sidebar listing
         const QString dir = env("QBUCKET_SCREENSHOT_DIR");

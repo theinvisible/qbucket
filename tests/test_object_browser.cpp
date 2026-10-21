@@ -318,11 +318,33 @@ private slots:
         browser.view()->selectRow(1);   // a.txt's earlier version
         QVERIFY(browser.copyKeyAction()->isEnabled());
         QVERIFY(browser.copyUriAction()->isEnabled());
-        for (QAction* a : {browser.copyAction(), browser.cutAction(), browser.renameAction(), browser.deleteAction(),
-                           browser.editMetadataAction(), browser.downloadAction()}) {
+        for (QAction* a : {browser.copyAction(), browser.cutAction(), browser.renameAction(),
+                           browser.editMetadataAction()}) {
             QVERIFY2(!a->isEnabled(), qPrintable(a->text()));
             QVERIFY(a->toolTip().contains(QLatin1String("versions view")));
         }
+        // Its own actions — writes only once the gate allows them.
+        QVERIFY(browser.downloadAction()->isEnabled());
+        QVERIFY(browser.presignAction()->isEnabled());
+        QVERIFY(!browser.restoreVersionAction()->isEnabled());
+        QVERIFY(!browser.deleteAction()->isEnabled());
+        browser.setVersionActionsAllowed(true, QString());
+        QVERIFY(browser.restoreVersionAction()->isEnabled());
+        QVERIFY(browser.deleteAction()->isEnabled());
+        QVERIFY(browser.deleteAction()->text().contains(QLatin1String("Permanently")));
+        QVERIFY(!browser.removeMarkerAction()->isEnabled());
+        QCOMPARE(browser.selectedVersions().size(), 1);
+        QVERIFY(!browser.selectedVersions().first().latest);
+
+        browser.view()->clearSelection();
+        browser.view()->selectRow(0);   // a.txt's current version: nothing to restore
+        QVERIFY(!browser.restoreVersionAction()->isEnabled());
+        const int marker = browser.model()->rowOfKey(QStringLiteral("b.txt"));
+        browser.view()->clearSelection();
+        browser.view()->selectRow(marker);   // b.txt's delete marker
+        QVERIFY(browser.removeMarkerAction()->isEnabled());
+        QVERIFY(!browser.downloadAction()->isEnabled());   // a marker has no content
+        QVERIFY(browser.deleteAllVersionsAction()->isEnabled());
 
         browser.setMode(ObjectTableModel::Mode::Folders);
         QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
@@ -330,6 +352,9 @@ private slots:
         QVERIFY(browser.view()->isColumnHidden(ObjectTableModel::VersionColumn));
         browser.view()->selectRow(0);
         QVERIFY(browser.deleteAction()->isEnabled());
+        QCOMPARE(browser.deleteAction()->text(), QStringLiteral("&Delete…"));
+        QVERIFY(browser.restoreDeletedAction()->isEnabled());
+        QVERIFY(!browser.removeMarkerAction()->isEnabled());
     }
 
     void anEmptyFolderAndAnErrorSayWhatTheyAre()

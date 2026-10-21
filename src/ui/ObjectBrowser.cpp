@@ -529,6 +529,11 @@ void ObjectBrowser::buildActions_()
     m_actDelete = make(tr("&Delete…"), QKeySequence::Delete);
     m_actDownload = make(tr("Do&wnload"), QKeySequence(Qt::CTRL | Qt::Key_D));
     m_actDownloadTo = make(tr("Download &To…"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
+    m_actRestoreVersion = make(tr("Restore This &Version…"), QKeySequence());
+    m_actRemoveMarker = make(tr("Remove Delete Mark&er…"), QKeySequence());   // M: Edit Metadata
+    // Like a file manager's "delete permanently" (Cut is Ctrl+X only here).
+    m_actDeleteAllVersions = make(tr("Delete All Versions…"), QKeySequence(Qt::SHIFT | Qt::Key_Delete));
+    m_actRestoreDeleted = make(tr("Restore Deleted Objects…"), QKeySequence());
 
     // Backspace goes up, like a file manager — wherever the focus is in
     // the browser (a line edit keeps its own Backspace).
@@ -542,6 +547,22 @@ void ObjectBrowser::buildActions_()
 void ObjectBrowser::updateActions_()
 {
     const QModelIndexList rows = selectedRows();
+    // Folders and flat: everything of the selection for good, what was
+    // deleted in the selected (or current) folders back.
+    m_actDeleteAllVersions->setText(tr("Delete All Versions…"));
+    m_actDeleteAllVersions->setEnabled(!rows.isEmpty() && m_versionsAllowed);
+    m_actDeleteAllVersions->setToolTip(m_versionsAllowed ? tr("Every version and delete marker of the selection, "
+                                                              "for good")
+                                                         : m_versionsReason);
+    m_actRestoreDeleted->setEnabled(m_versionsAllowed && m_nav->current().hasBucket());
+    m_actRestoreDeleted->setToolTip(m_versionsAllowed ? tr("Bring back what was deleted in the selected folders, "
+                                                           "or in this one")
+                                                      : m_versionsReason);
+    m_actRestoreVersion->setEnabled(false);
+    m_actRestoreVersion->setToolTip(tr("In the versions view"));
+    m_actRemoveMarker->setEnabled(false);
+    m_actRemoveMarker->setToolTip(tr("In the versions view"));
+    m_actDelete->setText(tr("&Delete…"));
     if (m_mode == ObjectTableModel::Mode::Versions) {
         updateVersionActions_(rows);
         return;
@@ -580,18 +601,68 @@ void ObjectBrowser::updateActions_()
 }
 
 // The versions view lists what was, not what is: nothing in it is copied,
-// moved, renamed or edited.
+// moved, renamed or edited. Its own actions: download / link a version,
+// restore it, remove a delete marker, delete versions for good.
 void ObjectBrowser::updateVersionActions_(const QModelIndexList& rows)
 {
     m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
     m_actCopyKey->setEnabled(!rows.isEmpty());
     m_actCopyUri->setEnabled(!rows.isEmpty());
     const QString notHere = tr("Not in the versions view — switch to Folders or Flat");
-    for (QAction* a : {m_actCopy, m_actCut, m_actPaste, m_actRename, m_actEditMetadata, m_actChangeClass,
-                       m_actPresign, m_actDelete, m_actDownload, m_actDownloadTo}) {
+    for (QAction* a : {m_actCopy, m_actCut, m_actPaste, m_actRename, m_actEditMetadata, m_actChangeClass}) {
         a->setEnabled(false);
         a->setToolTip(notHere);
     }
+    int versions = 0;       // real versions (not markers)
+    int earlier = 0;        // of those, not the current one
+    int topMarkers = 0;     // markers that hide their object
+    int entries = 0;        // versions and markers
+    for (const VersionRow& v : selectedVersions()) {
+        ++entries;
+        if (v.deleteMarker) {
+            topMarkers += v.latest ? 1 : 0;
+        } else {
+            ++versions;
+            earlier += v.latest ? 0 : 1;
+        }
+    }
+    for (QAction* a : {m_actDownload, m_actDownloadTo}) {
+        a->setEnabled(versions > 0 && m_downloadsAllowed);
+        a->setToolTip(m_downloadsAllowed ? tr("Download the selected versions") : m_downloadsReason);
+    }
+    m_actPresign->setEnabled(versions > 0 && m_downloadsAllowed);
+    m_actPresign->setToolTip(m_downloadsAllowed ? tr("Links to the selected versions") : m_downloadsReason);
+    m_actRestoreVersion->setEnabled(earlier > 0 && m_versionsAllowed);
+    m_actRestoreVersion->setToolTip(!m_versionsAllowed ? m_versionsReason
+                                                       : tr("Copy the selected earlier version over the current one"));
+    m_actRemoveMarker->setEnabled(topMarkers > 0 && m_versionsAllowed);
+    m_actRemoveMarker->setToolTip(!m_versionsAllowed ? m_versionsReason
+                                                     : tr("Bring the object back: its newest version becomes current"));
+    m_actDelete->setText(tr("&Delete Permanently…"));
+    m_actDelete->setEnabled(entries > 0 && m_versionsAllowed);
+    m_actDelete->setToolTip(m_versionsAllowed ? tr("Delete the selected versions and markers for good")
+                                              : m_versionsReason);
+}
+
+QList<ObjectBrowser::VersionRow> ObjectBrowser::selectedVersions() const
+{
+    QList<VersionRow> out;
+    if (m_mode != ObjectTableModel::Mode::Versions)
+        return out;
+    for (const QModelIndex& r : selectedRows()) {
+        if (r.data(ObjectTableModel::IsFolderRole).toBool())
+            continue;
+        out.append({r.data(ObjectTableModel::KeyRole).toString(), r.data(ObjectTableModel::VersionIdRole).toString(),
+                    r.data(ObjectTableModel::IsLatestRole).toBool(), r.data(ObjectTableModel::IsDeleteMarkerRole).toBool()});
+    }
+    return out;
+}
+
+void ObjectBrowser::setVersionActionsAllowed(bool allowed, const QString& reason)
+{
+    m_versionsAllowed = allowed;
+    m_versionsReason = reason;
+    updateActions_();
 }
 
 void ObjectBrowser::setDownloadsAllowed(bool allowed, const QString& reason)
@@ -704,12 +775,15 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
         return;
     QMenu menu(this);
     menu.setToolTipsVisible(true);
+    const bool versions = m_mode == ObjectTableModel::Mode::Versions;
     if (m_actOpen->isEnabled())
         menu.addAction(m_actOpen);
-    menu.addAction(m_actCopy);
-    menu.addAction(m_actCut);
-    menu.addAction(m_actPaste);
-    menu.addSeparator();
+    if (!versions) {
+        menu.addAction(m_actCopy);
+        menu.addAction(m_actCut);
+        menu.addAction(m_actPaste);
+        menu.addSeparator();
+    }
     menu.addAction(m_actCopyKey);
     menu.addAction(m_actCopyUri);
     menu.addSeparator();
@@ -717,10 +791,18 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
     menu.addAction(m_actDownloadTo);
     menu.addAction(m_actPresign);
     menu.addSeparator();
-    menu.addAction(m_actRename);
-    menu.addAction(m_actEditMetadata);
-    menu.addAction(m_actChangeClass);
+    if (versions) {
+        menu.addAction(m_actRestoreVersion);
+        menu.addAction(m_actRemoveMarker);
+    } else {
+        menu.addAction(m_actRename);
+        menu.addAction(m_actEditMetadata);
+        menu.addAction(m_actChangeClass);
+    }
     menu.addAction(m_actDelete);
+    menu.addSeparator();
+    menu.addAction(m_actDeleteAllVersions);
+    menu.addAction(m_actRestoreDeleted);
     menu.addSeparator();
     menu.addAction(tr("Refresh"), this, &ObjectBrowser::refresh);
     menu.exec(m_view->viewport()->mapToGlobal(pos));

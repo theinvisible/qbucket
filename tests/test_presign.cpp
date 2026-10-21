@@ -147,6 +147,32 @@ private slots:
         QCOMPARE(reply->readAll(), QByteArray("b"));
     }
 
+    void aLinkToAnEarlierVersion()
+    {
+        m_objects->setVersioning(QStringLiteral("bkt"), QStringLiteral("Enabled"));
+        const QString v1 = m_objects->putObject(QStringLiteral("bkt"), QStringLiteral("docs/v.txt"), "old");
+        m_objects->putObject(QStringLiteral("bkt"), QStringLiteral("docs/v.txt"), "new");
+        PresignService::Request r;
+        r.account = m_h->account.id;
+        r.bucket = QStringLiteral("bkt");
+        r.keys = {QStringLiteral("docs/v.txt")};
+        r.versionIds = {v1};
+        const QList<PresignService::Link> links = sign(r);
+        QCOMPARE(links.size(), 1);
+        QCOMPARE(QUrlQuery(links.first().url).queryItemValue(QStringLiteral("versionId")), v1);
+        QNetworkAccessManager nam;
+        std::unique_ptr<QNetworkReply> reply(nam.get(QNetworkRequest(links.first().url)));
+        QSignalSpy done(reply.get(), &QNetworkReply::finished);
+        QVERIFY(done.wait(10000));
+        QCOMPARE(reply->readAll(), QByteArray("old"));
+
+        // The dialog offers no upload link for a version.
+        PresignDialog dlg(m_service.get(), m_h->account.id, QStringLiteral("bkt"), r.keys, 0);
+        dlg.setVersionIds(r.versionIds);
+        QVERIFY(!dlg.methodBox()->isEnabled());
+        QCOMPARE(dlg.methodBox()->currentData().toByteArray(), QByteArray("GET"));
+    }
+
     // Write access handed out is journaled — never the link itself.
     void putLinksAreJournaledWithoutTheUrl()
     {
