@@ -8,32 +8,11 @@
 #include <qbucket/s3/Session.h>
 #include <qbucket/s3/providers/ProviderRegistry.h>
 
-#include <QLocale>
-
 #include <algorithm>
 
 namespace qbucket {
 
 namespace {
-
-bool isPrintableAscii(const QString& text)
-{
-    return std::all_of(text.begin(), text.end(), [](QChar c) { return c.unicode() >= 0x20 && c.unicode() <= 0x7E; });
-}
-
-bool headersAreAscii(const s3::ObjectHeaders& h)
-{
-    for (const QString* v : {&h.contentType, &h.cacheControl, &h.contentDisposition, &h.contentEncoding,
-                             &h.contentLanguage, &h.expires, &h.websiteRedirectLocation}) {
-        if (!isPrintableAscii(*v))
-            return false;
-    }
-    for (auto it = h.userMetadata.cbegin(); it != h.userMetadata.cend(); ++it) {
-        if (!isPrintableAscii(it.key()) || !isPrintableAscii(it.value()))
-            return false;
-    }
-    return true;
-}
 
 // "" and STANDARD are the same class.
 bool sameClass(const QString& a, const QString& b)
@@ -379,32 +358,7 @@ void EditObjectsJob::start_(const Entry& e)
 
 QString EditObjectsJob::cannotEdit_(const ObjectSnapshot& s) const
 {
-    const s3::ObjectMeta& m = s.meta;
-    if (!m.sseCustomerAlgorithm.isEmpty())
-        return tr("encrypted with a customer key (SSE-C): QBucket has no key to copy it");
-    if (m.serverSideEncryption.startsWith(QLatin1String("aws:kms")))
-        return tr("encrypted with KMS: not carried over by QBucket yet");
-    if (!m.objectLockMode.isEmpty() && m.objectLockRetainUntil > QDateTime::currentDateTimeUtc())
-        return tr("under retention until %1: the new version would not be protected")
-            .arg(QLocale().toString(m.objectLockRetainUntil.toLocalTime(), QLocale::ShortFormat));
-    if (m.legalHold)
-        return tr("under a legal hold: the new version would not be protected");
-    const auto profile = s3::ProviderRegistry::builtin().findOrGeneric(account().providerId);
-    if (profile->isArchiveStorageClass(m.storageClass))
-        return tr("in the archive class %1: restore it first").arg(m.storageClass);
-    if (s.acl) {
-        const std::optional<QString> canned = s3::cannedAclOf(*s.acl);
-        if (!canned)
-            return tr("has permissions for particular accounts that a copy would lose");
-        if (*canned != QLatin1String("private") && !m_writeAcl)
-            return tr("is %1, and changing ACLs isn't confirmed for this server").arg(*canned);
-    }
-    const bool tagged = s.tags ? !s.tags->isEmpty() : m.tagCount > 0;
-    if (tagged && (!m_writeTags || !s.tags))
-        return tr("has tags, and writing tags isn't confirmed for this server");
-    if (!headersAreAscii(s3::objectHeadersOf(m)))
-        return tr("has headers or metadata that aren't plain ASCII and can't be sent back unchanged");
-    return {};
+    return InPlaceCopy::cannotCarry(s, account().providerId, m_writeTags, m_writeAcl, true);
 }
 
 void EditObjectsJob::snapshotTaken_(const std::shared_ptr<Active>& a)

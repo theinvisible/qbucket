@@ -54,6 +54,15 @@ public:
     explicit InPlaceCopy(Job* job);
     ~InPlaceCopy() override;
 
+    // Why a copy of this object (version) would lose something it can't
+    // carry over; empty: it can be copied safely. SSE-C / KMS encryption, an
+    // archive class, a custom ACL, tags or a public ACL where writing them
+    // isn't confirmed, headers that aren't plain ASCII — and with
+    // `lockMatters` retention or a legal hold (the new version would not be
+    // protected).
+    [[nodiscard]] static QString cannotCarry(const ObjectSnapshot& snapshot, const QString& providerId, bool writeTags,
+                                             bool writeAcl, bool lockMatters);
+
     // `done` is called once, later, on this thread.
     void run(const Request& request, Done done);
     // Stops multipart copies (their uploads are aborted, the object stays as

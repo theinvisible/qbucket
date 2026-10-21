@@ -95,6 +95,97 @@
     </message>
 </context>
 <context>
+    <name>qbucket::DeleteVersionsJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="100"/>
+        <source>Delete %n version(s) permanently</source>
+        <translation>
+            <numerusform>Delete %n version permanently</numerusform>
+            <numerusform>Delete %n versions permanently</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="103"/>
+        <source>Delete every version of %n item(s)</source>
+        <translation>
+            <numerusform>Delete every version of %n item</numerusform>
+            <numerusform>Delete every version of %n items</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="109"/>
+        <source>Restore %n deleted item(s)</source>
+        <translation>
+            <numerusform>Restore %n deleted item</numerusform>
+            <numerusform>Restore %n deleted items</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="316"/>
+        <source>s3://%1 — %n selected item(s)</source>
+        <translation>
+            <numerusform>s3://%1 — %n selected item</numerusform>
+            <numerusform>s3://%1 — %n selected items</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="318"/>
+        <source>%n selected item(s) are skipped — see the report.</source>
+        <translation>
+            <numerusform>%n selected item is skipped — see the report.</numerusform>
+            <numerusform>%n selected items are skipped — see the report.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="324"/>
+        <source>%n object(s) come back: the delete markers over their newest version are removed (%1 marker(s)).</source>
+        <translation>
+            <numerusform>%n object comes back: the delete markers over its newest version are removed (%1 marker(s)).</numerusform>
+            <numerusform>%n objects come back: the delete markers over their newest version are removed (%1 marker(s)).</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="332"/>
+        <source>%1 version(s) and %2 delete marker(s) of %n object(s).</source>
+        <translation>
+            <numerusform>%1 version(s) and %2 delete marker(s) of %n object.</numerusform>
+            <numerusform>%1 version(s) and %2 delete marker(s) of %n objects.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="338"/>
+        <source>%n current version(s) are among them: the previous version becomes current, or the object disappears when none is left.</source>
+        <translation>
+            <numerusform>A current version is among them: the previous version becomes current, or the object disappears when none is left.</numerusform>
+            <numerusform>%n current versions are among them: the previous version becomes current, or the object disappears when none is left.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="641"/>
+        <source>%n object(s) looked up: they are back</source>
+        <translation>
+            <numerusform>%n object looked up: it is back</numerusform>
+            <numerusform>%n objects looked up: they are back</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="642"/>
+        <source>%n object(s) are still not back: %1</source>
+        <translation>
+            <numerusform>%n object is still not back: %1</numerusform>
+            <numerusform>%n objects are still not back: %1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/DeleteVersionsJob.cpp" line="646"/>
+        <source>%n version(s) are still listed: %1</source>
+        <translation>
+            <numerusform>%n version is still listed: %1</numerusform>
+            <numerusform>%n versions are still listed: %1</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::DetailPane</name>
     <message numerus="yes">
         <location filename="../../src/ui/DetailPane.cpp" line="371"/>
@@ -148,7 +239,7 @@
 <context>
     <name>qbucket::DownloadJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="95"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="100"/>
         <source>Download %n item(s) to %1</source>
         <translation>
             <numerusform>Download %n item to %1</numerusform>
@@ -156,7 +247,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="442"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="448"/>
         <source>s3://%1 — %n selected item(s) → %2</source>
         <translation>
             <numerusform>s3://%1 — %n selected item → %2</numerusform>
@@ -164,7 +255,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="449"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="455"/>
         <source>%n selected object(s) no longer exist and are skipped.</source>
         <translation>
             <numerusform>%n selected object no longer exists and is skipped.</numerusform>
@@ -172,7 +263,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="452"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="458"/>
         <source>%n name(s) contain characters this system does not allow and are saved under another name, e.g. %1</source>
         <translation>
             <numerusform>%n name contains characters this system does not allow and is saved under another name, e.g. %1</numerusform>
@@ -180,7 +271,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="458"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="464"/>
         <source>%n object(s) can&apos;t be saved here and are left out — first: %1</source>
         <translation>
             <numerusform>%n object can&apos;t be saved here and is left out — first: %1</numerusform>
@@ -188,7 +279,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/DownloadJob.cpp" line="826"/>
+        <location filename="../../src/controllers/DownloadJob.cpp" line="833"/>
         <source>%n file(s) verified by MD5</source>
         <translation>
             <numerusform>%n file verified by MD5</numerusform>
@@ -210,7 +301,7 @@
 <context>
     <name>qbucket::EditObjectsJob</name>
     <message numerus="yes">
-        <location filename="../../src/controllers/EditObjectsJob.cpp" line="148"/>
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="127"/>
         <source>%n items</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -218,7 +309,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/EditObjectsJob.cpp" line="284"/>
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="263"/>
         <source>%n items in s3://%1</source>
         <translation>
             <numerusform>%n item in s3://%1</numerusform>
@@ -412,6 +503,33 @@
         <translation>
             <numerusform>not verified: %n object still under the old name</numerusform>
             <numerusform>not verified: %n objects still under the old name</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::RestoreVersionsJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/RestoreVersionsJob.cpp" line="56"/>
+        <source>Restore %n earlier version(s)</source>
+        <translation>
+            <numerusform>Restore %n earlier version</numerusform>
+            <numerusform>Restore %n earlier versions</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/RestoreVersionsJob.cpp" line="167"/>
+        <source>%n object(s) in s3://%1</source>
+        <translation>
+            <numerusform>%n object in s3://%1</numerusform>
+            <numerusform>%n objects in s3://%1</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/RestoreVersionsJob.cpp" line="174"/>
+        <source>%n selected version(s) are skipped — see the report.</source>
+        <translation>
+            <numerusform>%n selected version is skipped — see the report.</numerusform>
+            <numerusform>%n selected versions are skipped — see the report.</numerusform>
         </translation>
     </message>
 </context>

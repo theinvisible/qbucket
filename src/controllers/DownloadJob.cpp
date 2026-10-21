@@ -57,6 +57,7 @@ DownloadJob::Record DownloadJob::Record::from(const QStringList& f)
     r.localState = f.value(5);
     r.localSize = f.value(6).toLongLong();
     r.localMtimeMs = f.value(7).toLongLong();
+    r.versionId = f.value(8);
     return r;
 }
 
@@ -90,6 +91,10 @@ QString DownloadJob::title() const
 {
     if (m_resuming)
         return m_record.title;
+    if (m_items.size() == 1 && !m_items.first().versionId.isEmpty()) {
+        return tr("Download an earlier version of “%1” to %2")
+            .arg(lastSegment(m_items.first().key), QDir::toNativeSeparators(m_target));
+    }
     if (m_items.size() == 1)
         return tr("Download “%1” to %2").arg(lastSegment(m_items.first().key), QDir::toNativeSeparators(m_target));
     return tr("Download %n item(s) to %1", nullptr, int(m_items.size()))
@@ -228,7 +233,7 @@ DownloadJob::LocalCheck DownloadJob::checkLocal(const QString& rawPath, const QS
         if (c.samples.size() < kSamples)
             c.samples.append(key);
         buffer += PlanFile::encodeRecord({key, mapped.path, f.value(2), f.value(3), f.value(4), state,
-                                          QString::number(localSize), QString::number(localMtime)});
+                                          QString::number(localSize), QString::number(localMtime), f.value(6)});
         if (buffer.size() >= qsizetype(256) * 1024) {
             if (out.write(buffer) != buffer.size()) {
                 c.error = out.errorString();
@@ -323,14 +328,15 @@ void DownloadJob::planNext_()
             return;
         }
         ++m_headsInFlight;
-        session->headObject(bucket(), item.key, QString(), m_run.get(), [this, item](const s3::Result<s3::ObjectMeta>& head) {
+        session->headObject(bucket(), item.key, item.versionId, m_run.get(), [this, item](const s3::Result<s3::ObjectMeta>& head) {
             --m_headsInFlight;
             if (phase() != Phase::Planning)
                 return;
             if (head) {
                 const QString rel = item.localName.isEmpty() ? lastSegment(item.key) : item.localName;
                 m_raw->appendRecords({{item.key, rel, QString::number(head->size), head->etag,
-                                       QString::number(head->lastModified.toMSecsSinceEpoch()), head->storageClass}});
+                                       QString::number(head->lastModified.toMSecsSinceEpoch()), head->storageClass,
+                                       item.versionId}});
             } else if (head.error().category == s3::ErrorCategory::NotFound) {
                 ++m_missing;
             } else {
@@ -653,6 +659,7 @@ void DownloadJob::download_(const std::shared_ptr<Active>& item, bool overwrite)
     req.targetPath = absolute_(item->path);
     req.overwrite = overwrite;
     req.expectEtag = item->record.etag;   // what the plan saw
+    req.versionId = item->record.versionId;
     req.transferId = transferId_(item->record);
     req.account = account().id.toString(QUuid::WithoutBraces);
     req.extra.insert(QStringLiteral("job"), m_record.id.isEmpty() ? id() : m_record.id);
@@ -748,7 +755,7 @@ void DownloadJob::itemFailed_(const Record& r, const QString& reason)
     if (m_failures.size() < kMaxListed)
         m_failures.append(QStringLiteral("%1: %2").arg(r.key, reason));
     if (!r.path.endsWith(u'/'))
-        m_failedItems.append({r.key, false, r.path});
+        m_failedItems.append({r.key, false, r.path, r.versionId});   // a retry fetches the same version
     updateProgress_(false);
 }
 

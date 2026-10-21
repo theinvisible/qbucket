@@ -41,6 +41,7 @@ public:
         QString key;          // object key, or folder prefix with "/"
         bool folder = false;
         QString localName;    // explicit path inside the target (Retry Failed); empty: derived
+        QString versionId = {};   // an object's earlier version; empty: the current one
     };
     struct Options {
         // false: a single object without a local conflict on a
@@ -88,9 +89,10 @@ public:
         QStringList samples;
         QString error;
     };
-    // Raw records (key, relative name, size, ETag, mtime ms, storage class)
-    // → final records (key, local path, size, ETag, mtime ms, local state,
-    // local size, local mtime ms) for files that can be written.
+    // Raw records (key, relative name, size, ETag, mtime ms, storage class,
+    // version id) → final records (key, local path, size, ETag, mtime ms,
+    // local state, local size, local mtime ms, version id) for files that
+    // can be written. Fields are only ever appended (plans are resumed).
     static LocalCheck checkLocal(const QString& rawPath, const QString& finalPath, const QString& targetDir,
                                  LocalPathMapper::Rules rules, const std::atomic<bool>& cancel);
 
@@ -112,6 +114,7 @@ private:
         QString localState;     // "", "file"
         qint64 localSize = 0;
         qint64 localMtimeMs = 0;
+        QString versionId;      // empty: the current version
         qint64 ordinal = -1;
         static Record from(const QStringList& fields);
     };

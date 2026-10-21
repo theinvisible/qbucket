@@ -170,6 +170,26 @@ private slots:
         QCOMPARE(readFile(local(QStringLiteral("report.pdf"))), QByteArray("pdf"));
     }
 
+    void anEarlierVersionIsDownloaded()
+    {
+        m_objects->setVersioning(kBucket, QStringLiteral("Enabled"));
+        const QString v1 = m_objects->putObject(kBucket, QStringLiteral("docs/plan.txt"), "the old plan");
+        m_objects->putObject(kBucket, QStringLiteral("docs/plan.txt"), "the new plan, longer");
+        auto* job = make({{QStringLiteral("docs/plan.txt"), false, {}, v1}});
+        QVERIFY(job->title().contains(QLatin1String("earlier version")));
+        QVERIFY(runConfirmed(job));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(readFile(local(QStringLiteral("plan.txt"))), QByteArray("the old plan"));
+        int asked = 0;
+        for (const RecordedRequest& r : m_h->server->requests()) {
+            if ((r.method == "GET" || r.method == "HEAD") && r.path.endsWith("/plan.txt")) {
+                QCOMPARE(r.queryItem("versionId"), v1.toUtf8());
+                ++asked;
+            }
+        }
+        QVERIFY(asked >= 2);   // the plan's HEAD and the download
+    }
+
     void readOnlyAccountsMayDownload()
     {
         setAccount(Environment::Production, true);

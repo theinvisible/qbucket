@@ -66,10 +66,16 @@ add_library(qbucket_controllers STATIC
     controllers/PlanFile.cpp
     controllers/RenameJob.h
     controllers/RenameJob.cpp
+    controllers/DeleteVersionsJob.h
+    controllers/DeleteVersionsJob.cpp
     controllers/InPlaceCopy.h
     controllers/InPlaceCopy.cpp
     controllers/ObjectCopyRunner.h
     controllers/ObjectCopyRunner.cpp
+    controllers/RestoreVersionsJob.h
+    controllers/RestoreVersionsJob.cpp
+    controllers/VersionWalk.h
+    controllers/VersionWalk.cpp
     controllers/CopyJob.h
     controllers/CopyJob.cpp
     controllers/ObjectSnapshot.h

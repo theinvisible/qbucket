@@ -13,10 +13,12 @@
 #include "controllers/CopyJob.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
+#include "controllers/DeleteVersionsJob.h"
 #include "controllers/DownloadJob.h"
 #include "controllers/EditObjectsJob.h"
 #include "controllers/ObjectPropertyJob.h"
 #include "controllers/RenameJob.h"
+#include "controllers/RestoreVersionsJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "controllers/TransferService.h"
@@ -169,6 +171,8 @@ private slots:
         const QString second = qEnvironmentVariable("QBUCKET_IT_SECOND_BUCKET");
         if (!second.isEmpty() && second != m_bucket)
             purgeRoot(second);
+        if (!m_versionBucket.isEmpty())
+            purgeRoot(m_versionBucket);
         // Unfinished multipart uploads of this run (a failed upload job).
         s3::ListMultipartUploadsParams up;
         up.bucket = m_bucket;
@@ -227,6 +231,67 @@ private slots:
         QVERIFY(exists(keep));
         for (const QString& key : keys)
             QVERIFY2(!exists(key), qPrintable(key));
+    }
+
+    // Versions (M5): an earlier version restored, a folder deleted and
+    // restored from its delete markers, a version and then everything
+    // deleted for good — through the jobs, against the real server.
+    void restoreAndUndelete()
+    {
+        const QString bucket = versionedBucket();
+        if (bucket.isEmpty())
+            QSKIP("no versioned bucket on this backend");
+        const QString folder = m_root + QStringLiteral("versions/");
+        const QString k = folder + QStringLiteral("page ä.html");
+        QString v1;
+        QVERIFY(put(k, "<h1>first</h1>", bucket, &v1));
+        QVERIFY(put(k, "<h1>broken</h1>", bucket));
+        QVERIFY(put(folder + QStringLiteral("other.txt"), "other", bucket));
+
+        Job* job = run(new RestoreVersionsJob(m_account, bucket, {{k, v1}}, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().failures.join(QStringLiteral("; "))));
+        QCOMPARE(content(bucket, k), QByteArray("<h1>first</h1>"));
+        QCOMPARE(versions(bucket, k).size(), 3);   // the restore is a new version
+
+        auto* del = new DeleteJob(m_account, bucket, {{folder, true}}, m_ops->planDir());
+        del->setRecheckDelaysForTesting(2000, 5000);
+        QCOMPARE(run(del)->outcome(), Job::Outcome::Succeeded);
+        auto* undelete = DeleteVersionsJob::undelete(m_account, bucket, {{folder, true}}, m_ops->planDir());
+        undelete->setRecheckDelayForTesting(3000);
+        job = run(undelete);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().succeeded, 2);   // two markers
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        QCOMPARE(content(bucket, k), QByteArray("<h1>first</h1>"));
+        QCOMPARE(content(bucket, folder + QStringLiteral("other.txt")), QByteArray("other"));
+    }
+
+    void deleteVersionsForGood()
+    {
+        const QString bucket = versionedBucket();
+        if (bucket.isEmpty())
+            QSKIP("no versioned bucket on this backend");
+        const QString folder = m_root + QStringLiteral("purge/");
+        const QString k = folder + QStringLiteral("doc.txt");
+        QString v1;
+        QString v2;
+        QVERIFY(put(k, "one", bucket, &v1));
+        QVERIFY(put(k, "two", bucket, &v2));
+        auto* job = DeleteVersionsJob::versions(m_account, bucket, {{k, v2}}, m_ops->planDir());
+        job->setRecheckDelayForTesting(3000);
+        run(job);
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        QCOMPARE(content(bucket, k), QByteArray("one"));   // the previous version is current again
+        QVERIFY(put(folder + QStringLiteral("sub/x"), "x", bucket));
+
+        auto* purge = DeleteVersionsJob::everything(m_account, bucket, {{folder, true}}, m_ops->planDir());
+        purge->setRecheckDelayForTesting(3000);
+        run(purge);
+        QCOMPARE(purge->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(purge->report().verified, qPrintable(purge->report().verification));
+        QVERIFY(versions(bucket, folder).isEmpty());
     }
 
     void renameAnObjectAndAFolder()
@@ -502,16 +567,88 @@ private slots:
     }
 
 private:
-    bool put(const QString& key, const QByteArray& data)
+    bool put(const QString& key, const QByteArray& data, const QString& bucket = {}, QString* versionId = nullptr)
     {
         s3::PutObjectParams p;
-        p.bucket = m_bucket;
+        p.bucket = bucket.isEmpty() ? m_bucket : bucket;
         p.key = key;
         p.data = data;
         std::optional<bool> ok;
         QObject ctx;
-        session()->putObject(p, &ctx, [&](const s3::Result<s3::PutObjectResult>& r) { ok = bool(r); });
+        session()->putObject(p, &ctx, [&](const s3::Result<s3::PutObjectResult>& r) {
+            ok = bool(r);
+            if (r && versionId)
+                *versionId = r->versionId;
+        });
         return QTest::qWaitFor([&] { return ok.has_value(); }, 30000) && *ok;
+    }
+
+    // Every version and marker of a key / under a prefix in `bucket`.
+    QList<s3::VersionEntry> versions(const QString& bucket, const QString& prefix)
+    {
+        QList<s3::VersionEntry> out;
+        s3::ListObjectVersionsParams p;
+        p.bucket = bucket;
+        p.prefix = prefix;
+        s3::ListObjectVersionsPager pager(*session(), p);
+        while (pager.hasMore()) {
+            std::optional<s3::Result<s3::ListObjectVersionsPage>> r;
+            QObject ctx;
+            pager.fetchNext(&ctx, [&](s3::Result<s3::ListObjectVersionsPage> res) { r.emplace(std::move(res)); });
+            if (!QTest::qWaitFor([&] { return r.has_value(); }, 30000) || !*r)
+                break;
+            out += (*r)->entries;
+        }
+        return out;
+    }
+
+    QByteArray content(const QString& bucket, const QString& key)
+    {
+        std::optional<s3::Result<s3::ObjectData>> r;
+        QObject ctx;
+        session()->getObject(bucket, key, QString(), &ctx, [&](s3::Result<s3::ObjectData> d) { r.emplace(std::move(d)); });
+        return QTest::qWaitFor([&] { return r.has_value(); }, 30000) && *r ? (*r)->data : QByteArray();
+    }
+
+    // A bucket with versioning for the version jobs: the test bucket when it
+    // is versioned; on local backends that can switch it on,
+    // <bucket>-versions (created here). Probed like an opened bucket.
+    QString versionedBucket()
+    {
+        const auto status = [this](const QString& bucket) {
+            std::optional<s3::Result<s3::BucketVersioning>> r;
+            QObject ctx;
+            session()->getBucketVersioning(bucket, &ctx, [&](s3::Result<s3::BucketVersioning> v) { r.emplace(std::move(v)); });
+            return QTest::qWaitFor([&] { return r.has_value(); }, 30000) && *r ? (*r)->status : s3::VersioningStatus::Never;
+        };
+        QString bucket;
+        if (status(m_bucket) == s3::VersioningStatus::Enabled) {
+            bucket = m_bucket;
+        } else if (env("QBUCKET_IT_CREATE_BUCKET") == QLatin1String("1")) {
+            const QString local = m_bucket + QStringLiteral("-versions");
+            QObject ctx;
+            bool done = false;
+            s3::CreateBucketParams params;
+            params.bucket = local;
+            params.region = m_account.region;
+            session()->createBucket(params, &ctx, [&](const s3::Result<void>&) { done = true; });   // exists: fine
+            (void)QTest::qWaitFor([&] { return done; }, 30000);
+            s3::PutBucketVersioningParams v;
+            v.bucket = local;
+            done = false;
+            session()->putBucketVersioning(v, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>&) { done = true; });
+            (void)QTest::qWaitFor([&] { return done; }, 30000);
+            if (status(local) == s3::VersioningStatus::Enabled)
+                bucket = local;
+        }
+        if (!bucket.isEmpty()) {
+            m_caps->bucketOpened(m_account.id, bucket);
+            (void)QTest::qWaitFor([&] { return !m_caps->isProbing(m_account.id, bucket) && m_caps->bucketSet(m_account.id, bucket); },
+                            30000);
+            if (bucket != m_bucket)
+                m_versionBucket = bucket;
+        }
+        return bucket;
     }
 
     std::optional<s3::ObjectMeta> meta(const QString& key)
@@ -556,6 +693,7 @@ private:
 
     QTemporaryDir m_dir;
     QString m_bucket;
+    QString m_versionBucket;   // when it isn't m_bucket (cleaned up too)
     QString m_root;
     Account m_account;
     std::unique_ptr<AccountStore> m_accounts;
