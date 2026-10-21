@@ -59,6 +59,8 @@ public:
     [[nodiscard]] QAction* copyKeyAction() const { return m_actCopyKey; }
     [[nodiscard]] QAction* copyUriAction() const { return m_actCopyUri; }
     [[nodiscard]] QAction* renameAction() const { return m_actRename; }
+    [[nodiscard]] QAction* editMetadataAction() const { return m_actEditMetadata; }
+    [[nodiscard]] QAction* changeClassAction() const { return m_actChangeClass; }
     [[nodiscard]] QAction* deleteAction() const { return m_actDelete; }
     [[nodiscard]] QAction* downloadAction() const { return m_actDownload; }
     [[nodiscard]] QAction* downloadToAction() const { return m_actDownloadTo; }
@@ -67,6 +69,8 @@ public:
     void setMutationsAllowed(bool allowed, const QString& reason);
     // Downloads only read: also on read-only accounts.
     void setDownloadsAllowed(bool allowed, const QString& reason);
+    // The provider offers a choice of storage classes (not for one only).
+    void setStorageClassesAllowed(bool allowed, const QString& reason);
     // Local files may be dropped here (and onto folder rows).
     void setUploadsAllowed(bool allowed);
     // The local files of a drag, or empty when it isn't one of only local
@@ -143,6 +147,10 @@ private:
     QAction* m_actCopyKey = nullptr;
     QAction* m_actCopyUri = nullptr;
     QAction* m_actRename = nullptr;
+    QAction* m_actEditMetadata = nullptr;
+    QAction* m_actChangeClass = nullptr;
+    bool m_classesAllowed = false;
+    QString m_classesReason;
     QAction* m_actDelete = nullptr;
     QAction* m_actDownload = nullptr;
     QAction* m_actDownloadTo = nullptr;

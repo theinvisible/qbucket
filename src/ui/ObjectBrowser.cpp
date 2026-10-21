@@ -503,7 +503,7 @@ void ObjectBrowser::buildActions_()
     m_actOpen = make(tr("&Open"), QKeySequence());
     // Like a file manager: Ctrl+C / X / V copy, cut and paste objects.
     m_actCopy = make(tr("&Copy"), QKeySequence::Copy);
-    m_actCut = make(tr("Cu&t"), QKeySequence::Cut);
+    m_actCut = make(tr("Cut"), QKeySequence::Cut);   // no mnemonic: C, u and t are taken (Copy, URI, To)
     m_actPaste = make(tr("&Paste"), QKeySequence::Paste);
     connect(m_actCopy, &QAction::triggered, this, [this] { copyObjects_(ObjectSelection::Intent::Copy); });
     connect(m_actCut, &QAction::triggered, this, [this] { copyObjects_(ObjectSelection::Intent::Cut); });
@@ -514,6 +514,8 @@ void ObjectBrowser::buildActions_()
     // Mutations go through the OperationController (PLAN.md §12.1); until
     // it handles them, the actions say why they can't be used.
     m_actRename = make(tr("&Rename…"), QKeySequence(Qt::Key_F2));
+    m_actEditMetadata = make(tr("Edit &Metadata…"), QKeySequence());
+    m_actChangeClass = make(tr("Change Storage Cl&ass…"), QKeySequence());
     m_actDelete = make(tr("&Delete…"), QKeySequence::Delete);
     m_actDownload = make(tr("Do&wnload"), QKeySequence(Qt::CTRL | Qt::Key_D));
     m_actDownloadTo = make(tr("Download &To…"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D));
@@ -544,6 +546,13 @@ void ObjectBrowser::updateActions_()
     m_actDelete->setToolTip(m_mutationsAllowed ? tr("Delete the selection") : m_mutationsReason);
     m_actRename->setEnabled(rows.size() == 1 && m_mutationsAllowed);
     m_actRename->setToolTip(m_mutationsAllowed ? tr("Rename the selected object or folder") : m_mutationsReason);
+    m_actEditMetadata->setEnabled(!rows.isEmpty() && m_mutationsAllowed);
+    m_actEditMetadata->setToolTip(m_mutationsAllowed ? tr("Change headers and user metadata of the selection")
+                                                     : m_mutationsReason);
+    m_actChangeClass->setEnabled(!rows.isEmpty() && m_mutationsAllowed && m_classesAllowed);
+    m_actChangeClass->setToolTip(!m_mutationsAllowed ? m_mutationsReason
+                                 : !m_classesAllowed ? m_classesReason
+                                                     : tr("Move the selection to another storage class"));
     for (QAction* a : {m_actDownload, m_actDownloadTo}) {
         a->setEnabled(!rows.isEmpty() && m_downloadsAllowed);
         a->setToolTip(m_downloadsAllowed ? tr("Download the selection") : m_downloadsReason);
@@ -554,6 +563,13 @@ void ObjectBrowser::setDownloadsAllowed(bool allowed, const QString& reason)
 {
     m_downloadsAllowed = allowed;
     m_downloadsReason = reason;
+    updateActions_();
+}
+
+void ObjectBrowser::setStorageClassesAllowed(bool allowed, const QString& reason)
+{
+    m_classesAllowed = allowed;
+    m_classesReason = reason;
     updateActions_();
 }
 
@@ -666,6 +682,8 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
     menu.addAction(m_actDownloadTo);
     menu.addSeparator();
     menu.addAction(m_actRename);
+    menu.addAction(m_actEditMetadata);
+    menu.addAction(m_actChangeClass);
     menu.addAction(m_actDelete);
     menu.addSeparator();
     menu.addAction(tr("Refresh"), this, &ObjectBrowser::refresh);

@@ -45,8 +45,8 @@ public:
         QMap<QString, QString> metadata;
         // The other stored headers (cache-control, content-disposition,
         // content-encoding, content-language, expires,
-        // x-amz-website-redirect-location, x-amz-server-side-encryption),
-        // lower-case names.
+        // x-amz-website-redirect-location, the encryption and object lock
+        // headers), lower-case names.
         QMap<QString, QString> headers;
         QString acl = QStringLiteral("private");   // canned ACL
         TagSet tags;
@@ -91,6 +91,15 @@ public:
     // A proxy that drops object subresources: PUT ?tagging / ?acl are
     // executed as PutObject (the body becomes the object), GET as GetObject.
     void setDropObjectSubresources(bool drop);
+    // A copy onto itself with REPLACE loses the object's tags (RGW: Ceph,
+    // Hetzner).
+    void setDropTagsOnReplace(bool drop);
+
+    // Seeds what a test needs on an existing object (no request involved).
+    void setObjectHeader(const QString& bucket, const QString& key, const QString& name, const QString& value);
+    void setObjectAcl(const QString& bucket, const QString& key, const QString& cannedAcl);
+    void setObjectTags(const QString& bucket, const QString& key, const TagSet& tags);
+    void setObjectStorageClass(const QString& bucket, const QString& key, const QString& storageClass);
 
     void addFault(const Fault& fault);
     void clearFaults();

@@ -165,6 +165,36 @@
     </message>
 </context>
 <context>
+    <name>qbucket::EditMetadataDialog</name>
+    <message numerus="yes">
+        <location filename="../../src/ui/EditMetadataDialog.cpp" line="48"/>
+        <source>For %n object(s) and everything in the selected folders: each header is left alone, set or removed — the rest of each object stays as it is.</source>
+        <translation>
+            <numerusform>For %n object and everything in the selected folders: each header is left alone, set or removed — the rest of each object stays as it is.</numerusform>
+            <numerusform>For %n objects and everything in the selected folders: each header is left alone, set or removed — the rest of each object stays as it is.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>qbucket::EditObjectsJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="187"/>
+        <source>%n items</source>
+        <translation>
+            <numerusform>%n item</numerusform>
+            <numerusform>%n items</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/EditObjectsJob.cpp" line="323"/>
+        <source>%n items in s3://%1</source>
+        <translation>
+            <numerusform>%n item in s3://%1</numerusform>
+            <numerusform>%n items in s3://%1</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::IncompleteUploadsDialog</name>
     <message numerus="yes">
         <location filename="../../src/ui/IncompleteUploadsDialog.cpp" line="79"/>
@@ -186,7 +216,7 @@
 <context>
     <name>qbucket::MainWindow</name>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="219"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="223"/>
         <source>%n transfer(s) did not finish in the last session. Continue where they stopped?</source>
         <translation>
             <numerusform>%n transfer did not finish in the last session. Continue where it stopped?</numerusform>
@@ -194,7 +224,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="494"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="586"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -205,7 +235,7 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="680"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="698"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -217,7 +247,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="682"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="700"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -225,7 +255,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="688"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="706"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>

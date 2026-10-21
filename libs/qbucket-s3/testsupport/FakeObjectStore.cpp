@@ -132,7 +132,11 @@ QMap<QString, QString> userMetadata(const RecordedRequest& req)
 
 constexpr const char* kStoredHeaders[] = {"cache-control", "content-disposition", "content-encoding",
                                           "content-language", "expires", "x-amz-website-redirect-location",
-                                          "x-amz-server-side-encryption"};
+                                          "x-amz-server-side-encryption",
+                                          "x-amz-server-side-encryption-aws-kms-key-id",
+                                          "x-amz-server-side-encryption-customer-algorithm",
+                                          "x-amz-object-lock-mode", "x-amz-object-lock-retain-until-date",
+                                          "x-amz-object-lock-legal-hold"};
 
 // The stored headers a request sets (see Object::headers).
 QMap<QString, QString> storedHeaders(const RecordedRequest& req)
@@ -187,6 +191,7 @@ struct FakeObjectStore::Impl {
     bool ignoreRanges = false;
     bool ignoreMetadataReplace = false;
     bool dropObjectSubresources = false;
+    bool dropTagsOnReplace = false;
 
     Object* find(const QString& bucket, const QString& key)
     {
@@ -489,6 +494,8 @@ struct FakeObjectStore::Impl {
             copy.contentType = QString::fromUtf8(req.header("content-type"));
             copy.metadata = userMetadata(req);
             copy.headers = storedHeaders(req);
+            if (dropTagsOnReplace && source->second == find(bucket, key))
+                copy.tags.clear();
         } else if (const QByteArray sse = req.header("x-amz-server-side-encryption"); !sse.isNull()) {
             copy.headers.insert(QStringLiteral("x-amz-server-side-encryption"), QString::fromLatin1(sse));
         }
@@ -951,6 +958,36 @@ void FakeObjectStore::setIgnoreMetadataReplace(bool ignore)
 void FakeObjectStore::setDropObjectSubresources(bool drop)
 {
     d->dropObjectSubresources = drop;
+}
+
+void FakeObjectStore::setDropTagsOnReplace(bool drop)
+{
+    d->dropTagsOnReplace = drop;
+}
+
+void FakeObjectStore::setObjectHeader(const QString& bucket, const QString& key, const QString& name,
+                                      const QString& value)
+{
+    if (Object* o = d->find(bucket, key))
+        o->headers.insert(name.toLower(), value);
+}
+
+void FakeObjectStore::setObjectAcl(const QString& bucket, const QString& key, const QString& cannedAcl)
+{
+    if (Object* o = d->find(bucket, key))
+        o->acl = cannedAcl;
+}
+
+void FakeObjectStore::setObjectTags(const QString& bucket, const QString& key, const TagSet& tags)
+{
+    if (Object* o = d->find(bucket, key))
+        o->tags = tags;
+}
+
+void FakeObjectStore::setObjectStorageClass(const QString& bucket, const QString& key, const QString& storageClass)
+{
+    if (Object* o = d->find(bucket, key))
+        o->storageClass = storageClass;
 }
 
 void FakeObjectStore::addFault(const Fault& fault)

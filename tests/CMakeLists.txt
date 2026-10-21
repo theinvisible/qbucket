@@ -212,6 +212,17 @@ qbucket_add_test(test_copy_job
     qbucket::s3_testsupport
 )
 
+qbucket_add_test(test_edit_objects_job
+    test_edit_objects_job.cpp
+    qbucket_controllers
+    qbucket::s3_testsupport
+)
+
+qbucket_add_test(test_edit_metadata_dialog
+    test_edit_metadata_dialog.cpp
+    qbucket_app_ui
+)
+
 qbucket_add_test(test_account_dialog
     test_account_dialog.cpp
     qbucket_app_ui

@@ -6,6 +6,7 @@
 #include "support/FakeBucket.h"
 #include "ui/MainWindow.h"
 #include "ui/ObjectBrowser.h"
+#include "ui/EditMetadataDialog.h"
 #include "ui/OperationPreviewDialog.h"
 #include "ui/ThemeManager.h"
 
@@ -165,7 +166,7 @@ private slots:
         QVERIFY(ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData()));
         m_browser->navigation()->navigate({m_h->account.id, QStringLiteral("bkt"), QStringLiteral("doomed/")});
         QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->state(), ObjectTableModel::State::Complete, 10000);
-        QTRY_VERIFY(m_browser->pasteAction()->isEnabled());
+        QTRY_VERIFY2(m_browser->pasteAction()->isEnabled(), qPrintable(m_browser->pasteAction()->toolTip()));
         m_browser->pasteAction()->trigger();
 
         QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<OperationPreviewDialog*>() != nullptr, 10000);
@@ -178,6 +179,22 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(!ObjectSelection::fromMimeData(QGuiApplication::clipboard()->mimeData()), 10000);
         // The folder shown is the target: listed afresh.
         QTRY_VERIFY_WITH_TIMEOUT(m_browser->model()->rowOfKey(QStringLiteral("doomed/keep.txt")) >= 0, 10000);
+    }
+
+    // Edit Metadata on one object: its values, read fresh, in the dialog.
+    void editMetadataOpensWithTheObjectsValues()
+    {
+        m_browser->view()->setFocus();
+        m_browser->view()->selectRow(1);   // keep.txt
+        QTRY_VERIFY(m_browser->editMetadataAction()->isEnabled());
+        m_browser->editMetadataAction()->trigger();
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<EditMetadataDialog*>() != nullptr, 10000);
+        auto* dlg = m_window->findChild<EditMetadataDialog*>();
+        QVERIFY(dlg);
+        QVERIFY(!dlg->isBulk());
+        dlg->reject();
+        // The provider (AWS) offers a choice of classes.
+        QVERIFY(m_browser->changeClassAction()->isEnabled());
     }
 
     void aReadOnlyAccountOffersNoChanges()

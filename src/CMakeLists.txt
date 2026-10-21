@@ -70,6 +70,10 @@ add_library(qbucket_controllers STATIC
     controllers/ObjectCopyRunner.cpp
     controllers/CopyJob.h
     controllers/CopyJob.cpp
+    controllers/ObjectSnapshot.h
+    controllers/ObjectSnapshot.cpp
+    controllers/EditObjectsJob.h
+    controllers/EditObjectsJob.cpp
     controllers/CreateFolderJob.h
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h
@@ -153,6 +157,8 @@ add_library(qbucket_app_ui STATIC
     ui/MainWindow.cpp
     ui/ObjectBrowser.h
     ui/ObjectBrowser.cpp
+    ui/EditMetadataDialog.h
+    ui/EditMetadataDialog.cpp
     ui/OperationPreviewDialog.h
     ui/OperationPreviewDialog.cpp
     ui/ObjectRowDelegate.h

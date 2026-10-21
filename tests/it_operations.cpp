@@ -14,6 +14,7 @@
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
 #include "controllers/DownloadJob.h"
+#include "controllers/EditObjectsJob.h"
 #include "controllers/RenameJob.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
@@ -24,6 +25,8 @@
 #include "accounts/AccountStore.h"
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
+
+#include <qbucket/s3/providers/ProviderRegistry.h>
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -272,6 +275,88 @@ private slots:
         }
     }
 
+    // Headers and metadata in place: one object, a folder; an object with
+    // tags and a public ACL keeps both where the provider confirms tag and
+    // ACL writes (Hetzner drops the tags on such a copy: they are written
+    // back), and is left alone where it doesn't (a generic server).
+    void editMetadataInPlace()
+    {
+        m_ops->setPlanDir(m_dir.filePath(QStringLiteral("plans")));
+        const QString one = m_root + QStringLiteral("edit/one.txt");
+        QVERIFY(put(one, "edit me"));
+        EditObjectsJob::ChangeSpec change;
+        change.cacheControl = QStringLiteral("max-age=60");
+        change.metadata.insert(QStringLiteral("stage"), QStringLiteral("it"));
+        Job* job = run(new EditObjectsJob(m_account, m_bucket, {{one, false}}, change, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        const std::optional<s3::ObjectMeta> head = meta(one);
+        QVERIFY(head);
+        QCOMPARE(head->cacheControl, QStringLiteral("max-age=60"));
+        QCOMPARE(head->userMetadata.value(QStringLiteral("stage")), QStringLiteral("it"));
+        QCOMPARE(head->size, qint64(7));
+
+        QVERIFY(put(m_root + QStringLiteral("edit/two.txt"), "second"));
+        EditObjectsJob::ChangeSpec lang;
+        lang.contentLanguage = QStringLiteral("de");
+        job = run(new EditObjectsJob(m_account, m_bucket, {{m_root + QStringLiteral("edit/"), true}}, lang, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().succeeded, 2);
+        QCOMPARE(meta(one)->cacheControl, QStringLiteral("max-age=60"));   // untouched by the second edit
+        QCOMPARE(meta(one)->contentLanguage, QStringLiteral("de"));
+
+        // Tags and a public ACL — only where the server has them.
+        const auto profile = s3::ProviderRegistry::builtin().findOrGeneric(m_account.providerId);
+        const QString tagged = m_root + QStringLiteral("edit-tagged/obj.txt");
+        QVERIFY(put(tagged, "tagged"));
+        s3::PutObjectTaggingParams tp;
+        tp.bucket = m_bucket;
+        tp.key = tagged;
+        tp.tags = {{QStringLiteral("keep"), QStringLiteral("me")}};
+        std::optional<bool> tagOk;
+        QObject ctx;
+        session()->putObjectTagging(tp, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>& r) { tagOk = bool(r); });
+        QVERIFY(QTest::qWaitFor([&] { return tagOk.has_value(); }, 30000));
+        if (!*tagOk)
+            QSKIP("no object tags on this backend");
+        const bool confirmed = profile->capabilities().state(s3::Feature::ObjectTaggingWrite) == s3::CapabilityState::Supported
+            && profile->capabilities().state(s3::Feature::ObjectAclWrite) == s3::CapabilityState::Supported;
+        if (confirmed) {
+            s3::PutObjectAclParams ap;
+            ap.bucket = m_bucket;
+            ap.key = tagged;
+            ap.cannedAcl = QStringLiteral("public-read");
+            std::optional<bool> aclOk;
+            session()->putObjectAcl(ap, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>& r) { aclOk = bool(r); });
+            QVERIFY(QTest::qWaitFor([&] { return aclOk.has_value(); }, 30000) && *aclOk);
+        }
+        job = run(new EditObjectsJob(m_account, m_bucket, {{tagged, false}}, change, m_ops->planDir()));
+        if (!confirmed) {
+            QCOMPARE(job->report().skipped, 1);
+            QVERIFY(job->report().notes.join(u' ').contains(QLatin1String("tags")));
+            return;
+        }
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().failures.join(u'|')));
+        QCOMPARE(meta(tagged)->cacheControl, QStringLiteral("max-age=60"));
+        std::optional<s3::Result<s3::ObjectTagging>> tags;
+        session()->getObjectTagging(m_bucket, tagged, QString(), &ctx, [&](s3::Result<s3::ObjectTagging> r) { tags.emplace(std::move(r)); });
+        QVERIFY(QTest::qWaitFor([&] { return tags.has_value(); }, 30000) && *tags);
+        QCOMPARE((*tags)->tags.size(), 1);
+        std::optional<s3::Result<s3::AccessControlPolicy>> acl;
+        session()->getObjectAcl(m_bucket, tagged, QString(), &ctx, [&](s3::Result<s3::AccessControlPolicy> r) { acl.emplace(std::move(r)); });
+        QVERIFY(QTest::qWaitFor([&] { return acl.has_value(); }, 30000) && *acl);
+        QCOMPARE(s3::cannedAclOf(**acl), std::optional<QString>(QStringLiteral("public-read")));
+        // Not public any longer than needed.
+        s3::PutObjectAclParams back;
+        back.bucket = m_bucket;
+        back.key = tagged;
+        back.cannedAcl = QStringLiteral("private");
+        std::optional<bool> privateOk;
+        session()->putObjectAcl(back, &ctx, [&](const s3::Result<s3::SubresourceWriteResult>& r) { privateOk = bool(r); });
+        QVERIFY(QTest::qWaitFor([&] { return privateOk.has_value(); }, 30000) && *privateOk);
+    }
+
     // A folder tree with an empty folder and a large file (multipart;
     // QBUCKET_IT_UPLOAD_MIB, default 70), then the same again: everything
     // exists, nothing is overwritten unasked.
@@ -366,6 +451,16 @@ private:
         QObject ctx;
         session()->putObject(p, &ctx, [&](const s3::Result<s3::PutObjectResult>& r) { ok = bool(r); });
         return QTest::qWaitFor([&] { return ok.has_value(); }, 30000) && *ok;
+    }
+
+    std::optional<s3::ObjectMeta> meta(const QString& key)
+    {
+        std::optional<s3::Result<s3::ObjectMeta>> r;
+        QObject ctx;
+        session()->headObject(m_bucket, key, QString(), &ctx, [&](s3::Result<s3::ObjectMeta> m) { r.emplace(std::move(m)); });
+        if (!QTest::qWaitFor([&] { return r.has_value(); }, 30000) || !*r)
+            return std::nullopt;
+        return **r;
     }
 
     bool exists(const QString& key)

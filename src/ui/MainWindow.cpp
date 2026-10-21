@@ -7,8 +7,10 @@
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
 #include "controllers/CopyJob.h"
+#include "controllers/ConnectionTester.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
+#include "controllers/EditObjectsJob.h"
 #include "controllers/RenameJob.h"
 #include "controllers/Job.h"
 #include "controllers/Journal.h"
@@ -19,6 +21,7 @@
 #include "controllers/UploadJob.h"
 #include "ui/AccountSidebar.h"
 #include "ui/CapabilitiesDialog.h"
+#include "ui/EditMetadataDialog.h"
 #include "ui/IncompleteUploadsDialog.h"
 #include "ui/LogPanel.h"
 #include "ui/OperationPreviewDialog.h"
@@ -35,6 +38,7 @@
 #include "ui/ThemeManager.h"
 
 #include <qbucket/s3/transfer/ResumeStore.h>
+#include <qbucket/s3/providers/ProviderRegistry.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -310,6 +314,14 @@ void MainWindow::updateMutationActions_()
     if (m_operations && here.hasBucket())
         del = m_operations->check(here.account, here.bucket, {}, true);
     m_browser->setMutationsAllowed(del.allowed, del.reason);
+    // A choice of storage classes (one only: nothing to choose).
+    const std::optional<Account> acct = m_accounts && here.isValid() ? m_accounts->account(here.account) : std::nullopt;
+    const QStringList classes =
+        acct ? s3::ProviderRegistry::builtin().findOrGeneric(acct->providerId)->storageClasses() : QStringList();
+    if (classes.size() == 1)
+        m_browser->setStorageClassesAllowed(false, tr("This provider has one storage class only (%1).").arg(classes.first()));
+    else
+        m_browser->setStorageClassesAllowed(acct.has_value(), QString());
     OperationController::Check read{false, tr("Open a bucket first.")};
     if (m_operations && here.hasBucket())
         read = m_operations->check(here.account, here.bucket, {}, false, false);
@@ -344,6 +356,86 @@ void MainWindow::startCopy_(const ObjectSelection& sel, const QUuid& accountId, 
         });
     }
     m_operations->start(job);
+}
+
+void MainWindow::editMetadata_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    const QModelIndexList rows = m_browser->selectedRows();
+    if (!m_operations || !account || !here.hasBucket() || rows.isEmpty())
+        return;
+    QList<EditObjectsJob::Item> items;
+    for (const QModelIndex& r : rows)
+        items.append({r.data(ObjectTableModel::KeyRole).toString(), r.data(ObjectTableModel::IsFolderRole).toBool()});
+    const auto start = [this, account, here, items](const EditObjectsJob::ChangeSpec& change) {
+        m_operations->start(new EditObjectsJob(*account, here.bucket, items, change, m_operations->planDir()));
+    };
+    if (items.size() > 1 || items.first().folder) {
+        auto* dlg = new EditMetadataDialog(int(items.size()), this);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        connect(dlg, &QDialog::accepted, this, [dlg, start] { start(dlg->change()); });
+        dlg->open();
+        return;
+    }
+    // One object: its current values, fresh.
+    const s3::Result<s3::Session*> session = m_sessions->session(here.account);
+    if (!session)
+        return;
+    const QString key = items.first().key;
+    (*session)->headObject(here.bucket, key, QString(), this, [this, key, start](const s3::Result<s3::ObjectMeta>& meta) {
+        if (!meta) {
+            statusBar()->showMessage(tr("Could not read “%1”: %2").arg(key, ConnectionTester::describe(meta.error())), 10000);
+            return;
+        }
+        auto* dlg = new EditMetadataDialog(key, *meta, this);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        connect(dlg, &QDialog::accepted, this, [dlg, start] { start(dlg->change()); });
+        dlg->open();
+    });
+}
+
+void MainWindow::changeStorageClass_()
+{
+    const Location here = m_browser->navigation()->current();
+    const std::optional<Account> account = m_accounts ? m_accounts->account(here.account) : std::nullopt;
+    const QModelIndexList rows = m_browser->selectedRows();
+    if (!m_operations || !account || !here.hasBucket() || rows.isEmpty())
+        return;
+    QList<EditObjectsJob::Item> items;
+    for (const QModelIndex& r : rows)
+        items.append({r.data(ObjectTableModel::KeyRole).toString(), r.data(ObjectTableModel::IsFolderRole).toBool()});
+    QStringList classes = s3::ProviderRegistry::builtin().findOrGeneric(account->providerId)->storageClasses();
+    const bool known = !classes.isEmpty();
+    if (!known) {
+        // Not known for this server: STANDARD and the classes the listing shows; others may be typed.
+        classes = {QStringLiteral("STANDARD")};
+        for (int row = 0; row < m_browser->model()->rowCount(); ++row) {
+            const QString c = m_browser->model()->index(row, 0).data(ObjectTableModel::StorageClassRole).toString();
+            if (!c.isEmpty() && !classes.contains(c))
+                classes.append(c);
+        }
+    }
+    auto* dlg = new QInputDialog(this);
+    dlg->setWindowTitle(tr("Change Storage Class"));
+    dlg->setLabelText(known ? tr("New storage class for the selection:")
+                            : tr("New storage class for the selection (not known for this server — the server refuses "
+                                 "one it doesn't have, nothing is changed then):"));
+    dlg->setComboBoxItems(classes);
+    dlg->setComboBoxEditable(!known);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dlg, &QInputDialog::textValueSelected, this, [this, account, here, items](const QString& value) {
+        const QString cls = value.trimmed().toUpper();
+        static const QRegularExpression valid(QStringLiteral("^[A-Z0-9_]+$"));
+        if (!valid.match(cls).hasMatch()) {
+            statusBar()->showMessage(tr("“%1” is not a storage class name.").arg(value), 10000);
+            return;
+        }
+        EditObjectsJob::ChangeSpec change;
+        change.storageClass = cls;
+        m_operations->start(new EditObjectsJob(*account, here.bucket, items, change, m_operations->planDir()));
+    });
+    dlg->open();
 }
 
 void MainWindow::renameSelection_()
@@ -589,12 +681,16 @@ void MainWindow::connectBrowser_()
     connect(m_uploadBtn, &QToolButton::clicked, m_actUploadFiles, &QAction::trigger);
     connect(m_browser->deleteAction(), &QAction::triggered, this, &MainWindow::deleteSelection_);
     connect(m_browser->renameAction(), &QAction::triggered, this, &MainWindow::renameSelection_);
+    connect(m_browser->editMetadataAction(), &QAction::triggered, this, &MainWindow::editMetadata_);
+    connect(m_browser->changeClassAction(), &QAction::triggered, this, &MainWindow::changeStorageClass_);
     connect(m_deleteBtn, &QToolButton::clicked, m_browser->deleteAction(), &QAction::trigger);
     connect(m_browser->deleteAction(), &QAction::changed, this, [this] {
         m_deleteBtn->setEnabled(m_browser->deleteAction()->isEnabled());
         m_deleteBtn->setToolTip(m_browser->deleteAction()->toolTip());
     });
     m_editMenu->addAction(m_browser->renameAction());
+    m_editMenu->addAction(m_browser->editMetadataAction());
+    m_editMenu->addAction(m_browser->changeClassAction());
     m_editMenu->addAction(m_browser->deleteAction());
     m_editMenu->addSeparator();
     m_editMenu->addAction(m_browser->downloadAction());

@@ -186,6 +186,11 @@ version bump may break the API.
   `Session::presign` refuses when `Feature::Presign` is Unsupported. ITs
   `presignedPut` and a named `presignedGet`.
 
+- `FakeObjectStore`: `setDropTagsOnReplace()` (RGW's behaviour),
+  `setObjectHeader()`, `setObjectAcl()`, `setObjectTags()`,
+  `setObjectStorageClass()` to seed test objects; the encryption and object
+  lock headers are kept with an object.
+
 ### Changed
 
 - `CreateMultipartUploadParams`: `contentType` and `metadata` are replaced
