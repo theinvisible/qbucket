@@ -706,7 +706,18 @@ dialog, journal + crash/resume tests, a QNAM per transfer lane, AIMD) are in.
 **Done when:** a 50 GB upload survives killing the app and resumes; parallel
 transfers don't block browsing.
 
-### M4 — Object operations — **M** (1 week)
+### M4 — Object operations — **M** (1 week) — ✅ done (devlog 007)
+
+Implemented in 14 commits on `main` (library first). Deviations from the
+text below: **copy between accounts is deferred** (it streams through this
+machine and gets the transfer engine's resume later; paste / drops across
+accounts are refused with that reason); the grant table is **read-only**
+(canned ACL picker only); tag and ACL writes need the write-only features
+`ObjectTaggingWrite` / `ObjectAclWrite` (profile knowledge after canary +
+victim ITs — Hetzner confirmed); edits write tags back with
+`PutObjectTagging` after the copy (RGW drops them, Hetzner can't take them
+as a header); the Versions tab waits for M5. The §13.5 M4 items are in;
+"conditional writes capability" was done in M3.
 
 - Copy/move via clipboard and internal D&D: CopyObject, UploadPartCopy for
   > 5 GiB, across buckets and accounts (cross-account = download + upload
@@ -1004,6 +1015,19 @@ release time:
 - 2026-10-20 — **Complete / CopyObject / UploadPartCopy get a 15-minute
   transfer timeout** (`SessionOptions::serverWorkTimeoutMs`): servers
   assemble or copy for minutes without sending a byte (devlog 006).
+- 2026-10-21 — **Write-only features for object tag / ACL writes**
+  (`object.tagging-write`, `object.acl-write`): a read probe never unlocks
+  them; profiles after canary + victim ITs. `featuresFor()` lists the
+  operation's own feature first, a 501 teaches only that one.
+- 2026-10-21 — **Edits = copy onto itself with REPLACE on a fresh snapshot**
+  (HEAD + tags + ACL), canned ACL and SSE-S3 sent along, tags written back
+  with PutObjectTagging, everything read back; what a copy can't carry is
+  skipped with the reason (devlog 007).
+- 2026-10-21 — **The gate checks every bucket a job touches**
+  (`Job::buckets()`); copy / move across buckets of one account in M4,
+  across accounts later.
+- 2026-10-21 — Clipboard / shortcuts like a file manager (Ctrl+C / X / V for
+  objects); drags copy, Shift moves, the preview always opens.
 - 2026-10-20 — Downloads **never leave the target folder**
   (`LocalPathMapper`) and run on read-only accounts; drops always show the
   preview.
@@ -1211,7 +1235,7 @@ regressions show up.
 | M1 | Library skeleton + standalone CI job, worker-thread `S3Client` + `s3::Session` proxy (TSan job on Linux CI), `FakeS3Server` fault injection, 200-with-error handling, safe-retry rules, listing loop detection, log redaction |
 | M2 | Capability enforcement in `OperationController` (`requires()`) + UI reasons/tooltips + "Server capabilities" page with change history, background re-validation timer + change notifications, `OperationController` skeleton, read-only + environment marker, plan/preview/verify for delete/rename, compact model, paging budgets, `bench/` |
 | M3 ✅ | Content-MD5 per part, download verification, `.qbpart` atomic finalize, conflict dialog, journal + crash/resume tests, QNAM pool, adaptive concurrency |
-| M4 | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
+| M4 ✅ | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
 | M5 | Versioning-aware confirmations, separate permanent-delete flow |
 | M6 | Read-back verification of every bucket config write, object-lock/governance safeguards |
 

@@ -131,9 +131,16 @@ private slots:
         QVERIFY(details);
         QTRY_VERIFY_WITH_TIMEOUT(!details->meta().key.isEmpty(), 30000);
 
-        // Read-only: no change is offered.
+        // Read-only: no change is offered — reading is (copy to the
+        // clipboard, a GET link; a PUT link is refused in its dialog).
         QVERIFY(!browser->deleteAction()->isEnabled());
         QVERIFY(!browser->renameAction()->isEnabled());
+        QVERIFY(!browser->cutAction()->isEnabled());
+        QVERIFY(!browser->pasteAction()->isEnabled());
+        QVERIFY(!browser->editMetadataAction()->isEnabled());
+        QVERIFY(!browser->changeClassAction()->isEnabled());
+        QVERIFY(browser->copyAction()->isEnabled());
+        QVERIFY(browser->presignAction()->isEnabled());
 
         QTest::qWait(1500);   // capability probes, sidebar listing
         const QString dir = env("QBUCKET_SCREENSHOT_DIR");

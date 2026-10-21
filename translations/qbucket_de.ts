@@ -980,63 +980,58 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Der Bucket führt Versionen: die Originale bleiben als frühere Versionen erhalten, verborgen hinter Löschmarkern.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="363"/>
-        <source>The originals are deleted for good once their copies are checked: the bucket keeps no versions.</source>
-        <translation>Die Originale werden endgültig gelöscht, sobald ihre Kopien geprüft sind: der Bucket führt keine Versionen.</translation>
-    </message>
-    <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="367"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="365"/>
         <source>Object ACLs are not copied: the copies get the bucket&apos;s default access.</source>
         <translation>Objekt-ACLs werden nicht kopiert: die Kopien bekommen den Standardzugriff des Buckets.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="421"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="419"/>
         <source>not copied (not connected) — the original is untouched</source>
         <translation>nicht kopiert (nicht verbunden) — das Original ist unberührt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="432"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="430"/>
         <source>exists at the target</source>
         <translation>existiert am Ziel</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="437"/>
-        <location filename="../src/controllers/CopyJob.cpp" line="468"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="435"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="466"/>
         <source>could not look up the target (%1) — the original is untouched</source>
         <translation>das Ziel ließ sich nicht nachschlagen (%1) — das Original ist unberührt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="454"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="452"/>
         <source>no free name for a second copy</source>
         <translation>kein freier Name für eine zweite Kopie</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="454"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="452"/>
         <source>not copied (not connected)</source>
         <translation>nicht kopiert (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="517"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="515"/>
         <source>cancelled — %1 of %2 done</source>
         <translation>abgebrochen — %1 von %2 erledigt</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="539"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="537"/>
         <source>done; cancelled while verifying</source>
         <translation>erledigt; beim Prüfen abgebrochen</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="554"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="552"/>
         <source>every copy checked (size, and the checksum where the ETag is one)</source>
         <translation>jede Kopie geprüft (Größe, und die Prüfsumme, wo das ETag eine ist)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="576"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="574"/>
         <source>verified: the originals are gone</source>
         <translation>geprüft: die Originale sind weg</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/controllers/CopyJob.cpp" line="577"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="575"/>
         <source>not verified: %n original(s) still there</source>
         <translation>
             <numerusform>nicht bestätigt: %n Original ist noch da</numerusform>
@@ -1044,12 +1039,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="583"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="581"/>
         <source>not verified (not connected)</source>
         <translation>nicht geprüft (nicht verbunden)</translation>
     </message>
     <message>
-        <location filename="../src/controllers/CopyJob.cpp" line="602"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="600"/>
         <source>not verified: %1</source>
         <translation>nicht geprüft: %1</translation>
     </message>

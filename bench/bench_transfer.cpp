@@ -2,14 +2,16 @@
 // release build; the files go to a temporary folder (default: the system's
 // temp location, override with --dir):
 //
-//   build-release/bench/bench_transfer [--files 1000000] [--upload-mib 2048] [--dir /path]
+//   build-release/bench/bench_transfer [--files 1000000] [--upload-mib 2048] [--size-keys 1000000] [--dir /path]
 //
 // A FakeS3Server with a FakeObjectStore (discard mode: bodies are hashed,
 // not kept) runs on its own thread; the GUI thread runs the real jobs. A
 // 1 ms probe timer measures the longest GUI-thread stall of each phase:
 //   1. planning a folder upload of --files files (scan + target listing),
 //   2. one large upload (throughput),
-//   3. four uploads while the browser lists 100 000 objects.
+//   3. four uploads while the browser lists 100 000 objects,
+//   4. planning a copy of a folder of 100 000 objects (the target merged),
+//   5. counting a folder of --size-keys objects (FolderSizeTask).
 
 #include "accounts/AccountStore.h"
 #include "accounts/CapabilityStore.h"
@@ -18,6 +20,8 @@
 #include "controllers/ActivityLog.h"
 #include "controllers/BrowseController.h"
 #include "controllers/CapabilityController.h"
+#include "controllers/CopyJob.h"
+#include "controllers/FolderSizeTask.h"
 #include "controllers/Journal.h"
 #include "controllers/OperationController.h"
 #include "controllers/TransferService.h"
@@ -105,11 +109,11 @@ private:
 // The store on its own thread: hashing request bodies is not GUI work.
 class ServerThread {
 public:
-    explicit ServerThread(int browseObjects)
+    ServerThread(int browseObjects, int sizeObjects)
     {
         m_anchor.moveToThread(&m_thread);
         m_thread.start();
-        QMetaObject::invokeMethod(&m_anchor, [this, browseObjects] {
+        QMetaObject::invokeMethod(&m_anchor, [this, browseObjects, sizeObjects] {
             m_server = std::make_unique<FakeS3Server>();
             m_server->setRecordBodies(false);
             m_store = std::make_unique<FakeObjectStore>(m_server.get());
@@ -119,6 +123,12 @@ public:
                 m_store->putSyntheticObject(QStringLiteral("bkt"),
                                             QStringLiteral("many/obj-%1.bin").arg(i, 8, 10, QLatin1Char('0')),
                                             (qint64(i) * 7919) % 100'000'000);
+            }
+            for (int i = 0; i < sizeObjects; ++i) {
+                m_store->putSyntheticObject(QStringLiteral("bkt"),
+                                            QStringLiteral("huge/d%1/f%2").arg(i / 10'000, 4, 10, QLatin1Char('0'))
+                                                .arg(i % 10'000, 5, 10, QLatin1Char('0')),
+                                            (qint64(i) * 104'729) % 10'000'000);
             }
             m_server->listen();
             m_url = m_server->endpointUrl();
@@ -256,11 +266,14 @@ int main(int argc, char** argv)
                                     QStringLiteral("MiB"), QStringLiteral("2048"));
     const QCommandLineOption dirOpt(QStringLiteral("dir"), QStringLiteral("Where to put the local files."),
                                     QStringLiteral("path"));
-    parser.addOptions({filesOpt, mibOpt, dirOpt});
+    const QCommandLineOption sizeOpt(QStringLiteral("size-keys"), QStringLiteral("Objects in the folder whose size is counted."),
+                                     QStringLiteral("n"), QStringLiteral("1000000"));
+    parser.addOptions({filesOpt, mibOpt, dirOpt, sizeOpt});
     parser.addHelpOption();
     parser.process(app);
     const int files = parser.value(filesOpt).toInt();
     const qint64 uploadBytes = parser.value(mibOpt).toLongLong() * 1024 * 1024;
+    const int sizeKeys = parser.value(sizeOpt).toInt();
 
     ThemeManager theme;
     theme.apply(QStringLiteral("Dark"));
@@ -270,7 +283,7 @@ int main(int argc, char** argv)
     std::unique_ptr<QTemporaryDir> local = parser.isSet(dirOpt)
         ? std::make_unique<QTemporaryDir>(parser.value(dirOpt) + QStringLiteral("/bench_transfer-XXXXXX"))
         : std::make_unique<QTemporaryDir>();
-    ServerThread server(100'000);
+    ServerThread server(100'000, sizeKeys);
     Stack s(server.url());
     StallProbe probe;
 
@@ -367,6 +380,51 @@ int main(int argc, char** argv)
         report(QStringLiteral("4 uploads + listing %1 objects: GUI stall").arg(listed), double(stall), "ms", 50);
         report(QStringLiteral("4 × 256 MiB: aggregate throughput"), 4.0 * 256 * 1.048576 / (double(clock.elapsed()) / 1000.0),
                "MB/s", 0);
+    }
+
+    // 4. Planning a copy of a folder of 100 000 objects: both sides listed,
+    //    merged page by page on the GUI thread.
+    {
+        auto* job = new CopyJob(s.account, QStringLiteral("bkt"), {{QStringLiteral("many/"), true}}, QString(),
+                                QStringLiteral("bkt"), QStringLiteral("copies/"), CopyJob::Mode::Copy, s.ops->planDir());
+        bool previewed = false;
+        bool ended = false;
+        QObject::connect(s.ops.get(), &OperationController::previewNeeded, job, [&previewed, job](Job* j) {
+            if (j == job) {
+                previewed = true;
+                j->cancel();
+            }
+        });
+        QObject::connect(job, &Job::finished, job, [&ended] { ended = true; });
+        QElapsedTimer clock;
+        clock.start();
+        probe.start();
+        s.ops->start(job);
+        waitFor([&] { return ended; });
+        const qint64 stall = probe.stop();
+        report(QStringLiteral("plan a copy of 100000 objects: GUI stall%1").arg(previewed ? QString() : QStringLiteral(" (FAILED)")),
+               double(stall), "ms", 50);
+        report(QStringLiteral("plan a copy of 100000 objects: time"), double(clock.elapsed()) / 1000.0, "s", 0);
+    }
+
+    // 5. Counting a folder of many objects.
+    if (sizeKeys > 0) {
+        const qint64 rssBefore = residentBytes();
+        FolderSizeTask task(*s.sessions->session(s.account.id), QStringLiteral("bkt"), {QStringLiteral("huge/")});
+        bool ended = false;
+        QObject::connect(&task, &FolderSizeTask::finished, &task, [&ended] { ended = true; });
+        QElapsedTimer clock;
+        clock.start();
+        probe.start();
+        task.start();
+        waitFor([&] { return ended; });
+        const qint64 stall = probe.stop();
+        const bool ok = task.isComplete() && task.totals().objects == sizeKeys;
+        report(QStringLiteral("count a folder of %1 objects: GUI stall%2").arg(sizeKeys).arg(ok ? QString() : QStringLiteral(" (FAILED)")),
+               double(stall), "ms", 50);
+        report(QStringLiteral("count a folder of %1 objects: time").arg(sizeKeys), double(clock.elapsed()) / 1000.0, "s", 0);
+        report(QStringLiteral("count a folder of %1 objects: memory growth").arg(sizeKeys),
+               double(residentBytes() - rssBefore) / 1e6, "MB", 0);
     }
 
     s3::transfer::flushResumeWrites(5000);

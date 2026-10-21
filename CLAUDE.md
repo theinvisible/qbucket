@@ -51,6 +51,9 @@ validation, nbg1).
 delete / rename, Hetzner run).
 **M3 done** — devlog 006 (transfer engine: multipart, resume after a crash,
 uploads / downloads, transfer panel, drag & drop in, incomplete uploads).
+**M4 done** — devlog 007 (copy / move, also between buckets; clipboard and
+internal drag & drop; headers / metadata / storage class edits; tags and
+canned ACLs; presigned links; folder size).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -103,6 +106,15 @@ What exists:
   `ui/TransferPanel`, `models/MultipartUploadModel`,
   `ui/IncompleteUploadsDialog`; drag & drop in (browser, sidebar);
   Settings → Transfers. `bench/bench_transfer`.
+- Object operations (M4), library: `ObjectHeaders`, CopyObject with
+  `MetadataDirective::Replace`, object tags / ACLs on `Session`, write-only
+  features `ObjectTaggingWrite` / `ObjectAclWrite`, `Copier` with replaced
+  headers, `ProviderProfile::storageClasses()` / `cannedObjectAcls()`.
+- Object operations (M4), app: `Job::buckets()` (the gate checks each),
+  `ObjectCopyRunner`, `CopyJob`, `EditObjectsJob` (+ `ObjectSnapshot`),
+  `ObjectPropertyJob`, `PresignService`, `FolderSizeTask`;
+  `models/ObjectSelection` (clipboard / drag), `ui/EditMetadataDialog`,
+  `ui/PresignDialog`, DetailPane Tags / Access tabs and "Calculate Size".
 - `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
   with the tests, run by hand, release builds only).
 - CI per push (`ci.yml`): Linux Release, Windows app, library as Windows DLL.
@@ -112,7 +124,7 @@ What exists:
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M4** (object operations).
+Next: **M5** (versioning).
 
 ## Devlog
 
@@ -188,8 +200,9 @@ ctest --test-dir build -L docker
 #   build/tests/it_operations; build/tests/it_browser   (it_browser: read-only account)
 # listing budgets (release build)
 build-release/bench/bench_listing --keys 100000 --flat-keys 1000000
-# transfer budgets: GUI stalls while planning 1M files / uploading / browsing
-build-release/bench/bench_transfer --files 1000000 --upload-mib 2048
+# transfer budgets: GUI stalls while planning 1M files / uploading / browsing,
+# planning a 100k-object copy, counting a 1M-object folder
+build-release/bench/bench_transfer --files 1000000 --upload-mib 2048 --size-keys 1000000
 # a transfer by hand, killable and resumable (credentials from AWS_* env)
 build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR --id X upload FILE BUCKET KEY
 build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR resume X
@@ -314,6 +327,10 @@ Each of these cost time there; don't relearn them.
   removed.** The download sink opens `.qbpart` with `ExistingOnly`
   (`GetObjectToFileParams::createFile = false`); otherwise a range started
   just before a cancel brought the deleted partial file back.
+- **Run test binaries by hand with `QT_QPA_PLATFORM=offscreen`** (ctest
+  sets it). On the real desktop (KDE / Wayland) an unfocused test window's
+  clipboard never reaches the compositor and Klipper hands back its own
+  content — clipboard tests fail there for no fault of the code.
 - **Debugging a hanging QtTest binary:** after an abort, QtTest's crash
   handler forks to print a stack and can deadlock on the malloc lock —
   `QTEST_DISABLE_STACK_DUMP=1` shows the real failure.
@@ -430,6 +447,19 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
   transfer timeout — a client that hangs up makes the server cancel.
 - **VersityGW on ext4 fails Completes above ~640 parts** (500, ENOSPC from
   an xattr in its log). Big multipart runs locally: Garage.
+- **Tag / ACL writes have write-only features** (`object.tagging-write`,
+  `object.acl-write`): a read probe never sets them; a profile does, after
+  canary + victim ITs on guarded buckets (Hetzner: confirmed 2026-10-21).
+  No `DeleteObjectTagging` — an empty tag set removes the tags.
+- **An edit is a copy onto itself with REPLACE**, which keeps only what it
+  sends: merge into a fresh snapshot (HEAD + tags + ACL), send the canned
+  ACL and SSE-S3 along, read everything back. **RGW (Ceph, Hetzner) drops
+  the tags on such a copy** whatever the tagging directive, and Hetzner
+  leaves tags sent with `x-amz-tagging` unreadable (`GET ?tagging` → empty
+  200): write them back with `PutObjectTagging`. VersityGW keeps standard
+  headers a REPLACE leaves out; Garage ignores the storage class on copies.
+- Storage classes per provider: Hetzner and Garage only STANDARD (Hetzner
+  answers 400 InvalidArgument to STANDARD_IA).
 - "Folders" are prefixes; a `prefix/` marker object may or may not exist.
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.

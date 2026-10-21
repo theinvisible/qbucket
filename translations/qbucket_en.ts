@@ -50,7 +50,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/controllers/CopyJob.cpp" line="577"/>
+        <location filename="../../src/controllers/CopyJob.cpp" line="575"/>
         <source>not verified: %n original(s) still there</source>
         <translation>
             <numerusform>not verified: %n original still there</numerusform>

@@ -10,15 +10,18 @@ A threaded, provider-aware S3 client library for Qt 6 — the protocol core of
 - Provider quirks live in provider profiles, never in the protocol core.
 - Errors are values (`Result<T>` / `Error`), no exceptions.
 
-> Status: **pre-1.0, under construction** (QBucket milestones M1–M3). The
+> Status: **pre-1.0, under construction** (QBucket milestones M1–M4). The
 > API changes between minor versions; see [CHANGELOG.md](CHANGELOG.md).
 
 Two targets:
 
 - **`qbucket::s3`** — `Session` (worker thread, optional transfer lanes),
   SigV4, every object and multipart request, ranged / part-number reads
-  streamed into files, uploads streamed from file ranges, capabilities,
-  provider profiles.
+  streamed into files, uploads streamed from file ranges, copies with
+  `MetadataDirective::Replace` (edits in place), object tags and canned
+  ACLs (with write-only capability features a read probe never unlocks),
+  presigned GET / PUT links, capabilities, provider profiles (storage
+  classes, canned ACLs).
 - **`qbucket::s3_transfer`** — `Uploader`, `Downloader`, `Copier` (multipart
   in parallel, Content-MD5 on every part, ETag verification, pause / cancel),
   `AdaptiveConcurrency` (AIMD on SlowDown / 503), `PartPlanner`, hashing,

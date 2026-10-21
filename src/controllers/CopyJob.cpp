@@ -359,9 +359,7 @@ void CopyJob::planDone_()
                 p.details.append(tr("The bucket keeps versions: the originals stay as earlier versions, hidden behind "
                                     "delete markers."));
             } else {
-                p.permanent = true;
-                p.warnings.append(tr("The originals are deleted for good once their copies are checked: the bucket "
-                                     "keeps no versions."));
+                p.permanent = true;   // the dialog says it: nothing to recover
             }
         }
         p.warnings.append(tr("Object ACLs are not copied: the copies get the bucket's default access."));

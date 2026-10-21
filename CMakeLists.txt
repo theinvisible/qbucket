@@ -27,7 +27,7 @@ option(QBUCKET_BUILD_TESTS          "Build the test suite"                      
 option(QBUCKET_WARNINGS_AS_ERRORS   "Treat compiler warnings as errors (CI)"        OFF)
 option(QBUCKET_SANITIZERS           "AddressSanitizer + UBSan (GCC/Clang only)"     OFF)
 
-set(_qbucket_qt_components Core Gui Widgets Svg Network LinguistTools)
+set(_qbucket_qt_components Core Gui Widgets Svg Network Concurrent LinguistTools)
 if(QBUCKET_BUILD_TESTS)
     list(APPEND _qbucket_qt_components Test)
 endif()

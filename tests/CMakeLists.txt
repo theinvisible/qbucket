@@ -264,7 +264,7 @@ qbucket_add_test(it_browser
 set_tests_properties(it_browser PROPERTIES LABELS integration TIMEOUT 300)
 target_compile_definitions(it_browser PRIVATE QBUCKET_QM_DIR="${CMAKE_BINARY_DIR}/src")
 # Screenshots with the English plural forms ("1 file", not "1 file(s)").
-foreach(_shot test_transfer_panel test_upload_job)
+foreach(_shot test_transfer_panel test_upload_job test_edit_metadata_dialog test_object_properties)
     target_compile_definitions(${_shot} PRIVATE QBUCKET_QM_DIR="${CMAKE_BINARY_DIR}/src")
 endforeach()
 add_dependencies(it_browser qbucket)

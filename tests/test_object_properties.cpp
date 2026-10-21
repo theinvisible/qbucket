@@ -5,22 +5,26 @@
 #include "accounts/CapabilityStore.h"
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
+#include "controllers/CopyJob.h"
 #include "controllers/Journal.h"
 #include "controllers/ObjectPropertyJob.h"
 #include "controllers/OperationController.h"
 #include "models/ObjectTableModel.h"
 #include "support/AccountHarness.h"
 #include "ui/DetailPane.h"
+#include "ui/OperationPreviewDialog.h"
 #include "ui/ThemeManager.h"
 
 #include <qbucket/s3/testing/FakeObjectStore.h>
 
 #include <QComboBox>
+#include <QDir>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QTreeWidget>
+#include <QTranslator>
 #include <QtTest>
 
 using namespace qbucket;
@@ -195,6 +199,66 @@ private slots:
         pane.cannedAclBox()->setCurrentText(QStringLiteral("public-read"));
         pane.applyAccessButton()->click();
         QTRY_COMPARE_WITH_TIMEOUT(m_objects->object(kBucket, QStringLiteral("doc.txt"))->acl, QStringLiteral("public-read"), 10000);
+    }
+
+    // QBUCKET_SCREENSHOT_DIR (with a real platform): details-tags.png,
+    // details-access.png and copy-preview.png (devlog).
+    void screenshot()
+    {
+        const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
+        if (dir.isEmpty())
+            QSKIP("QBUCKET_SCREENSHOT_DIR not set");
+        QTranslator plurals;   // as the app does
+        if (plurals.load(QStringLiteral(QBUCKET_QM_DIR "/qbucket_en.qm")))
+            QCoreApplication::installTranslator(&plurals);
+        m_theme.apply(QStringLiteral("Dark"));
+        QDir().mkpath(dir);
+        m_objects->putObject(kBucket, QStringLiteral("reports/q3.pdf"), QByteArray(48000, 'p'), QStringLiteral("application/pdf"));
+        m_objects->setObjectTags(kBucket, QStringLiteral("reports/q3.pdf"),
+                                 {{QStringLiteral("project"), QStringLiteral("finance")}, {QStringLiteral("retention"), QStringLiteral("7y")},
+                                  {QStringLiteral("owner"), QStringLiteral("controlling")}});
+        m_objects->setObjectAcl(kBucket, QStringLiteral("reports/q3.pdf"), QStringLiteral("public-read"));
+        ObjectTableModel model(m_h->sessions.get());
+        model.setLocation(m_h->account.id, kBucket, QStringLiteral("reports/"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), ObjectTableModel::State::Complete, 10000);
+        DetailPane pane(m_h->sessions.get());
+        pane.setControllers(m_ops.get(), m_caps.get());
+        pane.resize(440, 520);
+        pane.show();
+        QSignalSpy tags(&pane, &DetailPane::tagsLoaded);
+        pane.tabs()->setCurrentIndex(DetailPane::TagsTab);
+        pane.setSelection(m_h->account.id, kBucket, {model.index(0, 0)});
+        QVERIFY(tags.wait(10000));
+        QTest::qWait(400);
+        QVERIFY(pane.grab().save(QDir(dir).filePath(QStringLiteral("details-tags.png"))));
+        QSignalSpy access(&pane, &DetailPane::accessLoaded);
+        pane.tabs()->setCurrentIndex(DetailPane::AccessTab);
+        QVERIFY(access.wait(10000));
+        QTest::qWait(400);
+        QVERIFY(pane.grab().save(QDir(dir).filePath(QStringLiteral("details-access.png"))));
+
+        // A copy with conflicts into another bucket: the preview.
+        m_objects->createBucket(QStringLiteral("archive"));
+        for (const char* k : {"reports/q1.pdf", "reports/q2.pdf", "reports/q4-draft.pdf"})
+            m_objects->putObject(kBucket, QString::fromLatin1(k), QByteArray(12000, 'x'));
+        m_objects->putObject(QStringLiteral("archive"), QStringLiteral("2026/reports/q1.pdf"), QByteArray(9000, 'o'));
+        m_objects->putObject(QStringLiteral("archive"), QStringLiteral("2026/reports/q2.pdf"), QByteArray(9500, 'o'));
+        disconnect(m_ops.get(), &OperationController::previewNeeded, this, nullptr);
+        OperationPreviewDialog* dlg = nullptr;
+        connect(m_ops.get(), &OperationController::previewNeeded, this, [&dlg](Job* job) {
+            dlg = new OperationPreviewDialog(job);
+            dlg->setAttribute(Qt::WA_DeleteOnClose);
+            dlg->show();
+        });
+        auto* copy = new CopyJob(m_h->account, kBucket, {{QStringLiteral("reports/"), true}}, QString(),
+                                 QStringLiteral("archive"), QStringLiteral("2026/"), CopyJob::Mode::Move, m_h->path(QStringLiteral("plans")));
+        m_ops->setPlanDir(m_h->path(QStringLiteral("plans")));
+        m_ops->start(copy);
+        QTRY_VERIFY_WITH_TIMEOUT(dlg != nullptr, 10000);
+        QTest::qWait(500);
+        QVERIFY(dlg->grab().save(QDir(dir).filePath(QStringLiteral("copy-preview.png"))));
+        dlg->reject();
+        m_theme.apply(QStringLiteral("Light"));
     }
 
     // A server without object tags: the tab is hidden once that is known.

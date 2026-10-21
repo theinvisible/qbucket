@@ -5,9 +5,11 @@
 #include "ui/ThemeManager.h"
 
 #include <QComboBox>
+#include <QDir>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTranslator>
 #include <QtTest>
 
 using namespace qbucket;
@@ -71,6 +73,31 @@ private slots:
         QVERIFY(!c.contentType);
         QCOMPARE(c.metadata.value(QStringLiteral("team")), std::optional<QString>(QStringLiteral("web")));
         QVERIFY(c.metadata.contains(QStringLiteral("old")) && !c.metadata.value(QStringLiteral("old")));
+    }
+
+    // QBUCKET_SCREENSHOT_DIR (with a real platform): edit-metadata.png (devlog).
+    void screenshot()
+    {
+        const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
+        if (dir.isEmpty())
+            QSKIP("QBUCKET_SCREENSHOT_DIR not set");
+        QTranslator plurals;   // as the app does
+        if (plurals.load(QStringLiteral(QBUCKET_QM_DIR "/qbucket_en.qm")))
+            QCoreApplication::installTranslator(&plurals);
+        m_theme.apply(QStringLiteral("Dark"));
+        s3::ObjectMeta meta;
+        meta.contentType = QStringLiteral("text/html; charset=utf-8");
+        meta.cacheControl = QStringLiteral("max-age=300");
+        meta.contentLanguage = QStringLiteral("de");
+        meta.userMetadata = {{QStringLiteral("build"), QStringLiteral("2026.10.21-3")}, {QStringLiteral("owner"), QStringLiteral("web-team")}};
+        EditMetadataDialog dlg(QStringLiteral("site/index.html"), meta);
+        dlg.field(QStringLiteral("Cache-Control"))->setText(QStringLiteral("max-age=60, must-revalidate"));
+        dlg.resize(640, 560);
+        dlg.show();
+        QTest::qWait(400);
+        QDir().mkpath(dir);
+        QVERIFY(dlg.grab().save(QDir(dir).filePath(QStringLiteral("edit-metadata.png"))));
+        m_theme.apply(QStringLiteral("Light"));
     }
 };
 
