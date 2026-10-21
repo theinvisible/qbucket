@@ -2372,7 +2372,8 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/ui/MainWindow.cpp" line="298"/>
         <location filename="../src/ui/MainWindow.cpp" line="316"/>
         <location filename="../src/ui/MainWindow.cpp" line="328"/>
-        <location filename="../src/ui/MainWindow.cpp" line="791"/>
+        <location filename="../src/ui/MainWindow.cpp" line="333"/>
+        <location filename="../src/ui/MainWindow.cpp" line="804"/>
         <source>Open a bucket first.</source>
         <translation>Öffne zuerst einen Bucket.</translation>
     </message>
@@ -2392,102 +2393,107 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Dieser Provider hat nur eine Storage Class (%1).</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="340"/>
+        <location filename="../src/ui/MainWindow.cpp" line="336"/>
+        <source>Every version and delete marker of the objects here</source>
+        <translation>Alle Versionen und Löschmarker der Objekte hier</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/MainWindow.cpp" line="353"/>
         <source>Copying between accounts comes in a later version.</source>
         <translation>Kopieren zwischen Accounts kommt in einer späteren Version.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="391"/>
+        <location filename="../src/ui/MainWindow.cpp" line="404"/>
         <source>Could not read “%1”: %2</source>
         <translation>„%1“ konnte nicht gelesen werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="443"/>
+        <location filename="../src/ui/MainWindow.cpp" line="456"/>
         <source>Change Storage Class</source>
         <translation>Storage Class ändern</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="444"/>
+        <location filename="../src/ui/MainWindow.cpp" line="457"/>
         <source>New storage class for the selection:</source>
         <translation>Neue Storage Class für die Auswahl:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="445"/>
+        <location filename="../src/ui/MainWindow.cpp" line="458"/>
         <source>New storage class for the selection (not known for this server — the server refuses one it doesn&apos;t have, nothing is changed then):</source>
         <translation>Neue Storage Class für die Auswahl (für diesen Server nicht bekannt — eine unbekannte lehnt der Server ab, dann ändert sich nichts):</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="454"/>
+        <location filename="../src/ui/MainWindow.cpp" line="467"/>
         <source>“%1” is not a storage class name.</source>
         <translation>„%1“ ist kein Name einer Storage Class.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="475"/>
+        <location filename="../src/ui/MainWindow.cpp" line="488"/>
         <source>Rename Folder</source>
         <translation>Ordner umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="475"/>
+        <location filename="../src/ui/MainWindow.cpp" line="488"/>
         <source>Rename</source>
         <translation>Umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="476"/>
+        <location filename="../src/ui/MainWindow.cpp" line="489"/>
         <source>New name for “%1”:</source>
         <translation>Neuer Name für „%1“:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="481"/>
+        <location filename="../src/ui/MainWindow.cpp" line="494"/>
         <source>Not renamed: %1</source>
         <translation>Nicht umbenannt: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="505"/>
+        <location filename="../src/ui/MainWindow.cpp" line="518"/>
         <source>Upload Files</source>
         <translation>Dateien hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="517"/>
+        <location filename="../src/ui/MainWindow.cpp" line="530"/>
         <source>Upload Folder</source>
         <translation>Ordner hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="569"/>
+        <location filename="../src/ui/MainWindow.cpp" line="582"/>
         <source>New Folder</source>
         <translation>Neuer Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="570"/>
+        <location filename="../src/ui/MainWindow.cpp" line="583"/>
         <source>Name of the new folder in s3://%1/%2:</source>
         <translation>Name des neuen Ordners in s3://%1/%2:</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="574"/>
+        <location filename="../src/ui/MainWindow.cpp" line="587"/>
         <source>No folder created: %1</source>
         <translation>Kein Ordner angelegt: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="599"/>
+        <location filename="../src/ui/MainWindow.cpp" line="612"/>
         <source>planning</source>
         <translation>wird geplant</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="602"/>
+        <location filename="../src/ui/MainWindow.cpp" line="615"/>
         <source>verifying</source>
         <translation>wird geprüft</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="605"/>
+        <location filename="../src/ui/MainWindow.cpp" line="618"/>
         <source>%1 of %2</source>
         <translation>%1 von %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="606"/>
+        <location filename="../src/ui/MainWindow.cpp" line="619"/>
         <source>running</source>
         <translation>läuft</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/MainWindow.cpp" line="609"/>
+        <location filename="../src/ui/MainWindow.cpp" line="622"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) und %n weitere</numerusform>
@@ -2495,335 +2501,330 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="610"/>
+        <location filename="../src/ui/MainWindow.cpp" line="623"/>
         <source>%1 (%2)</source>
         <translation>%1 (%2)</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="631"/>
-        <location filename="../src/ui/MainWindow.cpp" line="643"/>
-        <location filename="../src/ui/MainWindow.cpp" line="654"/>
+        <location filename="../src/ui/MainWindow.cpp" line="644"/>
+        <location filename="../src/ui/MainWindow.cpp" line="656"/>
+        <location filename="../src/ui/MainWindow.cpp" line="667"/>
         <source>Retry Failed</source>
         <translation>Fehlgeschlagene wiederholen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="693"/>
+        <location filename="../src/ui/MainWindow.cpp" line="706"/>
         <source>&amp;New Folder…</source>
         <translation>&amp;Neuer Ordner…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="764"/>
+        <location filename="../src/ui/MainWindow.cpp" line="777"/>
         <source>What “%1” supports has changed — see Tools → Server Capabilities.</source>
         <translation>Was „%1“ unterstützt, hat sich geändert — siehe Extras → Server-Fähigkeiten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="796"/>
+        <location filename="../src/ui/MainWindow.cpp" line="809"/>
         <source>Unfinished multipart uploads of this bucket</source>
         <translation>Unvollständige Multipart-Uploads dieses Buckets</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="866"/>
+        <location filename="../src/ui/MainWindow.cpp" line="879"/>
         <source>&amp;File</source>
         <translation>&amp;Datei</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="867"/>
+        <location filename="../src/ui/MainWindow.cpp" line="880"/>
         <source>Add &amp;Account…</source>
         <translation>&amp;Konto hinzufügen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="870"/>
+        <location filename="../src/ui/MainWindow.cpp" line="883"/>
         <source>&amp;Quit</source>
         <translation>&amp;Beenden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="873"/>
+        <location filename="../src/ui/MainWindow.cpp" line="886"/>
         <source>&amp;Edit</source>
         <translation>&amp;Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="876"/>
+        <location filename="../src/ui/MainWindow.cpp" line="889"/>
         <source>&amp;View</source>
         <translation>&amp;Ansicht</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="879"/>
+        <location filename="../src/ui/MainWindow.cpp" line="892"/>
         <source>&amp;Folders</source>
         <translation>&amp;Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="880"/>
+        <location filename="../src/ui/MainWindow.cpp" line="893"/>
         <source>F&amp;lat Listing</source>
         <translation>&amp;Flache Liste</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="881"/>
+        <location filename="../src/ui/MainWindow.cpp" line="894"/>
         <source>&amp;Versions</source>
         <translation>&amp;Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="901"/>
+        <location filename="../src/ui/MainWindow.cpp" line="913"/>
         <source>&amp;Back</source>
         <translation>&amp;Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="903"/>
+        <location filename="../src/ui/MainWindow.cpp" line="915"/>
         <source>&amp;Forward</source>
         <translation>&amp;Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="905"/>
+        <location filename="../src/ui/MainWindow.cpp" line="917"/>
         <source>&amp;Up One Level</source>
         <translation>Eine Ebene &amp;nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="907"/>
+        <location filename="../src/ui/MainWindow.cpp" line="919"/>
         <source>&amp;Refresh</source>
         <translation>&amp;Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="909"/>
+        <location filename="../src/ui/MainWindow.cpp" line="921"/>
         <source>&amp;Go to Path…</source>
         <translation>&amp;Gehe zu Pfad…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="915"/>
+        <location filename="../src/ui/MainWindow.cpp" line="927"/>
         <source>&amp;Theme</source>
         <translation>&amp;Design</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="917"/>
+        <location filename="../src/ui/MainWindow.cpp" line="929"/>
         <source>&amp;Dark</source>
         <translation>&amp;Dunkel</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="918"/>
+        <location filename="../src/ui/MainWindow.cpp" line="930"/>
         <source>&amp;Light</source>
         <translation>&amp;Hell</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="919"/>
+        <location filename="../src/ui/MainWindow.cpp" line="931"/>
         <source>Follow &amp;System</source>
         <translation>&amp;System folgen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="938"/>
+        <location filename="../src/ui/MainWindow.cpp" line="950"/>
         <source>&amp;Tools</source>
         <translation>E&amp;xtras</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="939"/>
+        <location filename="../src/ui/MainWindow.cpp" line="951"/>
         <source>Server &amp;Capabilities…</source>
         <translation>Server-&amp;Fähigkeiten…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="941"/>
+        <location filename="../src/ui/MainWindow.cpp" line="953"/>
         <source>&amp;Incomplete Uploads…</source>
         <translation>&amp;Unvollständige Uploads…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="944"/>
+        <location filename="../src/ui/MainWindow.cpp" line="956"/>
         <source>&amp;Settings…</source>
         <translation>&amp;Einstellungen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="948"/>
+        <location filename="../src/ui/MainWindow.cpp" line="960"/>
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="949"/>
+        <location filename="../src/ui/MainWindow.cpp" line="961"/>
         <source>&amp;About QBucket…</source>
         <translation>&amp;Über QBucket…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="950"/>
+        <location filename="../src/ui/MainWindow.cpp" line="962"/>
         <source>About &amp;Qt…</source>
         <translation>Über &amp;Qt…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="958"/>
+        <location filename="../src/ui/MainWindow.cpp" line="970"/>
         <source>Main</source>
         <translation>Haupt</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="977"/>
+        <location filename="../src/ui/MainWindow.cpp" line="989"/>
         <source>Upload</source>
         <translation>Hochladen</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="312"/>
-        <location filename="../src/ui/MainWindow.cpp" line="979"/>
+        <location filename="../src/ui/MainWindow.cpp" line="991"/>
         <source>Upload files or folders to the current location</source>
         <translation>Dateien oder Ordner an den aktuellen Ort hochladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="983"/>
+        <location filename="../src/ui/MainWindow.cpp" line="995"/>
         <source>Download the selection</source>
         <translation>Auswahl herunterladen</translation>
     </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="314"/>
-        <location filename="../src/ui/MainWindow.cpp" line="987"/>
+        <location filename="../src/ui/MainWindow.cpp" line="999"/>
         <source>New folder</source>
         <translation>Neuer Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="696"/>
+        <location filename="../src/ui/MainWindow.cpp" line="709"/>
         <source>Upload &amp;Files…</source>
         <translation>&amp;Dateien hochladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="698"/>
+        <location filename="../src/ui/MainWindow.cpp" line="711"/>
         <source>Upload Fo&amp;lder…</source>
         <translation>O&amp;rdner hochladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="725"/>
+        <location filename="../src/ui/MainWindow.cpp" line="738"/>
         <source>Download To</source>
         <translation>Herunterladen nach</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="991"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1003"/>
         <source>Delete the selection</source>
         <translation>Auswahl löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="997"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1009"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1001"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1013"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1005"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1017"/>
         <source>Up one level</source>
         <translation>Eine Ebene nach oben</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1009"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1021"/>
         <source>Refresh</source>
         <translation>Aktualisieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1017"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1029"/>
         <source>Filter this folder…</source>
         <translation>Diesen Ordner filtern…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1036"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1048"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1037"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1049"/>
         <source>Flat</source>
         <translation>Flach</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1038"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1050"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1054"/>
-        <source>Not available yet</source>
-        <translation>Noch nicht verfügbar</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1057"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1067"/>
         <source>Folders: browse by prefix · Flat: every key below the current prefix · Versions: all object versions</source>
         <translation>Ordner: nach Präfix navigieren · Flach: alle Keys unterhalb des aktuellen Präfixes · Versionen: alle Objektversionen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1063"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1073"/>
         <source>Toggle light / dark</source>
         <translation>Hell / dunkel umschalten</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1070"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1080"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1145"/>
         <location filename="../src/ui/MainWindow.cpp" line="1155"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1162"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1165"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1172"/>
         <source>Transfers</source>
         <translation>Übertragungen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1162"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1172"/>
         <source>No transfers.</source>
         <translation>Keine Übertragungen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1164"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1174"/>
         <source>Log</source>
         <translation>Protokoll</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1171"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1181"/>
         <source>&amp;Transfers Panel</source>
         <translation>&amp;Übertragungsbereich</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="831"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1183"/>
+        <location filename="../src/ui/MainWindow.cpp" line="844"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1193"/>
         <source>Not connected</source>
         <translation>Nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="833"/>
-        <location filename="../src/ui/MainWindow.cpp" line="1197"/>
+        <location filename="../src/ui/MainWindow.cpp" line="846"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1207"/>
         <source>Offline</source>
         <translation>Offline</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="840"/>
+        <location filename="../src/ui/MainWindow.cpp" line="853"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="845"/>
+        <location filename="../src/ui/MainWindow.cpp" line="858"/>
         <source>Refreshing…</source>
         <translation>Wird aktualisiert…</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="845"/>
+        <location filename="../src/ui/MainWindow.cpp" line="858"/>
         <source>Online</source>
         <translation>Online</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="849"/>
+        <location filename="../src/ui/MainWindow.cpp" line="862"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1191"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1201"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1270"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1282"/>
         <source>Account “%1” saved — its secret is kept for this session only.</source>
         <translation>Konto „%1“ gespeichert — sein geheimer Schlüssel wird nur für diese Sitzung gehalten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1271"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1283"/>
         <source>Account “%1” saved.</source>
         <translation>Konto „%1“ gespeichert.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1278"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1290"/>
         <source>About QBucket</source>
         <translation>Über QBucket</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainWindow.cpp" line="1279"/>
+        <location filename="../src/ui/MainWindow.cpp" line="1291"/>
         <source>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;A native browser for S3 and S3-compatible object storage.&lt;/p&gt;&lt;p&gt;Built with Qt %2 Widgets. Licensed under the MIT license.&lt;/p&gt;</source>
         <translation>&lt;h3&gt;QBucket %1&lt;/h3&gt;&lt;p&gt;Ein nativer Browser für S3 und S3-kompatiblen Object Storage.&lt;/p&gt;&lt;p&gt;Erstellt mit Qt %2 Widgets. Lizenziert unter der MIT-Lizenz.&lt;/p&gt;</translation>
     </message>
@@ -2870,201 +2871,214 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <name>qbucket::ObjectBrowser</name>
     <message>
         <location filename="../src/ui/ObjectBrowser.cpp" line="72"/>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="306"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="311"/>
         <source>Try Again</source>
         <translation>Erneut versuchen</translation>
     </message>
     <message>
         <location filename="../src/ui/ObjectBrowser.cpp" line="111"/>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="178"/>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="226"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="180"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="231"/>
         <source>No location</source>
         <translation>Kein Ort</translation>
     </message>
     <message>
         <location filename="../src/ui/ObjectBrowser.cpp" line="112"/>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="288"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="293"/>
         <source>Add an account to start browsing your buckets.</source>
         <translation>Füge ein Konto hinzu, um deine Buckets zu durchsuchen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="267"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="272"/>
         <source>Could not refresh — showing the listing from %1: %2</source>
         <translation>Aktualisieren fehlgeschlagen — angezeigt wird die Liste von %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="270"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="275"/>
         <source>The listing is incomplete: %1</source>
         <translation>Die Liste ist unvollständig: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="273"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="278"/>
         <source>Showing the listing from %1 — refreshing…</source>
         <translation>Angezeigt wird die Liste von %1 — wird aktualisiert…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="286"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="291"/>
         <source>Select a bucket of this account in the sidebar.</source>
         <translation>Wähle in der Seitenleiste einen Bucket dieses Kontos.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="290"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="295"/>
         <source>Select a bucket in the sidebar.</source>
         <translation>Wähle in der Seitenleiste einen Bucket.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="303"/>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="323"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="308"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="328"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="315"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="320"/>
         <source>Load More</source>
         <translation>Mehr laden</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="316"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="321"/>
         <source>Nothing loaded so far matches “%1”; more entries can be loaded.</source>
         <translation>Bisher passt nichts Geladenes zu „%1“; weitere Einträge können geladen werden.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="318"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="323"/>
         <source>Nothing here matches “%1”.</source>
         <translation>Hier passt nichts zu „%1“.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="321"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="326"/>
         <source>Nothing here starts with “%1”.</source>
         <translation>Hier beginnt nichts mit „%1“.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="325"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="330"/>
         <source>This folder is empty.</source>
         <translation>Dieser Ordner ist leer.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="503"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="512"/>
         <source>&amp;Open</source>
         <translation>Ö&amp;ffnen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="505"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="514"/>
         <source>&amp;Copy</source>
         <translation>&amp;Kopieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="506"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="515"/>
         <source>Cut</source>
         <translation>&amp;Ausschneiden</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="507"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="516"/>
         <source>&amp;Paste</source>
         <translation>&amp;Einfügen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="512"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="521"/>
         <source>Copy &amp;Key</source>
         <translation>Ke&amp;y kopieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="513"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="522"/>
         <source>Copy S3 &amp;URI</source>
         <translation>S3-&amp;URI kopieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="516"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="525"/>
         <source>&amp;Rename…</source>
         <translation>U&amp;mbenennen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="517"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="526"/>
         <source>Edit &amp;Metadata…</source>
         <translation>Metadaten &amp;bearbeiten…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="518"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="527"/>
         <source>Change Storage Cl&amp;ass…</source>
         <translation>&amp;Storage Class ändern…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="519"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="528"/>
         <source>Pre&amp;signed Link…</source>
         <translation>&amp;Presigned-Link…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="520"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="529"/>
         <source>&amp;Delete…</source>
         <translation>&amp;Löschen…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="521"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="530"/>
         <source>Do&amp;wnload</source>
         <translation>&amp;Herunterladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="522"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="531"/>
         <source>Download &amp;To…</source>
         <translation>Herunterladen na&amp;ch…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="541"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="554"/>
         <source>Cut the selection: Paste moves it</source>
         <translation>Auswahl ausschneiden: Einfügen verschiebt sie</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="545"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="558"/>
         <source>Paste here (copied objects are copied, cut ones moved)</source>
         <translation>Hier einfügen (kopierte Objekte werden kopiert, ausgeschnittene verschoben)</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="547"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="560"/>
         <source>Delete the selection</source>
         <translation>Auswahl löschen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="549"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="562"/>
         <source>Rename the selected object or folder</source>
         <translation>Ausgewähltes Objekt oder ausgewählten Ordner umbenennen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="551"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="564"/>
         <source>Change headers and user metadata of the selection</source>
         <translation>Header und User-Metadaten der Auswahl ändern</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="556"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="569"/>
         <source>Move the selection to another storage class</source>
         <translation>Die Auswahl in eine andere Storage Class verschieben</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="561"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="574"/>
         <source>Links to the selected objects that work without credentials</source>
         <translation>Links zu den gewählten Objekten, die ohne Zugangsdaten funktionieren</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="565"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="578"/>
         <source>Download the selection</source>
         <translation>Auswahl herunterladen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="640"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="589"/>
+        <source>Not in the versions view — switch to Folders or Flat</source>
+        <translation>Nicht in der Versionsansicht — zu Ordner oder Flach wechseln</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="668"/>
         <source>Copying between accounts comes in a later version.</source>
         <translation>Kopieren zwischen Accounts kommt in einer späteren Version.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="644"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="672"/>
         <source>This account can&apos;t write here.</source>
         <translation>Dieser Account darf hier nicht schreiben.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="697"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="725"/>
         <source>Refresh</source>
         <translation>Aktualisieren</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ObjectBrowser.cpp" line="706"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="735"/>
+        <source>%n version(s)</source>
+        <translation>
+            <numerusform>%n Version</numerusform>
+            <numerusform>%n Versionen</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/ObjectBrowser.cpp" line="736"/>
         <location filename="../tests/test_translations.cpp" line="15"/>
         <location filename="../tests/test_translations.cpp" line="16"/>
         <location filename="../tests/test_translations.cpp" line="26"/>
@@ -3076,7 +3090,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ObjectBrowser.cpp" line="708"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="738"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n Ordner</numerusform>
@@ -3084,17 +3098,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="709"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="739"/>
         <source>%1 · %2</source>
         <translation>%1 · %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/ObjectBrowser.cpp" line="711"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="741"/>
         <source>%1 loaded so far</source>
         <translation>%1 bisher geladen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ObjectBrowser.cpp" line="714"/>
+        <location filename="../src/ui/ObjectBrowser.cpp" line="744"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n ausgewählt</numerusform>
@@ -3292,29 +3306,72 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::ObjectRowDelegate</name>
+    <message>
+        <location filename="../src/ui/ObjectRowDelegate.cpp" line="156"/>
+        <source>deleted</source>
+        <translation>gelöscht</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectRowDelegate.cpp" line="158"/>
+        <source>current</source>
+        <translation>aktuell</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/ObjectRowDelegate.cpp" line="161"/>
+        <source>null (unversioned)</source>
+        <translation>null (unversioniert)</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::ObjectTableModel</name>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="792"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="859"/>
+        <source>delete marker</source>
+        <translation>Löschmarker</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="860"/>
+        <source>null (unversioned)</source>
+        <translation>null (unversioniert)</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="870"/>
+        <source>%1 — deleted here (a delete marker hides the versions below)</source>
+        <translation>%1 — hier gelöscht (ein Löschmarker verdeckt die Versionen darunter)</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="871"/>
+        <source>%1 — an earlier version</source>
+        <translation>%1 — eine frühere Version</translation>
+    </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="904"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="794"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="906"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="796"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="908"/>
         <source>Modified</source>
         <translation>Geändert</translation>
     </message>
     <message>
-        <location filename="../src/models/ObjectTableModel.cpp" line="798"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="910"/>
         <source>Class</source>
         <translation>Klasse</translation>
     </message>
+    <message>
+        <location filename="../src/models/ObjectTableModel.cpp" line="912"/>
+        <source>Version</source>
+        <translation>Version</translation>
+    </message>
     <message numerus="yes">
-        <location filename="../src/models/ObjectTableModel.cpp" line="804"/>
+        <location filename="../src/models/ObjectTableModel.cpp" line="918"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sortiert innerhalb der %n bisher geladenen Zeile; weitere Seiten werden beim Eintreffen einsortiert.</numerusform>

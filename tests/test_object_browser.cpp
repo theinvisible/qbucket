@@ -9,6 +9,8 @@
 #include "ui/PathBar.h"
 #include "ui/ThemeManager.h"
 
+#include <qbucket/s3/testing/FakeObjectStore.h>
+
 #include <QClipboard>
 #include <QDir>
 #include <QGuiApplication>
@@ -288,6 +290,46 @@ private slots:
         std::unique_ptr<QMimeData> foreignMime(foreign.toMimeData());
         QVERIFY(!dragTo(folderRow.center(), foreignMime.get(), Qt::NoModifier));
         QCOMPARE(dropped.size(), 2);
+    }
+
+    void theVersionsViewListsVersionsAndChangesNothing()
+    {
+        FakeObjectStore store(m_server.get());   // replaces the FakeBucket fallback
+        store.createBucket(QStringLiteral("bkt"));
+        store.setVersioning(QStringLiteral("bkt"), QStringLiteral("Enabled"));
+        store.putObject(QStringLiteral("bkt"), QStringLiteral("a.txt"), "1");
+        store.putObject(QStringLiteral("bkt"), QStringLiteral("a.txt"), "22");
+        store.putObject(QStringLiteral("bkt"), QStringLiteral("b.txt"), "3");
+        store.deleteObject(QStringLiteral("bkt"), QStringLiteral("b.txt"));
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.resize(800, 400);
+        browser.show();
+        browser.setMutationsAllowed(true, QString());
+        browser.setDownloadsAllowed(true, QString());
+        QVERIFY(browser.view()->isColumnHidden(ObjectTableModel::VersionColumn));
+
+        browser.setMode(ObjectTableModel::Mode::Versions);
+        browser.openBucket(m_account, QStringLiteral("bkt"));
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QCOMPARE(browser.model()->rowCount(), 4);
+        QVERIFY(!browser.view()->isColumnHidden(ObjectTableModel::VersionColumn));
+        QVERIFY(browser.statusText().contains(QLatin1String("4 version")));   // "(s)" without the plurals file
+
+        browser.view()->selectRow(1);   // a.txt's earlier version
+        QVERIFY(browser.copyKeyAction()->isEnabled());
+        QVERIFY(browser.copyUriAction()->isEnabled());
+        for (QAction* a : {browser.copyAction(), browser.cutAction(), browser.renameAction(), browser.deleteAction(),
+                           browser.editMetadataAction(), browser.downloadAction()}) {
+            QVERIFY2(!a->isEnabled(), qPrintable(a->text()));
+            QVERIFY(a->toolTip().contains(QLatin1String("versions view")));
+        }
+
+        browser.setMode(ObjectTableModel::Mode::Folders);
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QCOMPARE(browser.model()->rowCount(), 1);   // b.txt is deleted
+        QVERIFY(browser.view()->isColumnHidden(ObjectTableModel::VersionColumn));
+        browser.view()->selectRow(0);
+        QVERIFY(browser.deleteAction()->isEnabled());
     }
 
     void anEmptyFolderAndAnErrorSayWhatTheyAre()

@@ -112,6 +112,7 @@ private:
     void showMessage_(const QString& text, bool retry);
     void buildActions_();
     void updateActions_();
+    void updateVersionActions_(const QModelIndexList& rows);
     void showContextMenu_(const QPoint& pos);
     void copySelection_(bool asUri);
     void copyObjects_(ObjectSelection::Intent intent);

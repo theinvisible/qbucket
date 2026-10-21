@@ -6,7 +6,9 @@ namespace qbucket {
 
 // Rows of ObjectTableModel: folder / file icon tinted by file type in the
 // name column, secondary text for size and date, the storage class as a
-// badge. Paints from model roles only — no I/O, nothing per-row cached.
+// badge; in the versions view "current" / "deleted" badges, earlier
+// versions muted, delete markers grey. Paints from model roles only — no
+// I/O, nothing per-row cached.
 class ObjectRowDelegate : public QStyledItemDelegate {
     Q_OBJECT
 
@@ -24,6 +26,9 @@ protected:
 
 private:
     void paintDropTarget_(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+    void paintVersion_(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const;
+    static int paintPill_(QPainter* painter, const QStyleOptionViewItem& opt, const QRect& text, const QString& label,
+                          const QColor& fg);
 
     int m_dropRow = -1;
 };

@@ -329,6 +329,19 @@ void MainWindow::updateMutationActions_()
     if (m_operations && here.hasBucket())
         read = m_operations->check(here.account, here.bucket, {}, false, false);
     m_browser->setDownloadsAllowed(read.allowed, read.reason);
+    // The versions view: wherever the bucket can list versions.
+    OperationController::Check versions{false, tr("Open a bucket first.")};
+    if (m_operations && here.hasBucket())
+        versions = m_operations->check(here.account, here.bucket, {s3::Feature::ObjectVersionsListing}, false, false);
+    const QString versionsTip = versions.allowed ? tr("Every version and delete marker of the objects here") : versions.reason;
+    m_actVersions->setEnabled(versions.allowed);
+    m_actVersions->setToolTip(versionsTip);
+    for (QAbstractButton* btn : m_browseSeg->buttons()) {
+        if (btn->property("browseMode").toString() == QLatin1String("versions")) {
+            btn->setEnabled(versions.allowed);
+            btn->setToolTip(versionsTip);
+        }
+    }
 }
 
 void MainWindow::startCopy_(const ObjectSelection& sel, const QUuid& accountId, const QString& bucket,
@@ -894,8 +907,7 @@ void MainWindow::buildMenuBar_()
                 [this, mode] { m_settings->setBrowseMode(mode); });
     }
 
-    // Versions arrive with M5.
-    m_actVersions->setEnabled(false);
+    m_actVersions->setEnabled(false);   // per bucket: updateMutationActions_()
 
     view->addSeparator();
     m_actBack = view->addAction(tr("&Back"));
@@ -1049,10 +1061,8 @@ void MainWindow::buildToolBar_()
         segLay->addWidget(btn);
         connect(btn, &QToolButton::clicked, this,
                 [this, mode] { m_settings->setBrowseMode(mode); });
-        if (mode == QLatin1String("versions")) {
-            btn->setEnabled(false);   // M5
-            btn->setToolTip(tr("Not available yet"));
-        }
+        if (mode == QLatin1String("versions"))
+            btn->setEnabled(false);   // per bucket: updateMutationActions_()
     }
     seg->setToolTip(tr("Folders: browse by prefix · Flat: every key below the "
                        "current prefix · Versions: all object versions"));
@@ -1222,9 +1232,11 @@ void MainWindow::applyBrowseMode_()
         action->setChecked(action->data().toString() == mode);
     for (QAbstractButton* btn : m_browseSeg->buttons())
         btn->setChecked(btn->property("browseMode").toString() == mode);
-    if (m_browser)
-        m_browser->setMode(mode == QLatin1String("flat") ? ObjectTableModel::Mode::Flat
-                                                          : ObjectTableModel::Mode::Folders);
+    if (m_browser) {
+        m_browser->setMode(mode == QLatin1String("flat")       ? ObjectTableModel::Mode::Flat
+                           : mode == QLatin1String("versions") ? ObjectTableModel::Mode::Versions
+                                                               : ObjectTableModel::Mode::Folders);
+    }
 }
 
 void MainWindow::applyThemeChoice_()

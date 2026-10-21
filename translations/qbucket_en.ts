@@ -240,7 +240,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/MainWindow.cpp" line="609"/>
+        <location filename="../../src/ui/MainWindow.cpp" line="622"/>
         <source>%1 (%2) and %n more</source>
         <translation>
             <numerusform>%1 (%2) and %n more</numerusform>
@@ -251,7 +251,15 @@
 <context>
     <name>qbucket::ObjectBrowser</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="706"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="735"/>
+        <source>%n version(s)</source>
+        <translation>
+            <numerusform>%n version</numerusform>
+            <numerusform>%n versions</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="736"/>
         <location filename="../../tests/test_translations.cpp" line="15"/>
         <location filename="../../tests/test_translations.cpp" line="16"/>
         <location filename="../../tests/test_translations.cpp" line="26"/>
@@ -263,7 +271,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="708"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="738"/>
         <source>%1, %n folder(s)</source>
         <translation>
             <numerusform>%1, %n folder</numerusform>
@@ -271,7 +279,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/ObjectBrowser.cpp" line="714"/>
+        <location filename="../../src/ui/ObjectBrowser.cpp" line="744"/>
         <source>%1 · %n selected</source>
         <translation>
             <numerusform>%1 · %n selected</numerusform>
@@ -282,7 +290,7 @@
 <context>
     <name>qbucket::ObjectTableModel</name>
     <message numerus="yes">
-        <location filename="../../src/models/ObjectTableModel.cpp" line="804"/>
+        <location filename="../../src/models/ObjectTableModel.cpp" line="918"/>
         <source>Sorted among the %n row(s) loaded so far; pages still to come are sorted in as they arrive.</source>
         <translation>
             <numerusform>Sorted among the %n row loaded so far; pages still to come are sorted in as they arrive.</numerusform>

@@ -123,6 +123,8 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
     header->resizeSection(ObjectTableModel::SizeColumn, 110);
     header->resizeSection(ObjectTableModel::ModifiedColumn, 170);
     header->resizeSection(ObjectTableModel::StorageClassColumn, 130);
+    header->resizeSection(ObjectTableModel::VersionColumn, 240);
+    m_view->setColumnHidden(ObjectTableModel::VersionColumn, true);   // Versions mode only
     // Server order until a column is clicked; a third click returns to it.
     header->setSortIndicatorClearable(true);
     header->setSortIndicator(-1, Qt::AscendingOrder);
@@ -189,9 +191,12 @@ void ObjectBrowser::setMode(ObjectTableModel::Mode mode)
     if (mode == m_mode)
         return;
     m_mode = mode;
+    if (m_model)
+        m_view->setColumnHidden(ObjectTableModel::VersionColumn, mode != ObjectTableModel::Mode::Versions);
     const Location here = m_nav->current();
     if (m_model && here.hasBucket())
         m_model->setLocation(here.account, here.bucket, here.prefix, m_mode);
+    updateActions_();
 }
 
 void ObjectBrowser::refresh()
@@ -370,6 +375,10 @@ bool ObjectBrowser::eventFilter(QObject* watched, QEvent* event)
         case QEvent::DragMove:
         case QEvent::DragLeave:
         case QEvent::Drop:
+            if (m_mode == ObjectTableModel::Mode::Versions) {   // nothing lands in the versions view
+                event->ignore();
+                return true;
+            }
             return handleDrop_(event);
         default:
             break;
@@ -533,6 +542,10 @@ void ObjectBrowser::buildActions_()
 void ObjectBrowser::updateActions_()
 {
     const QModelIndexList rows = selectedRows();
+    if (m_mode == ObjectTableModel::Mode::Versions) {
+        updateVersionActions_(rows);
+        return;
+    }
     m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
     m_actCopyKey->setEnabled(!rows.isEmpty());
     m_actCopyUri->setEnabled(!rows.isEmpty());
@@ -563,6 +576,21 @@ void ObjectBrowser::updateActions_()
     for (QAction* a : {m_actDownload, m_actDownloadTo}) {
         a->setEnabled(!rows.isEmpty() && m_downloadsAllowed);
         a->setToolTip(m_downloadsAllowed ? tr("Download the selection") : m_downloadsReason);
+    }
+}
+
+// The versions view lists what was, not what is: nothing in it is copied,
+// moved, renamed or edited.
+void ObjectBrowser::updateVersionActions_(const QModelIndexList& rows)
+{
+    m_actOpen->setEnabled(rows.size() == 1 && rows.first().data(ObjectTableModel::IsFolderRole).toBool());
+    m_actCopyKey->setEnabled(!rows.isEmpty());
+    m_actCopyUri->setEnabled(!rows.isEmpty());
+    const QString notHere = tr("Not in the versions view — switch to Folders or Flat");
+    for (QAction* a : {m_actCopy, m_actCut, m_actPaste, m_actRename, m_actEditMetadata, m_actChangeClass,
+                       m_actPresign, m_actDelete, m_actDownload, m_actDownloadTo}) {
+        a->setEnabled(false);
+        a->setToolTip(notHere);
     }
 }
 
@@ -703,7 +731,9 @@ QString ObjectBrowser::statusText() const
     if (!m_model || !m_nav->current().hasBucket() || m_model->state() == ObjectTableModel::State::Loading)
         return {};
     const QLocale locale;
-    QString text = tr("%n object(s)", nullptr, int(m_model->loadedObjects()));
+    QString text = m_mode == ObjectTableModel::Mode::Versions
+                       ? tr("%n version(s)", nullptr, int(m_model->loadedObjects()))
+                       : tr("%n object(s)", nullptr, int(m_model->loadedObjects()));
     if (m_model->loadedFolders() > 0)
         text = tr("%1, %n folder(s)", nullptr, int(m_model->loadedFolders())).arg(text);
     text = tr("%1 · %2").arg(text, locale.formattedDataSize(m_model->loadedBytes()));

@@ -26,6 +26,7 @@ namespace {
 struct SortKey {
     quint32 row = 0;
     bool folder = false;
+    bool groupVersions = false;   // Versions mode: a key's versions stay in server order
     qint64 size = 0;
     qint64 mtime = 0;
     QString storageClass;
@@ -106,6 +107,9 @@ std::vector<quint32> sortedOrder(std::vector<SortKey> keys, int column, Qt::Sort
         default:
             break;
         }
+        // By name, a key's versions stay together, newest first, either way.
+        if (c == 0 && column == ObjectTableModel::NameColumn && a.groupVersions)
+            return a.row < b.row;
         if (c == 0)
             c = compare3(a.row, b.row);
         return descending ? c > 0 : c < 0;
@@ -137,10 +141,11 @@ ObjectTableModel::ObjectTableModel(AccountSessions* sessions, QObject* parent)
     // The pager refers to the session; when that goes, list through the
     // next one.
     connect(m_sessions, &AccountSessions::sessionStopped, this, [this](const QUuid& id) {
-        if (id != m_account || !m_pager)
+        if (id != m_account || !hasPager_())
             return;
         m_run.reset();
         m_pager.reset();
+        m_versionPager.reset();
         if (!m_sessions->isShutDown())
             reload();
     });
@@ -201,6 +206,7 @@ void ObjectTableModel::resetListing_()
 {
     m_run.reset();   // answers of the previous listing are dropped
     m_pager.reset();
+    m_versionPager.reset();
     m_sortDebounce.stop();
     m_fresh.clear();
     m_freshEnds.clear();
@@ -214,6 +220,7 @@ void ObjectTableModel::resetListing_()
     m_folderRows = m_orderFolders = m_viewFolders = 0;
     m_bytes = 0;
     m_storageClasses = QStringList{QString()};
+    m_versionIds.assign(1, QString());
     endResetModel();
     ++m_orderVersion;
     m_pages = 0;
@@ -235,13 +242,24 @@ void ObjectTableModel::start_(bool useCache)
         setState_(State::Error);
         return;
     }
+    m_run = std::make_unique<QObject>();
+    if (m_mode == Mode::Versions) {
+        s3::ListObjectVersionsParams params;
+        params.bucket = m_bucket;
+        params.prefix = m_prefix + m_search;
+        params.delimiter = QStringLiteral("/");
+        params.maxKeys = kPageSize;
+        m_versionPager = std::make_unique<s3::ListObjectVersionsPager>(**session, params);
+        setState_(State::Loading);   // never from the cache
+        fetchPage_();
+        return;
+    }
     s3::ListObjectsParams params;
     params.bucket = m_bucket;
     params.prefix = m_prefix + m_search;
     params.delimiter = m_mode == Mode::Folders ? QStringLiteral("/") : QString();
     params.maxKeys = kPageSize;
     m_pager = std::make_unique<s3::ListObjectsPager>(**session, params);
-    m_run = std::make_unique<QObject>();
     if (useCache && m_search.isEmpty() && restoreSnapshot_()) {
         fetchPage_();   // the refresh
         return;
@@ -254,7 +272,7 @@ void ObjectTableModel::start_(bool useCache)
 
 void ObjectTableModel::keepForCache_()
 {
-    if (m_account.isNull() || m_bucket.isEmpty() || !m_search.isEmpty() || m_pageEnds.empty()
+    if (m_account.isNull() || m_bucket.isEmpty() || !m_search.isEmpty() || m_pageEnds.empty() || m_mode == Mode::Versions
         || (m_state != State::Ready && m_state != State::Complete))
         return;
     auto snap = std::make_unique<Snapshot>();
@@ -312,7 +330,7 @@ void ObjectTableModel::swapInFresh_()
     m_freshEnds.clear();
     m_freshPages = 0;
     setStale_(false);
-    setState_(m_pager && m_pager->hasMore() ? State::Ready : State::Complete);
+    setState_(pagerHasMore_() ? State::Ready : State::Complete);
     emit pageLoaded();
 }
 
@@ -355,30 +373,66 @@ void ObjectTableModel::setStale_(bool stale)
     emit staleChanged(stale);
 }
 
+bool ObjectTableModel::pagerHasMore_() const
+{
+    return m_versionPager ? m_versionPager->hasMore() : (m_pager && m_pager->hasMore());
+}
+
+bool ObjectTableModel::pagerFetching_() const
+{
+    return m_versionPager ? m_versionPager->isFetching() : (m_pager && m_pager->isFetching());
+}
+
 void ObjectTableModel::fetchPage_()
 {
-    if (!m_pager || m_pager->isFetching() || !m_pager->hasMore())
+    if (!hasPager_() || pagerFetching_() || !pagerHasMore_())
         return;
+    if (m_versionPager) {
+        m_versionPager->fetchNext(m_run.get(), [this](const s3::Result<s3::ListObjectVersionsPage>& page) {
+            onVersionPage_(page);
+        });
+        return;
+    }
     m_pager->fetchNext(m_run.get(), [this](const s3::Result<s3::ListPage>& page) { onPage_(page); });
+}
+
+void ObjectTableModel::listingFailed_(const s3::Error& error)
+{
+    if (error.category == s3::ErrorCategory::Cancelled)
+        return;   // a replaced session; sessionStopped lists again
+    m_error = error;
+    m_errorText = ConnectionTester::describe(m_error);
+    m_fresh.clear();
+    m_freshEnds.clear();
+    setState_(State::Error);   // a stale listing stays, still marked stale
+}
+
+void ObjectTableModel::onVersionPage_(const s3::Result<s3::ListObjectVersionsPage>& page)
+{
+    if (!page) {
+        listingFailed_(page.error());
+        return;
+    }
+    std::vector<Row> folders;
+    std::vector<Row> objects;
+    parseVersionPage_(*page, folders, objects);
+    pageArrived_(std::move(folders), std::move(objects));
 }
 
 void ObjectTableModel::onPage_(const s3::Result<s3::ListPage>& page)
 {
     if (!page) {
-        if (page.error().category == s3::ErrorCategory::Cancelled)
-            return;   // a replaced session; sessionStopped lists again
-        m_error = page.error();
-        m_errorText = ConnectionTester::describe(m_error);
-        m_fresh.clear();
-        m_freshEnds.clear();
-        setState_(State::Error);   // a stale listing stays, still marked stale
+        listingFailed_(page.error());
         return;
     }
-
     std::vector<Row> folders;
     std::vector<Row> objects;
     parsePage_(*page, folders, objects);
+    pageArrived_(std::move(folders), std::move(objects));
+}
 
+void ObjectTableModel::pageArrived_(std::vector<Row>&& folders, std::vector<Row>&& objects)
+{
     if (m_stale) {
         // Refreshing a cached listing: collect the same pages, then swap.
         for (Row& r : folders)
@@ -387,7 +441,7 @@ void ObjectTableModel::onPage_(const s3::Result<s3::ListPage>& page)
             m_fresh.push_back(std::move(r));
         m_freshEnds.push_back(m_fresh.size());
         ++m_freshPages;
-        if (m_freshPages >= m_stalePages || !m_pager->hasMore())
+        if (m_freshPages >= m_stalePages || !pagerHasMore_())
             swapInFresh_();
         else
             fetchPage_();
@@ -398,11 +452,11 @@ void ObjectTableModel::onPage_(const s3::Result<s3::ListPage>& page)
     const bool empty = folders.empty() && objects.empty();
     appendRows_(std::move(folders), std::move(objects));
 
-    setState_(m_pager->hasMore() ? State::Ready : State::Complete);
+    setState_(pagerHasMore_() ? State::Ready : State::Complete);
     emit pageLoaded();
     // A page without rows brings no rows to scroll to — the view would not
     // ask again.
-    if (empty && m_pager->hasMore())
+    if (empty && pagerHasMore_())
         fetchPage_();
 }
 
@@ -427,6 +481,35 @@ void ObjectTableModel::parsePage_(const s3::ListPage& page, std::vector<Row>& fo
         r.size = e.size;
         r.mtimeMs = e.lastModified.isValid() ? e.lastModified.toMSecsSinceEpoch() : 0;
         r.storageClass = internStorageClass_(e.storageClass);
+        objects.push_back(std::move(r));
+    }
+}
+
+void ObjectTableModel::parseVersionPage_(const s3::ListObjectVersionsPage& page, std::vector<Row>& folders,
+                                         std::vector<Row>& objects)
+{
+    const qsizetype prefixLen = m_prefix.size();
+    folders.reserve(size_t(page.commonPrefixes.size()));
+    for (const QString& p : page.commonPrefixes) {
+        if (p.size() <= prefixLen)
+            continue;
+        Row r;
+        r.key = p;
+        r.flags = Folder;
+        folders.push_back(std::move(r));
+    }
+    objects.reserve(size_t(page.entries.size()));
+    for (const s3::VersionEntry& e : page.entries) {
+        if (e.key == m_prefix)
+            continue;   // the folder's own marker object
+        Row r;
+        r.key = e.key;
+        r.size = e.size;
+        r.mtimeMs = e.lastModified.isValid() ? e.lastModified.toMSecsSinceEpoch() : 0;
+        r.storageClass = internStorageClass_(e.storageClass);
+        r.flags = quint8((e.isLatest ? 0 : Older) | (e.isDeleteMarker ? DeleteMarker : 0));
+        r.version = quint32(m_versionIds.size());
+        m_versionIds.push_back(e.versionId);
         objects.push_back(std::move(r));
     }
 }
@@ -534,7 +617,8 @@ void ObjectTableModel::sort(int column, Qt::SortOrder order)
         keys.reserve(m_rows.size());
         for (quint32 i : m_order) {
             const Row& r = m_rows[i];
-            keys.push_back({i, bool(r.flags & Folder), r.size, r.mtimeMs, m_storageClasses[r.storageClass], nameOf_(r)});
+            keys.push_back({i, bool(r.flags & Folder), m_mode == Mode::Versions, r.size, r.mtimeMs,
+                            m_storageClasses[r.storageClass], nameOf_(r)});
         }
         applyOrder_(sortedOrder(std::move(keys), column, order, m_collator), m_orderVersion);
         return;
@@ -560,7 +644,8 @@ void ObjectTableModel::runSort_()
     keys.reserve(m_order.size());
     for (quint32 i : m_order) {
         const Row& r = m_rows[i];
-        keys.push_back({i, bool(r.flags & Folder), r.size, r.mtimeMs, m_storageClasses[r.storageClass], nameOf_(r)});
+        keys.push_back({i, bool(r.flags & Folder), m_mode == Mode::Versions, r.size, r.mtimeMs,
+                        m_storageClasses[r.storageClass], nameOf_(r)});
     }
     m_sortRunning = true;
     const int column = m_sortColumn;
@@ -673,6 +758,16 @@ int ObjectTableModel::rowOfKey(const QString& key) const
     return -1;
 }
 
+int ObjectTableModel::rowOfVersion(const QString& key, const QString& versionId) const
+{
+    for (size_t i = 0; i < m_view.size(); ++i) {
+        const Row& r = m_rows[m_view[i]];
+        if (r.key == key && m_versionIds[r.version] == versionId)
+            return int(i);
+    }
+    return -1;
+}
+
 // --- QAbstractItemModel ------------------------------------------------------
 
 int ObjectTableModel::rowCount(const QModelIndex& parent) const
@@ -687,7 +782,7 @@ int ObjectTableModel::columnCount(const QModelIndex& parent) const
 
 bool ObjectTableModel::canLoadMore() const
 {
-    return m_pager && m_state == State::Ready && !m_stale && m_pager->hasMore() && !m_pager->isFetching();
+    return hasPager_() && m_state == State::Ready && !m_stale && pagerHasMore_() && !pagerFetching_();
 }
 
 void ObjectTableModel::loadMore()
@@ -699,7 +794,7 @@ void ObjectTableModel::loadMore()
 Qt::ItemFlags ObjectTableModel::flags(const QModelIndex& index) const
 {
     Qt::ItemFlags f = QAbstractTableModel::flags(index);
-    if (index.isValid())
+    if (index.isValid() && m_mode != Mode::Versions)   // versions are not moved around
         f |= Qt::ItemIsDragEnabled;
     return f;
 }
@@ -742,6 +837,7 @@ QVariant ObjectTableModel::data(const QModelIndex& index, int role) const
         return {};
     const Row& r = rowAt_(index.row());
     const bool folder = r.flags & Folder;
+    const bool marker = r.flags & DeleteMarker;
     const QDateTime modified = (folder || r.mtimeMs == 0)
                                    ? QDateTime()
                                    : QDateTime::fromMSecsSinceEpoch(r.mtimeMs, QTimeZone::UTC);
@@ -752,17 +848,27 @@ QVariant ObjectTableModel::data(const QModelIndex& index, int role) const
         case NameColumn:
             return nameOf_(r);
         case SizeColumn:
-            return folder ? QStringLiteral("—") : QLocale().formattedDataSize(r.size);
+            return folder || marker ? QStringLiteral("—") : QLocale().formattedDataSize(r.size);
         case ModifiedColumn:
             return modified.isValid() ? QLocale().toString(modified.toLocalTime(), QLocale::ShortFormat)
                                       : QStringLiteral("—");
         case StorageClassColumn:
-            return folder ? QStringLiteral("—") : m_storageClasses[r.storageClass];
+            return folder || marker ? QStringLiteral("—") : m_storageClasses[r.storageClass];
+        case VersionColumn:
+            if (marker)
+                return tr("delete marker");
+            return m_versionIds[r.version] == QLatin1String("null") ? tr("null (unversioned)") : m_versionIds[r.version];
         default:
             return {};
         }
     case Qt::ToolTipRole:
-        return index.column() == NameColumn ? QVariant(r.key) : QVariant();
+        if (index.column() == VersionColumn)
+            return m_versionIds[r.version].isEmpty() ? QVariant() : QVariant(m_versionIds[r.version]);
+        if (index.column() != NameColumn)
+            return {};
+        if (marker)
+            return tr("%1 — deleted here (a delete marker hides the versions below)").arg(r.key);
+        return (r.flags & Older) ? tr("%1 — an earlier version").arg(r.key) : QVariant(r.key);
     case Qt::TextAlignmentRole:
         return index.column() == SizeColumn ? QVariant(Qt::AlignRight | Qt::AlignVCenter) : QVariant();
     case KeyRole:
@@ -777,6 +883,12 @@ QVariant ObjectTableModel::data(const QModelIndex& index, int role) const
         return m_storageClasses[r.storageClass];
     case NameRole:
         return nameOf_(r);
+    case VersionIdRole:
+        return m_versionIds[r.version];
+    case IsLatestRole:
+        return !(r.flags & Older);
+    case IsDeleteMarkerRole:
+        return marker;
     default:
         return {};
     }
@@ -796,6 +908,8 @@ QVariant ObjectTableModel::headerData(int section, Qt::Orientation orientation, 
             return tr("Modified");
         case StorageClassColumn:
             return tr("Class");
+        case VersionColumn:
+            return tr("Version");
         default:
             return {};
         }

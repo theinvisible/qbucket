@@ -5,6 +5,8 @@
 #include "support/FakeBucket.h"
 #include "support/FakeKeychainBackend.h"
 
+#include <qbucket/s3/testing/FakeObjectStore.h>
+
 #include <QAbstractItemModelTester>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -171,6 +173,73 @@ private slots:
         QVERIFY(!isFolder(model, 0));
         QVERIFY(!m_server->requests().first().hasQueryItem("delimiter")
                 || m_server->requests().first().queryItem("delimiter").isEmpty());
+    }
+
+    void versionsModeListsEveryVersionGrouped()
+    {
+        FakeObjectStore store(m_server.get());   // replaces the FakeBucket fallback
+        const QString b = QStringLiteral("bkt");
+        store.createBucket(b);
+        store.setVersioning(b, QStringLiteral("Enabled"));
+        store.putObject(b, QStringLiteral("docs/"), QByteArray());   // the folder's marker object
+        for (int i = 0; i < 996; ++i)
+            store.putObject(b, QStringLiteral("docs/a%1").arg(i, 3, 10, QLatin1Char('0')), "x");
+        store.putObject(b, QStringLiteral("docs/gone.txt"), "old");
+        const QString marker = store.deleteObject(b, QStringLiteral("docs/gone.txt"));
+        QStringList zIds;   // newest first; the first page (1000 entries) ends inside m's versions
+        for (int i = 0; i < 3; ++i)
+            zIds.prepend(store.putObject(b, QStringLiteral("docs/m.txt"), QByteArray(i + 1, 'z')));
+        store.putObject(b, QStringLiteral("docs/sub/c"), "c");
+
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, b, QStringLiteral("docs/"), ObjectTableModel::Mode::Versions);
+        // "docs/" (hidden) + 996 + gone's two entries + m's newest = 1000 entries
+        QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 999, 10000);
+        QVERIFY(m_server->requests().first().hasQueryItem("versions"));
+        model.loadMore();
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        QCOMPARE(model.rowCount(), 1 + 996 + 2 + 3);
+        QCOMPARE(model.loadedObjects(), 996 + 2 + 3);   // "versions"
+
+        QCOMPARE(name(model, 0), QStringLiteral("sub"));
+        QVERIFY(isFolder(model, 0));
+        // The deleted key: its marker first, then the version it hides.
+        const int g = model.rowOfKey(QStringLiteral("docs/gone.txt"));
+        QVERIFY(model.index(g, 0).data(ObjectTableModel::IsDeleteMarkerRole).toBool());
+        QVERIFY(model.index(g, 0).data(ObjectTableModel::IsLatestRole).toBool());
+        QCOMPARE(model.index(g, 0).data(ObjectTableModel::VersionIdRole).toString(), marker);
+        QCOMPARE(model.index(g, ObjectTableModel::SizeColumn).data().toString(), QStringLiteral("—"));
+        QVERIFY(!model.index(g + 1, 0).data(ObjectTableModel::IsDeleteMarkerRole).toBool());
+        QVERIFY(!model.index(g + 1, 0).data(ObjectTableModel::IsLatestRole).toBool());
+        // m's versions across the page boundary, newest first.
+        const auto zRows = [&] {
+            QStringList ids;
+            for (int r = 0; r < model.rowCount(); ++r) {
+                if (model.index(r, 0).data(ObjectTableModel::KeyRole).toString() == QLatin1String("docs/m.txt"))
+                    ids.append(model.index(r, 0).data(ObjectTableModel::VersionIdRole).toString());
+            }
+            return ids;
+        };
+        QCOMPARE(zRows(), zIds);
+        QCOMPARE(model.rowOfVersion(QStringLiteral("docs/m.txt"), zIds.last()), model.rowCount() - 1);
+        QCOMPARE(model.index(model.rowCount() - 1, ObjectTableModel::VersionColumn).data(Qt::ToolTipRole).toString(), zIds.last());
+        QVERIFY(!(model.flags(model.index(1, 0)) & Qt::ItemIsDragEnabled));   // versions are not dragged
+
+        // By name, descending: m first — its versions still newest first.
+        model.sort(ObjectTableModel::NameColumn, Qt::DescendingOrder);
+        QTRY_VERIFY_WITH_TIMEOUT(!model.isSorting(), 10000);
+        QCOMPARE(name(model, 0), QStringLiteral("sub"));
+        QCOMPARE(model.index(1, 0).data(ObjectTableModel::KeyRole).toString(), QStringLiteral("docs/m.txt"));
+        QCOMPARE(zRows(), zIds);
+
+        // Never shown from the cache: back from Folders, it lists afresh.
+        model.sort(-1);
+        model.setLocation(m_account, b, QStringLiteral("docs/"), ObjectTableModel::Mode::Folders);
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), State::Complete, 10000);
+        model.setLocation(m_account, b, QStringLiteral("docs/"), ObjectTableModel::Mode::Versions);
+        QVERIFY(!model.isStale());
+        QCOMPARE(model.state(), State::Loading);
+        QTRY_COMPARE_WITH_TIMEOUT(model.rowCount(), 999, 10000);
     }
 
     void anErrorKeepsTheRowsAndSaysSo()
