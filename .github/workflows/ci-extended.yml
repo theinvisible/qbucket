@@ -173,9 +173,15 @@ jobs:
           ./build-consumer/s3ls --version
 
   # ---------------------------------------------------------------------------
+  # Four runners with a quarter of the files each; clang-tidy alone took
+  # 40 min on one. Only moc's output is built, not the whole project.
   clang-tidy:
-    name: clang-tidy
+    name: clang-tidy (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v7
 
@@ -199,15 +205,14 @@ jobs:
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_GLOBAL_AUTOGEN_TARGET=ON
 
-      # Build first: moc/uic/rcc output must exist for clang-tidy to parse.
-      - name: Build
-        run: cmake --build build -j
+      # moc/uic output must exist for clang-tidy to parse; nothing else.
+      - name: Generate moc output
+        run: cmake --build build --target autogen -j
 
       - name: clang-tidy
-        run: >
-          run-clang-tidy -p build -quiet
-          '^(?!.*_autogen).*/(src|tests)/.*\.cpp$'
+        run: tools/run-clang-tidy.sh build ${{ matrix.shard }} 4
 
   # ---------------------------------------------------------------------------
   flatpak:

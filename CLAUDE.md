@@ -187,8 +187,10 @@ cmake --build build-s3-asan && ctest --test-dir build-s3-asan
 # Release build with -Werror (GCC -O3 warns differently than Debug)
 cmake -S . -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DQBUCKET_WARNINGS_AS_ERRORS=ON
 cmake --build build-release && ctest --test-dir build-release
-# clang-tidy 18 like CI (pip/wheel `clang-tidy==18.1.8`), on build/compile_commands.json
-run-clang-tidy -p build -quiet '^(?!.*_autogen).*/(src|tests)/.*\.cpp$'
+# clang-tidy 18 like CI (pip/wheel `clang-tidy==18.1.8`, binary via CLANG_TIDY),
+# on build/compile_commands.json; CI runs it as 4 shards (`… build 0 4`).
+# Check the exit code — a missing binary must not look like "no findings".
+tools/run-clang-tidy.sh build
 # real S3 servers in Docker (Ceph RGW, VersityGW, Garage): the library's
 # it_s3_backend and the app's jobs (it_operations)
 libs/qbucket-s3/tests/docker/it-up.sh
