@@ -8,7 +8,10 @@
 #include "ui/ObjectRowDelegate.h"
 #include "ui/ThemeManager.h"
 
+#include <qbucket/s3/testing/FakeObjectStore.h>
+
 #include <QLabel>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTreeView>
@@ -143,6 +146,54 @@ private slots:
         pane.clear();
         QTest::qWait(DetailPane::kHeadDelayMs * 2);
         QCOMPARE(m_server->requestCount(), 0);
+    }
+
+    void versionsTabAndVersionRows()
+    {
+        FakeObjectStore store(m_server.get());   // "vbkt"; the routes above stay for "bkt"
+        const QString b = QStringLiteral("vbkt");
+        store.createBucket(b);
+        store.setVersioning(b, QStringLiteral("Enabled"));
+        const QString v1 = store.putObject(b, QStringLiteral("doc.txt"), "one", QStringLiteral("text/plain"));
+        const QString v2 = store.putObject(b, QStringLiteral("doc.txt"), "two!!", QStringLiteral("text/plain"));
+        store.putObject(b, QStringLiteral("doc.txt.bak"), "other key, same prefix");
+        store.putObject(b, QStringLiteral("gone.txt"), "x");
+        const QString marker = store.deleteObject(b, QStringLiteral("gone.txt"));
+        ObjectTableModel model(m_sessions.get());
+        model.setLocation(m_account, b, QString(), ObjectTableModel::Mode::Versions);
+        QTRY_COMPARE_WITH_TIMEOUT(model.state(), ObjectTableModel::State::Complete, 10000);
+
+        DetailPane pane(m_sessions.get());
+        QSignalSpy head(&pane, &DetailPane::headFinished);
+        QSignalSpy versions(&pane, &DetailPane::versionsLoaded);
+        pane.setSelection(m_account, b, {model.index(model.rowOfVersion(QStringLiteral("doc.txt"), v2), 0)});
+        pane.tabs()->setCurrentIndex(DetailPane::VersionsTab);
+        QVERIFY(versions.size() == 1 || versions.wait(10000));
+        QCOMPARE(pane.versionList()->topLevelItemCount(), 2);   // not doc.txt.bak's
+        QCOMPARE(pane.versionList()->topLevelItem(0)->data(0, Qt::UserRole).toString(), v2);
+        QCOMPARE(pane.versionList()->topLevelItem(1)->data(0, Qt::UserRole).toString(), v1);
+        QVERIFY(pane.versionList()->topLevelItem(0)->isSelected());   // the row shown
+
+        // The earlier version: HEAD of that version, read-only.
+        pane.tabs()->setCurrentIndex(DetailPane::PropertiesTab);
+        head.clear();
+        pane.setSelection(m_account, b, {model.index(model.rowOfVersion(QStringLiteral("doc.txt"), v1), 0)});
+        QVERIFY(head.wait(10000));
+        QCOMPARE(pane.versionId(), v1);
+        QCOMPARE(pane.meta().size, 3);
+        QCOMPARE(pane.meta().versionId, v1);
+        QCOMPARE(m_server->requests().last().queryItem("versionId"), v1.toLatin1());
+        const auto* edit = pane.findChild<QPushButton*>(QStringLiteral("editMetadata"));
+        QVERIFY(edit && !edit->isEnabled());
+        QVERIFY(edit->toolTip().contains(QLatin1String("earlier version")));
+
+        // A delete marker: nothing to ask the server.
+        const int before = m_server->requestCount();
+        pane.setSelection(m_account, b, {model.index(model.rowOfKey(QStringLiteral("gone.txt")), 0)});
+        QVERIFY(fieldTexts(pane).join(u'\n').contains(QLatin1String("Delete marker")));
+        QVERIFY(fieldTexts(pane).contains(marker));
+        QTest::qWait(DetailPane::kHeadDelayMs * 3);
+        QCOMPARE(m_server->requestCount(), before);
     }
 
     void anErrorIsShown()

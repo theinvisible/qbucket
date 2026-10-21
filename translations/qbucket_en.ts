@@ -97,7 +97,23 @@
 <context>
     <name>qbucket::DetailPane</name>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="451"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="371"/>
+        <source>Showing the newest %n version(s); open the versions view for all.</source>
+        <translation>
+            <numerusform>Showing the newest version; open the versions view for all.</numerusform>
+            <numerusform>Showing the newest %n versions; open the versions view for all.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/DetailPane.cpp" line="373"/>
+        <source>%n version(s), newest first.</source>
+        <translation>
+            <numerusform>%n version.</numerusform>
+            <numerusform>%n versions, newest first.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/ui/DetailPane.cpp" line="603"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n item</numerusform>
@@ -105,7 +121,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="454"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="606"/>
         <source>%n folder(s), their contents not counted yet</source>
         <translation>
             <numerusform>%n folder, its contents not counted yet</numerusform>
@@ -113,7 +129,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="599"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="775"/>
         <source>counting… %n object(s), %1 so far</source>
         <translation>
             <numerusform>counting… %n object, %1 so far</numerusform>
@@ -121,7 +137,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/ui/DetailPane.cpp" line="609"/>
+        <location filename="../../src/ui/DetailPane.cpp" line="785"/>
         <source>%n object(s), %1</source>
         <translation>
             <numerusform>%n object, %1</numerusform>

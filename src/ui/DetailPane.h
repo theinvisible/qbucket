@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qbucket/s3/ListObjectVersionsPager.h>
 #include <qbucket/s3/Types.h>
 
 #include <QModelIndexList>
@@ -31,7 +32,10 @@ class OperationController;
 // Metadata dialog), its tags and its access (canned ACL; the grants shown
 // read-only) — both read only while their tab is shown, written through the
 // OperationController, and hidden where the server has no such feature. A
-// summary for a folder or several rows. Versions arrive with M5.
+// summary for a folder or several rows. The Versions tab lists the
+// object's versions and delete markers (only while shown). A row of the
+// versions view shows that version (HEAD, tags, ACL of it — editable only
+// for the current one); a delete marker has nothing to ask for.
 class DetailPane : public QWidget {
     Q_OBJECT
 
@@ -51,6 +55,9 @@ public:
     [[nodiscard]] QComboBox* cannedAclBox() const { return m_canned; }
     [[nodiscard]] QPushButton* applyAccessButton() const { return m_applyAccess; }
     [[nodiscard]] QTreeWidget* grantList() const { return m_grants; }
+    [[nodiscard]] QTreeWidget* versionList() const { return m_versionList; }
+    // The version shown (a row of the versions view); empty: the current object.
+    [[nodiscard]] QString versionId() const { return m_versionId; }
     // A folder (or several rows with folders): what they hold, on request.
     [[nodiscard]] QPushButton* sizeButton() const { return m_sizeButton; }
     [[nodiscard]] QLabel* sizeLabel() const { return m_sizeLabel; }
@@ -62,10 +69,14 @@ public:
     // The object last shown (tests).
     [[nodiscard]] const s3::ObjectMeta& meta() const { return m_meta; }
 
+    // The longest version list the tab shows.
+    static constexpr int kMaxVersionsShown = 5000;
+
 signals:
     void headFinished();
     void tagsLoaded();
     void accessLoaded();
+    void versionsLoaded();
     // The Metadata tab's "Edit…".
     void editMetadataRequested();
 
@@ -77,10 +88,16 @@ private:
     void resetFields_();
     void buildTagsTab_();
     void buildAccessTab_();
+    void buildVersionsTab_();
     // The tab shown (or the selection settled): load what it needs.
     void loadVisibleTab_();
     void loadTags_();
     void loadAccess_();
+    void loadVersions_();
+    void fetchVersions_();
+    void showVersions_();
+    // Editing applies to the current version only.
+    [[nodiscard]] bool showsOlderVersion_() const { return !m_versionId.isEmpty() && !m_latest; }
     void updateFeatureTabs_();
     void applyTags_();
     void applyAccess_();
@@ -91,7 +108,10 @@ private:
     AccountSessions* m_sessions;
     QUuid m_account;
     QString m_bucket;
-    QString m_key;
+    QString m_key;           // the object HEAD is asked for (not for a delete marker)
+    QString m_versionId;     // that version (a row of the versions view); empty: current
+    bool m_latest = true;    // the row is the key's current entry
+    QString m_versionsKey;   // the object whose versions the tab lists
     s3::ObjectMeta m_meta;
     QTimer m_headDelay;
     std::unique_ptr<QObject> m_run;   // context of the pending HeadObject
@@ -124,6 +144,15 @@ private:
     QComboBox* m_canned = nullptr;
     QPushButton* m_applyAccess = nullptr;
     QLabel* m_accessReason = nullptr;
+    QString m_versionsFor;   // key whose versions are shown / loading
+    std::unique_ptr<QObject> m_versionsRun;
+    std::unique_ptr<s3::ListObjectVersionsPager> m_versionsPager;
+    QList<s3::VersionEntry> m_versions;
+    bool m_versionsCapped = false;
+    QStackedWidget* m_versionsStack = nullptr;
+    QLabel* m_versionsHint = nullptr;
+    QTreeWidget* m_versionList = nullptr;
+    QLabel* m_versionsNote = nullptr;
     std::unique_ptr<FolderSizeTask> m_sizeTask;
     QPushButton* m_sizeButton = nullptr;   // in the form; gone with its rows
     QLabel* m_sizeLabel = nullptr;

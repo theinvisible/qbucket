@@ -111,7 +111,7 @@ DetailPane::DetailPane(AccountSessions* sessions, QWidget* parent)
     m_tabs->addTab(m_metaStack, tr("Metadata"));
 
     buildTagsTab_();
-    m_tabs->addTab(makeHint(tr("Versions arrive with a later version.")), tr("Versions"));
+    buildVersionsTab_();
     buildAccessTab_();
     connect(m_tabs, &QTabWidget::currentChanged, this, &DetailPane::loadVisibleTab_);
     lay->addWidget(m_tabs, 1);
@@ -215,6 +215,33 @@ void DetailPane::buildAccessTab_()
     m_tabs->addTab(m_accessStack, tr("Access"));
 }
 
+void DetailPane::buildVersionsTab_()
+{
+    m_versionsStack = new QStackedWidget;
+    m_versionsHint = makeHint(tr("Select an object to see its versions."));
+    m_versionsStack->addWidget(m_versionsHint);
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(8, 8, 8, 8);
+    m_versionList = new QTreeWidget;
+    m_versionList->setObjectName(QStringLiteral("versionList"));
+    m_versionList->setColumnCount(3);
+    m_versionList->setHeaderLabels({tr("Modified"), tr("Size"), tr("Version")});
+    m_versionList->setRootIsDecorated(false);
+    m_versionList->setUniformRowHeights(true);
+    m_versionList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_versionList->header()->setSectionResizeMode(QHeaderView::Interactive);
+    m_versionList->header()->resizeSection(0, 140);
+    m_versionList->header()->resizeSection(1, 80);
+    lay->addWidget(m_versionList, 1);
+    m_versionsNote = new QLabel;
+    m_versionsNote->setWordWrap(true);
+    m_versionsNote->setObjectName(QStringLiteral("hint"));
+    lay->addWidget(m_versionsNote);
+    m_versionsStack->addWidget(page);
+    m_tabs->addTab(m_versionsStack, tr("Versions"));
+}
+
 void DetailPane::addTagRow_(const QString& key, const QString& value)
 {
     const int row = m_tagTable->rowCount();
@@ -232,17 +259,121 @@ void DetailPane::updateFeatureTabs_()
         return m_caps->entry(m_account, m_bucket, f).state == s3::CapabilityState::Unsupported;
     };
     m_tabs->setTabVisible(TagsTab, !unsupported(s3::Feature::ObjectTagging));
+    m_tabs->setTabVisible(VersionsTab, !unsupported(s3::Feature::ObjectVersionsListing));
     m_tabs->setTabVisible(AccessTab, !unsupported(s3::Feature::ObjectAcl));
 }
 
 void DetailPane::loadVisibleTab_()
 {
+    if (m_tabs->currentIndex() == VersionsTab && !m_versionsKey.isEmpty() && m_versionsFor != m_versionsKey) {
+        loadVersions_();
+        return;
+    }
     if (m_key.isEmpty())
         return;
     if (m_tabs->currentIndex() == TagsTab && m_tagsFor != m_key)
         loadTags_();
     else if (m_tabs->currentIndex() == AccessTab && m_accessFor != m_key)
         loadAccess_();
+}
+
+// Every version and delete marker of one key: listed with the key as the
+// prefix, kept where the key matches exactly. Every key listed starts with
+// it and the key itself sorts first, so the first other key ends the walk.
+void DetailPane::loadVersions_()
+{
+    m_versionsFor = m_versionsKey;
+    m_versionsRun = std::make_unique<QObject>();
+    m_versions.clear();
+    m_versionsCapped = false;
+    m_versionsHint->setText(tr("Loading…"));
+    m_versionsStack->setCurrentIndex(0);
+    const s3::Result<s3::Session*> session = m_sessions ? m_sessions->session(m_account) : s3::Result<s3::Session*>(
+        s3::Error::make(s3::ErrorCategory::Internal, tr("not connected")));
+    if (!session) {
+        m_versionsHint->setText(ConnectionTester::describe(session.error()));
+        return;
+    }
+    s3::ListObjectVersionsParams p;
+    p.bucket = m_bucket;
+    p.prefix = m_versionsFor;
+    p.maxKeys = 1000;
+    m_versionsPager = std::make_unique<s3::ListObjectVersionsPager>(**session, p);
+    fetchVersions_();
+}
+
+void DetailPane::fetchVersions_()
+{
+    const QString key = m_versionsFor;
+    m_versionsPager->fetchNext(m_versionsRun.get(), [this, key](const s3::Result<s3::ListObjectVersionsPage>& page) {
+        if (key != m_versionsFor)
+            return;
+        if (!page) {
+            m_versionsHint->setText(page.error().category == s3::ErrorCategory::Unsupported
+                                        ? tr("This server keeps no object versions.")
+                                        : ConnectionTester::describe(page.error()));
+            updateFeatureTabs_();
+            emit versionsLoaded();
+            return;
+        }
+        bool pastKey = false;
+        for (const s3::VersionEntry& e : page->entries) {
+            if (e.key == key)
+                m_versions.append(e);
+            else
+                pastKey = true;
+        }
+        if (m_versions.size() >= kMaxVersionsShown) {
+            m_versionsCapped = true;
+            m_versions.resize(kMaxVersionsShown);
+            pastKey = true;
+        }
+        if (!pastKey && m_versionsPager->hasMore()) {
+            fetchVersions_();
+            return;
+        }
+        m_versionsPager.reset();
+        showVersions_();
+    });
+}
+
+void DetailPane::showVersions_()
+{
+    const QLocale locale;
+    m_versionList->clear();
+    for (const s3::VersionEntry& v : std::as_const(m_versions)) {
+        const QString when = locale.toString(v.lastModified.toLocalTime(), QLocale::ShortFormat);
+        const QString id = v.versionId == QLatin1String("null") ? tr("null (unversioned)") : v.versionId;
+        QString state;
+        if (v.isDeleteMarker)
+            state = v.isLatest ? tr("deleted (current)") : tr("deleted");
+        else if (v.isLatest)
+            state = tr("current");
+        auto* item = new QTreeWidgetItem(m_versionList, {when, v.isDeleteMarker ? QStringLiteral("—") : locale.formattedDataSize(v.size),
+                                                         state.isEmpty() ? id : QStringLiteral("%1 · %2").arg(state, id)});
+        item->setData(0, Qt::UserRole, v.versionId);
+        item->setToolTip(2, v.versionId);
+        if (v.isDeleteMarker) {
+            QFont f = item->font(0);
+            f.setItalic(true);
+            for (int c = 0; c < 3; ++c)
+                item->setFont(c, f);
+        }
+        if (v.versionId == m_versionId) {
+            item->setSelected(true);
+            m_versionList->setCurrentItem(item);
+        }
+    }
+    QString note;
+    if (m_versions.isEmpty())
+        note = tr("No versions — the bucket may not keep any.");
+    else if (m_versionsCapped)
+        note = tr("Showing the newest %n version(s); open the versions view for all.", nullptr, int(m_versions.size()));
+    else
+        note = tr("%n version(s), newest first.", nullptr, int(m_versions.size()));
+    m_versionsNote->setText(note);
+    m_versionsStack->setCurrentIndex(1);
+    emit versionsLoaded();
 }
 
 void DetailPane::loadTags_()
@@ -258,7 +389,7 @@ void DetailPane::loadTags_()
         return;
     }
     const QString key = m_key;
-    (*session)->getObjectTagging(m_bucket, key, QString(), m_tagsRun.get(), [this, key](const s3::Result<s3::ObjectTagging>& r) {
+    (*session)->getObjectTagging(m_bucket, key, m_versionId, m_tagsRun.get(), [this, key](const s3::Result<s3::ObjectTagging>& r) {
         if (key != m_key)
             return;
         if (!r) {
@@ -273,7 +404,9 @@ void DetailPane::loadTags_()
         for (const s3::Tag& t : r->tags)
             addTagRow_(t.key, t.value);
         OperationController::Check gate{false, tr("Read-only here.")};
-        if (m_ops)
+        if (showsOlderVersion_())
+            gate.reason = tr("An earlier version: only the current one can be changed.");
+        else if (m_ops)
             gate = m_ops->check(m_account, m_bucket, {s3::Feature::ObjectTaggingWrite}, true);
         m_applyTags->setEnabled(gate.allowed);
         m_tagsReason->setText(gate.allowed ? QString() : gate.reason);
@@ -298,7 +431,7 @@ void DetailPane::loadAccess_()
         return;
     }
     const QString key = m_key;
-    (*session)->getObjectAcl(m_bucket, key, QString(), m_accessRun.get(), [this, key](const s3::Result<s3::AccessControlPolicy>& r) {
+    (*session)->getObjectAcl(m_bucket, key, m_versionId, m_accessRun.get(), [this, key](const s3::Result<s3::AccessControlPolicy>& r) {
         if (key != m_key)
             return;
         if (!r) {
@@ -343,7 +476,9 @@ void DetailPane::loadAccess_()
             m_canned->setCurrentIndex(0);
         }
         OperationController::Check gate{false, tr("Read-only here.")};
-        if (m_ops)
+        if (showsOlderVersion_())
+            gate.reason = tr("An earlier version: only the current one can be changed.");
+        else if (m_ops)
             gate = m_ops->check(m_account, m_bucket, {s3::Feature::ObjectAclWrite}, true);
         m_canned->setEnabled(gate.allowed);
         m_applyAccess->setEnabled(gate.allowed);
@@ -401,8 +536,15 @@ void DetailPane::clear()
     m_headDelay.stop();
     m_run.reset();
     m_key.clear();
+    m_versionId.clear();
+    m_versionsKey.clear();
+    m_versionsRun.reset();
+    m_versionsPager.reset();
+    m_versionsFor.clear();
     m_meta = s3::ObjectMeta();
     showHint_(tr("Select an object to see its details."));
+    m_versionsHint->setText(tr("Select an object to see its versions."));
+    m_versionsStack->setCurrentIndex(0);
 }
 
 void DetailPane::setSelection(const QUuid& account, const QString& bucket, const QModelIndexList& rows)
@@ -411,18 +553,28 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
     m_run.reset();   // an answer for the previous selection is dropped
     m_tagsRun.reset();
     m_accessRun.reset();
+    m_versionsRun.reset();
+    m_versionsPager.reset();
     m_sizeTask.reset();   // a count of the previous selection stops
     m_tagsFor.clear();
     m_accessFor.clear();
+    m_versionsFor.clear();
     m_account = account;
     m_bucket = bucket;
     m_key.clear();
+    m_versionId.clear();
+    m_latest = true;
+    m_versionsKey.clear();
     m_meta = s3::ObjectMeta();
     updateFeatureTabs_();
     m_tagsHint->setText(tr("Select a single object to see its tags."));
     m_tagsStack->setCurrentIndex(0);
     m_accessHint->setText(tr("Select a single object to see who may access it."));
     m_accessStack->setCurrentIndex(0);
+    m_versionsHint->setText(tr("Select a single object to see its versions."));
+    m_versionsStack->setCurrentIndex(0);
+    m_editMetadata->setEnabled(true);
+    m_editMetadata->setToolTip(QString());
 
     QModelIndexList unique;
     QSet<int> seen;
@@ -475,6 +627,28 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
         m_metaStack->setCurrentIndex(0);
         return;
     }
+    m_versionsKey = key;
+    m_versionId = row.data(ObjectTableModel::VersionIdRole).toString();
+    m_latest = row.data(ObjectTableModel::IsLatestRole).toBool();
+    if (row.data(ObjectTableModel::IsDeleteMarkerRole).toBool()) {
+        // Nothing to ask the server about: the marker is all there is.
+        const QDateTime when = row.data(ObjectTableModel::ModifiedRole).toDateTime();
+        addField_(tr("Kind"), m_latest ? tr("Delete marker — the object is deleted here; earlier versions remain")
+                                       : tr("Delete marker (an earlier one)"), false);
+        if (when.isValid())
+            addField_(tr("Deleted"), QLocale().toString(when.toLocalTime(), QLocale::LongFormat));
+        addField_(tr("Version ID"), m_versionId);
+        m_metaHint->setText(tr("A delete marker has no content, headers or metadata."));
+        m_metaStack->setCurrentIndex(0);
+        m_tagsHint->setText(tr("A delete marker has no tags."));
+        m_accessHint->setText(tr("A delete marker has no permissions."));
+        loadVisibleTab_();
+        return;
+    }
+    if (showsOlderVersion_()) {
+        m_editMetadata->setEnabled(false);
+        m_editMetadata->setToolTip(tr("An earlier version: only the current one can be changed."));
+    }
     // What the listing already knows, at once; the rest after HeadObject.
     addField_(tr("Size"), exactSize(row.data(ObjectTableModel::SizeRole).toLongLong()));
     addField_(tr("Details"), tr("Loading…"), false);
@@ -482,6 +656,8 @@ void DetailPane::setSelection(const QUuid& account, const QString& bucket, const
     m_metaStack->setCurrentIndex(0);
     m_key = key;
     m_headDelay.start();
+    if (m_tabs->currentIndex() == VersionsTab)
+        loadVisibleTab_();
 }
 
 void DetailPane::requestHead_()
@@ -495,7 +671,7 @@ void DetailPane::requestHead_()
     }
     m_run = std::make_unique<QObject>();
     const QString key = m_key;
-    (*session)->headObject(m_bucket, key, QString(), m_run.get(), [this, key](const s3::Result<s3::ObjectMeta>& r) {
+    (*session)->headObject(m_bucket, key, m_versionId, m_run.get(), [this, key](const s3::Result<s3::ObjectMeta>& r) {
         if (key != m_key)
             return;
         if (r) {
@@ -527,7 +703,7 @@ void DetailPane::showMeta_(const s3::ObjectMeta& meta)
     addField_(tr("Content type"), meta.contentType.isEmpty() ? tr("(none)") : meta.contentType);
     addField_(tr("ETag"), meta.etag);
     if (!meta.versionId.isEmpty())
-        addField_(tr("Version ID"), meta.versionId);
+        addField_(tr("Version ID"), showsOlderVersion_() ? tr("%1 (an earlier version)").arg(meta.versionId) : meta.versionId);
 
     m_headers->clear();
     auto* system = new QTreeWidgetItem(m_headers, {tr("Headers")});

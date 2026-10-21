@@ -1294,14 +1294,14 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message>
         <location filename="../src/ui/DetailPane.cpp" line="62"/>
-        <location filename="../src/ui/DetailPane.cpp" line="480"/>
+        <location filename="../src/ui/DetailPane.cpp" line="654"/>
         <source>Details</source>
         <translation>Details</translation>
     </message>
     <message>
         <location filename="../src/ui/DetailPane.cpp" line="72"/>
-        <location filename="../src/ui/DetailPane.cpp" line="405"/>
-        <location filename="../src/ui/DetailPane.cpp" line="436"/>
+        <location filename="../src/ui/DetailPane.cpp" line="545"/>
+        <location filename="../src/ui/DetailPane.cpp" line="588"/>
         <source>Select an object to see its details.</source>
         <translation>Wähle ein Objekt, um seine Details zu sehen.</translation>
     </message>
@@ -1337,7 +1337,7 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Tags</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="114"/>
+        <location filename="../src/ui/DetailPane.cpp" line="242"/>
         <source>Versions</source>
         <translation>Versionen</translation>
     </message>
@@ -1347,12 +1347,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Zugriff</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="451"/>
+        <location filename="../src/ui/DetailPane.cpp" line="603"/>
         <source>Selection</source>
         <translation>Auswahl</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="451"/>
+        <location filename="../src/ui/DetailPane.cpp" line="603"/>
         <source>%n item(s)</source>
         <translation>
             <numerusform>%n Eintrag</numerusform>
@@ -1360,59 +1360,62 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="452"/>
+        <location filename="../src/ui/DetailPane.cpp" line="604"/>
         <source>Size of the objects</source>
         <translation>Größe der Objekte</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="454"/>
+        <location filename="../src/ui/DetailPane.cpp" line="606"/>
         <source>Folders</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="462"/>
+        <location filename="../src/ui/DetailPane.cpp" line="614"/>
         <source>Select a single object to see its headers and metadata.</source>
         <translation>Wähle ein einzelnes Objekt, um seine Header und Metadaten zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="469"/>
-        <location filename="../src/ui/DetailPane.cpp" line="520"/>
+        <location filename="../src/ui/DetailPane.cpp" line="621"/>
+        <location filename="../src/ui/DetailPane.cpp" line="696"/>
         <source>Name</source>
         <translation>Name</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="470"/>
-        <location filename="../src/ui/DetailPane.cpp" line="506"/>
-        <location filename="../src/ui/DetailPane.cpp" line="521"/>
+        <location filename="../src/ui/DetailPane.cpp" line="622"/>
+        <location filename="../src/ui/DetailPane.cpp" line="682"/>
+        <location filename="../src/ui/DetailPane.cpp" line="697"/>
         <source>Location</source>
         <translation>Ort</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="472"/>
+        <location filename="../src/ui/DetailPane.cpp" line="624"/>
+        <location filename="../src/ui/DetailPane.cpp" line="636"/>
         <source>Kind</source>
         <translation>Art</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="472"/>
+        <location filename="../src/ui/DetailPane.cpp" line="624"/>
         <source>Folder (a common key prefix)</source>
         <translation>Ordner (ein gemeinsames Schlüsselpräfix)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="474"/>
+        <location filename="../src/ui/DetailPane.cpp" line="626"/>
         <source>Folders have no headers or metadata of their own.</source>
         <translation>Ordner haben keine eigenen Header oder Metadaten.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="479"/>
-        <location filename="../src/ui/DetailPane.cpp" line="523"/>
+        <location filename="../src/ui/DetailPane.cpp" line="229"/>
+        <location filename="../src/ui/DetailPane.cpp" line="653"/>
+        <location filename="../src/ui/DetailPane.cpp" line="699"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="252"/>
-        <location filename="../src/ui/DetailPane.cpp" line="292"/>
-        <location filename="../src/ui/DetailPane.cpp" line="480"/>
-        <location filename="../src/ui/DetailPane.cpp" line="481"/>
+        <location filename="../src/ui/DetailPane.cpp" line="289"/>
+        <location filename="../src/ui/DetailPane.cpp" line="383"/>
+        <location filename="../src/ui/DetailPane.cpp" line="425"/>
+        <location filename="../src/ui/DetailPane.cpp" line="654"/>
+        <location filename="../src/ui/DetailPane.cpp" line="655"/>
         <source>Loading…</source>
         <translation>Wird geladen…</translation>
     </message>
@@ -1420,11 +1423,6 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <location filename="../src/ui/DetailPane.cpp" line="102"/>
         <source>Edit…</source>
         <translation>Bearbeiten…</translation>
-    </message>
-    <message>
-        <location filename="../src/ui/DetailPane.cpp" line="114"/>
-        <source>Versions arrive with a later version.</source>
-        <translation>Versionen kommen mit einer späteren Version.</translation>
     </message>
     <message>
         <location filename="../src/ui/DetailPane.cpp" line="140"/>
@@ -1473,59 +1471,129 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Zugriff:</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="255"/>
-        <location filename="../src/ui/DetailPane.cpp" line="295"/>
+        <location filename="../src/ui/DetailPane.cpp" line="221"/>
+        <location filename="../src/ui/DetailPane.cpp" line="546"/>
+        <source>Select an object to see its versions.</source>
+        <translation>Ein Objekt auswählen, um seine Versionen zu sehen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="229"/>
+        <source>Version</source>
+        <translation>Version</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="292"/>
+        <location filename="../src/ui/DetailPane.cpp" line="386"/>
+        <location filename="../src/ui/DetailPane.cpp" line="428"/>
         <source>not connected</source>
         <translation>nicht verbunden</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="266"/>
+        <location filename="../src/ui/DetailPane.cpp" line="313"/>
+        <source>This server keeps no object versions.</source>
+        <translation>Dieser Server führt keine Objektversionen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="346"/>
+        <source>null (unversioned)</source>
+        <translation>null (unversioniert)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="349"/>
+        <source>deleted (current)</source>
+        <translation>gelöscht (aktuell)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="349"/>
+        <source>deleted</source>
+        <translation>gelöscht</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="351"/>
+        <source>current</source>
+        <translation>aktuell</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="369"/>
+        <source>No versions — the bucket may not keep any.</source>
+        <translation>Keine Versionen — der Bucket führt vermutlich keine.</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/DetailPane.cpp" line="371"/>
+        <source>Showing the newest %n version(s); open the versions view for all.</source>
+        <translation>
+            <numerusform>Die neueste Version wird gezeigt; alle in der Versionsansicht.</numerusform>
+            <numerusform>Die neuesten %n Versionen werden gezeigt; alle in der Versionsansicht.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ui/DetailPane.cpp" line="373"/>
+        <source>%n version(s), newest first.</source>
+        <translation>
+            <numerusform>%n Version, neueste zuerst.</numerusform>
+            <numerusform>%n Versionen, neueste zuerst.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="397"/>
         <source>This server has no object tags.</source>
         <translation>Dieser Server hat keine Objekt-Tags.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="275"/>
-        <location filename="../src/ui/DetailPane.cpp" line="345"/>
+        <location filename="../src/ui/DetailPane.cpp" line="406"/>
+        <location filename="../src/ui/DetailPane.cpp" line="478"/>
         <source>Read-only here.</source>
         <translation>Hier nur lesend.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="306"/>
+        <location filename="../src/ui/DetailPane.cpp" line="408"/>
+        <location filename="../src/ui/DetailPane.cpp" line="480"/>
+        <location filename="../src/ui/DetailPane.cpp" line="650"/>
+        <source>An earlier version: only the current one can be changed.</source>
+        <translation>Eine frühere Version: nur die aktuelle lässt sich ändern.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="439"/>
         <source>This server has no object permissions (ACLs).</source>
         <translation>Dieser Server hat keine Objekt-Berechtigungen (ACLs).</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="312"/>
+        <location filename="../src/ui/DetailPane.cpp" line="445"/>
         <source>Owner: %1</source>
         <translation>Owner: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="324"/>
+        <location filename="../src/ui/DetailPane.cpp" line="457"/>
         <source>Owner</source>
         <translation>Owner</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="342"/>
+        <location filename="../src/ui/DetailPane.cpp" line="475"/>
         <source>custom (grants above)</source>
         <translation>benutzerdefiniert (Grants oben)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="389"/>
+        <location filename="../src/ui/DetailPane.cpp" line="524"/>
         <source>custom</source>
         <translation>benutzerdefiniert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="422"/>
+        <location filename="../src/ui/DetailPane.cpp" line="570"/>
         <source>Select a single object to see its tags.</source>
         <translation>Wähle ein einzelnes Objekt, um seine Tags zu sehen.</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="424"/>
+        <location filename="../src/ui/DetailPane.cpp" line="572"/>
         <source>Select a single object to see who may access it.</source>
         <translation>Wähle ein einzelnes Objekt, um zu sehen, wer darauf zugreifen darf.</translation>
     </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="574"/>
+        <source>Select a single object to see its versions.</source>
+        <translation>Ein einzelnes Objekt auswählen, um seine Versionen zu sehen.</translation>
+    </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="454"/>
+        <location filename="../src/ui/DetailPane.cpp" line="606"/>
         <source>%n folder(s), their contents not counted yet</source>
         <translation>
             <numerusform>%n Ordner, sein Inhalt noch nicht gezählt</numerusform>
@@ -1533,69 +1601,106 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="507"/>
+        <location filename="../src/ui/DetailPane.cpp" line="636"/>
+        <source>Delete marker — the object is deleted here; earlier versions remain</source>
+        <translation>Löschmarker — das Objekt ist hier gelöscht; frühere Versionen bleiben</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="637"/>
+        <source>Delete marker (an earlier one)</source>
+        <translation>Löschmarker (ein früherer)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="639"/>
+        <source>Deleted</source>
+        <translation>Gelöscht</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="641"/>
+        <source>A delete marker has no content, headers or metadata.</source>
+        <translation>Ein Löschmarker hat keinen Inhalt, keine Header und keine Metadaten.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="643"/>
+        <source>A delete marker has no tags.</source>
+        <translation>Ein Löschmarker hat keine Tags.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="644"/>
+        <source>A delete marker has no permissions.</source>
+        <translation>Ein Löschmarker hat keine Berechtigungen.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="683"/>
         <source>Error</source>
         <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="525"/>
+        <location filename="../src/ui/DetailPane.cpp" line="229"/>
+        <location filename="../src/ui/DetailPane.cpp" line="701"/>
         <source>Modified</source>
         <translation>Geändert</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="526"/>
+        <location filename="../src/ui/DetailPane.cpp" line="702"/>
         <source>Storage class</source>
         <translation>Speicherklasse</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="527"/>
+        <location filename="../src/ui/DetailPane.cpp" line="703"/>
         <source>Content type</source>
         <translation>Inhaltstyp</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="527"/>
-        <location filename="../src/ui/DetailPane.cpp" line="543"/>
+        <location filename="../src/ui/DetailPane.cpp" line="703"/>
+        <location filename="../src/ui/DetailPane.cpp" line="719"/>
         <source>(none)</source>
         <translation>(keine)</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="528"/>
+        <location filename="../src/ui/DetailPane.cpp" line="704"/>
         <source>ETag</source>
         <translation>ETag</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="530"/>
+        <location filename="../src/ui/DetailPane.cpp" line="640"/>
+        <location filename="../src/ui/DetailPane.cpp" line="706"/>
         <source>Version ID</source>
         <translation>Versions-ID</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="533"/>
+        <location filename="../src/ui/DetailPane.cpp" line="706"/>
+        <source>%1 (an earlier version)</source>
+        <translation>%1 (eine frühere Version)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/DetailPane.cpp" line="709"/>
         <source>Headers</source>
         <translation>Header</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="534"/>
+        <location filename="../src/ui/DetailPane.cpp" line="710"/>
         <source>User metadata</source>
         <translation>Benutzer-Metadaten</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="566"/>
+        <location filename="../src/ui/DetailPane.cpp" line="742"/>
         <source>Contents</source>
         <translation>Inhalt</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="571"/>
+        <location filename="../src/ui/DetailPane.cpp" line="747"/>
         <source>not counted</source>
         <translation>nicht gezählt</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="574"/>
-        <location filename="../src/ui/DetailPane.cpp" line="603"/>
+        <location filename="../src/ui/DetailPane.cpp" line="750"/>
+        <location filename="../src/ui/DetailPane.cpp" line="779"/>
         <source>Calculate Size</source>
         <translation>Größe berechnen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="599"/>
+        <location filename="../src/ui/DetailPane.cpp" line="775"/>
         <source>counting… %n object(s), %1 so far</source>
         <translation>
             <numerusform>zähle… bisher %n Objekt, %1</numerusform>
@@ -1603,12 +1708,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="605"/>
+        <location filename="../src/ui/DetailPane.cpp" line="781"/>
         <source>not counted: %1</source>
         <translation>nicht gezählt: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/DetailPane.cpp" line="609"/>
+        <location filename="../src/ui/DetailPane.cpp" line="785"/>
         <source>%n object(s), %1</source>
         <translation>
             <numerusform>%n Objekt, %1</numerusform>
@@ -1616,12 +1721,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="619"/>
+        <location filename="../src/ui/DetailPane.cpp" line="795"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/DetailPane.cpp" line="620"/>
+        <location filename="../src/ui/DetailPane.cpp" line="796"/>
         <source>counting…</source>
         <translation>zähle…</translation>
     </message>
