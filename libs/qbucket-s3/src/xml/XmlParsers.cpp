@@ -4,6 +4,8 @@
 
 #include <QXmlStreamReader>
 
+#include <algorithm>
+
 namespace qbucket::s3::xml {
 namespace {
 
@@ -554,6 +556,16 @@ Result<ListObjectVersionsPage> parseListVersions(const QByteArray& body, bool pl
         return decodeError(QStringLiteral("delimiter"));
     if (!decodeValue(nextKeyMarker, encoded, plusIsSpace, &out.nextKeyMarker))
         return decodeError(QStringLiteral("NextKeyMarker"));
+    // S3 interleaves versions and markers by key, newest first; VersityGW
+    // lists every marker of the page before every version. Stable: an
+    // order that is right already stays as it is.
+    std::stable_sort(out.entries.begin(), out.entries.end(), [](const VersionEntry& a, const VersionEntry& b) {
+        if (a.key != b.key)
+            return a.key.toUtf8() < b.key.toUtf8();
+        if (a.isLatest != b.isLatest)
+            return a.isLatest;
+        return a.lastModified > b.lastModified;
+    });
     if (out.isTruncated && out.nextKeyMarker.isEmpty()) {
         // Continue after whatever sorts last: the last entry or common prefix.
         const QString lastKey = out.entries.isEmpty() ? QString() : out.entries.last().key;

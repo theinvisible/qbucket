@@ -350,6 +350,16 @@ private Q_SLOTS:
         QCOMPARE(noMarker->nextKeyMarker, QStringLiteral("a"));
         QCOMPARE(noMarker->nextVersionIdMarker, QStringLiteral("v1"));
 
+        // VersityGW: every marker of the page before every version — put in
+        // S3's order (by key, the current entry first, then newest first).
+        const auto grouped = xml::parseListVersions(fixture("list-versions-markers-first.xml"), false);
+        QVERIFY(grouped);
+        QStringList order;
+        for (const VersionEntry& e : grouped->entries)
+            order.append(e.versionId);
+        QCOMPARE(order, (QStringList{QStringLiteral("a-marker"), QStringLiteral("a-v1"), QStringLiteral("b-v2"),
+                                     QStringLiteral("b-old-marker"), QStringLiteral("b-v1")}));
+
         // Hetzner's answer to the capability probe (max-keys=1, empty bucket).
         QFile f(QStringLiteral(TEST_DATA_DIR "/hetzner/probe-versions-200.xml"));
         QVERIFY(f.open(QIODevice::ReadOnly));

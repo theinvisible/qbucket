@@ -222,6 +222,10 @@ version bump may break the API.
   scratch bucket (nbg1, 2026-10-21). An answer that looks like CreateBucket (Location
   header, 409 BucketAlreadyOwnedByYou / BucketAlreadyExists) is a Protocol
   error: a proxy dropped ?versioning.
+- `ListObjectVersionsPage` entries come by key, a key's current entry
+  first, then newest first — also from a server that lists every delete
+  marker of a page before every version (VersityGW; fixture
+  `list-versions-markers-first.xml`). Stable: S3's own order is kept.
 - `BucketState::mfaDelete`, read by the versioning probe (now through
   `xml::parseVersioningConfiguration`) and persisted.
 - ITs: `listVersionsPagesAndMarkers`, `deleteMarkerSemantics`,

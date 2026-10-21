@@ -96,9 +96,10 @@ struct PutBucketVersioningParams {
     VersioningStatus status = VersioningStatus::Enabled;   // Enabled or Suspended
 };
 
-// One page of ListObjectVersions. Versions and delete markers in the order
-// the server sent them (key, then newest first) — a key's versions may
-// continue on the next page.
+// One page of ListObjectVersions. Versions and delete markers by key, a
+// key's current entry first, then newest first (put in that order where a
+// server sends them otherwise) — a key's versions may continue on the next
+// page.
 struct ListObjectVersionsPage {
     QString bucket;
     QString prefix;

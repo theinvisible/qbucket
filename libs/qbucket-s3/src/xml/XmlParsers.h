@@ -69,7 +69,9 @@ QBUCKET_S3_EXPORT Result<ListMultipartUploadsPage> parseListMultipartUploads(con
                                                                              bool plusIsSpace);
 
 // <ListVersionsResult> of ListObjectVersions: <Version> and <DeleteMarker>
-// in document order; keys and markers decoded for encoding-type=url. A
+// in key order (UTF-8, as S3 sorts), a key's current entry first, then
+// newest first — also where a server lists all delete markers before all
+// versions (VersityGW); keys and markers decoded for encoding-type=url. A
 // truncated page without NextKeyMarker continues after its last entry.
 QBUCKET_S3_EXPORT Result<ListObjectVersionsPage> parseListVersions(const QByteArray& body, bool plusIsSpace);
 
