@@ -732,7 +732,18 @@ as a header); the Versions tab waits for M5. The §13.5 M4 items are in;
   export as list
 - Folder size / object count calculation as a cancellable background job
 
-### M5 — Versioning — **M** (3–4 days)
+### M5 — Versioning — **M** (3–4 days) — ✅ done (devlog 008)
+
+Implemented in 14 commits on `main` (library first). Deviations from the
+text below: no separate `VersionTableModel` — the Versions view is a mode of
+`ObjectTableModel`; the versioning switch went into a first
+`BucketPropertiesDialog` (General, Versioning) that M6 extends; `PUT
+?versioning` needs the write-only feature `BucketVersioningWrite` (Hetzner
+confirmed by canary + toggle on a guarded scratch bucket); added beyond
+the list: undelete of whole folders (optionally only what was deleted
+after a moment), "delete every version" (Shift+Del), links to a version.
+Permanent deletes are always typed to confirm; MFA delete refuses them;
+locked versions are reported, never bypassed (object lock: M6).
 
 - Get/PutBucketVersioning (enable/suspend) in bucket properties
 - `Versions` view mode: `VersionTableModel` (ListObjectVersions, paged),
@@ -1236,7 +1247,7 @@ regressions show up.
 | M2 | Capability enforcement in `OperationController` (`requires()`) + UI reasons/tooltips + "Server capabilities" page with change history, background re-validation timer + change notifications, `OperationController` skeleton, read-only + environment marker, plan/preview/verify for delete/rename, compact model, paging budgets, `bench/` |
 | M3 ✅ | Content-MD5 per part, download verification, `.qbpart` atomic finalize, conflict dialog, journal + crash/resume tests, QNAM pool, adaptive concurrency |
 | M4 ✅ | Copy→verify→delete moves, metadata merge with `copy-source-if-match`, conditional writes capability |
-| M5 | Versioning-aware confirmations, separate permanent-delete flow |
+| M5 ✅ | Versioning-aware confirmations, separate permanent-delete flow |
 | M6 | Read-back verification of every bucket config write, object-lock/governance safeguards |
 
 **Effect on the timeline:** roughly **+2 weeks** overall (fault-injection

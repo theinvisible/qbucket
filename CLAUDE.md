@@ -54,6 +54,9 @@ uploads / downloads, transfer panel, drag & drop in, incomplete uploads).
 **M4 done** — devlog 007 (copy / move, also between buckets; clipboard and
 internal drag & drop; headers / metadata / storage class edits; tags and
 canned ACLs; presigned links; folder size).
+**M5 done** — devlog 008 (versions view and tab, download / link / restore
+a version, delete versions for good, undelete, the versioning switch in
+Bucket Properties).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -115,8 +118,18 @@ What exists:
   `ObjectPropertyJob`, `PresignService`, `FolderSizeTask`;
   `models/ObjectSelection` (clipboard / drag), `ui/EditMetadataDialog`,
   `ui/PresignDialog`, DetailPane Tags / Access tabs and "Calculate Size".
+- Versions (M5), library: `ListObjectVersions` + `ListObjectVersionsPager`
+  (pages put in S3's order), delete markers on `Error`,
+  `Get/PutBucketVersioning`, write-only `BucketVersioningWrite`; the
+  `FakeObjectStore` keeps versions.
+- Versions (M5), app: `ObjectTableModel::Mode::Versions`, DetailPane
+  Versions tab, `VersionWalk`, `DeleteVersionsJob` (versions / everything /
+  undelete), `RestoreVersionsJob` (on `InPlaceCopy`), version downloads and
+  links, `SetBucketVersioningJob`, `ui/BucketPropertiesDialog`,
+  `ui/UndeleteDialog`; `CapabilityController::versioningOf()`.
 - `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
-  with the tests, run by hand, release builds only).
+  with the tests, run by hand, release builds only; `--version-keys` for
+  the versions view).
 - CI per push (`ci.yml`): Linux Release, Windows app, library as Windows DLL.
   Weekly / tags / on demand: `ci-extended.yml` (ASan/UBSan, library
   static/shared/LSan, clang-tidy, Flatpak), `s3-integration.yml` (Docker
@@ -124,7 +137,7 @@ What exists:
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M5** (versioning).
+Next: **M6** (bucket management).
 
 ## Devlog
 
@@ -198,10 +211,11 @@ cmake -S . -B build -DQBUCKET_S3_IT_LOCAL=ON && cmake --build build
 ctest --test-dir build -L docker
 # Hetzner (qbucket-it-* buckets with a guard object only):
 #   set -a; . ~/.config/qbucket-it/hetzner.env; set +a
-#   build/libs/qbucket-s3/tests/it_s3_backend    (+ QBUCKET_IT_SECOND_BUCKET=qbucket-it-lock)
+#   build/libs/qbucket-s3/tests/it_s3_backend    (+ QBUCKET_IT_SECOND_BUCKET=qbucket-it-lock
+#                                                   QBUCKET_IT_VERSIONING_BUCKET=qbucket-it-versioning)
 #   build/tests/it_operations; build/tests/it_browser   (it_browser: read-only account)
-# listing budgets (release build)
-build-release/bench/bench_listing --keys 100000 --flat-keys 1000000
+# listing budgets (release build; offscreen — the budgets' platform)
+QT_QPA_PLATFORM=offscreen build-release/bench/bench_listing --keys 100000 --flat-keys 1000000 --version-keys 250000
 # transfer budgets: GUI stalls while planning 1M files / uploading / browsing,
 # planning a 100k-object copy, counting a 1M-object folder
 build-release/bench/bench_transfer --files 1000000 --upload-mib 2048 --size-keys 1000000
@@ -334,6 +348,10 @@ Each of these cost time there; don't relearn them.
   sets it). On the real desktop (KDE / Wayland) an unfocused test window's
   clipboard never reaches the compositor and Klipper hands back its own
   content — clipboard tests fail there for no fault of the code.
+- **Heavy work one after the other, at `-j12`.** Two builds at `-j20` side
+  by side plus a 1M-row benchmark took the machine down (31 GB, no swap).
+  A reboot empties `/tmp` — the scratchpad's clang-tidy too; the scripts
+  then fail loudly.
 - **Debugging a hanging QtTest binary:** after an abort, QtTest's crash
   handler forks to print a stack and can deadlock on the malloc lock —
   `QTEST_DISABLE_STACK_DUMP=1` shows the real failure.
@@ -463,6 +481,13 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
   headers a REPLACE leaves out; Garage ignores the storage class on copies.
 - Storage classes per provider: Hetzner and Garage only STANDARD (Hetzner
   answers 400 InvalidArgument to STANDARD_IA).
+- **Versions:** a delete marker is only certain from `ListObjectVersions`
+  — RGW (Ceph, Hetzner) and VersityGW answer HEAD on a deleted key with a
+  bare 404. RGW sends no version ids on CopyObject. VersityGW lists a
+  page's markers before its versions (the parser re-sorts). `PUT
+  ?versioning` needs `bucket.versioning-write` (Hetzner: confirmed by
+  canary + toggle on `qbucket-it-versioning`, 2026-10-21); never sent with
+  MfaDelete. Destructive version jobs need the bucket probed first.
 - "Folders" are prefixes; a `prefix/` marker object may or may not exist.
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.

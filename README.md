@@ -4,15 +4,17 @@ A native desktop browser for **S3 and S3-compatible object storage** —
 Hetzner Object Storage, Ceph RGW, AWS S3 and others. Windows and Linux,
 MIT-licensed, built with C++20 and Qt 6 Widgets.
 
-> **Status: early development (M4 — object operations).** Accounts with
+> **Status: early development (M5 — versioning).** Accounts with
 > the secret in the system keychain, browsing buckets and folders of any
 > size, object details, the server's capabilities; new folder, delete,
 > rename; uploads and downloads of any size — multipart, verified by MD5,
 > resumable after a quit or a crash, with a transfer panel and drag & drop
 > from the file manager; copy / move (also between buckets) with Ctrl+C / X
 > / V and drag & drop; headers, metadata, storage class, tags and canned
-> ACLs; presigned links; folder sizes. Every change is planned, previewed,
-> verified and journaled. See [PLAN.md](PLAN.md).
+> ACLs; presigned links; folder sizes; object versions — browse, download,
+> restore, delete for good, undelete folders, switch a bucket's versioning.
+> Every change is planned, previewed, verified and journaled. See
+> [PLAN.md](PLAN.md).
 
 ![QBucket browsing a Hetzner bucket, dark theme](docs/devlog/img/browser-hetzner-dark.png)
 
