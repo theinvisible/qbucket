@@ -10,6 +10,7 @@
 #include "accounts/CapabilityStore.h"
 #include "controllers/ActivityLog.h"
 #include "controllers/CapabilityController.h"
+#include "controllers/CopyJob.h"
 #include "controllers/CreateFolderJob.h"
 #include "controllers/DeleteJob.h"
 #include "controllers/DownloadJob.h"
@@ -211,6 +212,63 @@ private slots:
         for (const QString& k : keys) {
             QVERIFY2(!exists(k), qPrintable(k));
             QVERIFY2(exists(m_root + QStringLiteral("dir new/") + k.mid(folder.size())), qPrintable(k));
+        }
+    }
+
+    // Copy a folder, copy it again (everything exists: skipped), move the
+    // copy; into QBUCKET_IT_SECOND_BUCKET too when set (another qbucket-it-*
+    // bucket of the account; what lands there is removed again).
+    void copyAndMoveAFolder()
+    {
+        m_ops->setPlanDir(m_dir.filePath(QStringLiteral("plans")));
+        const QString src = m_root + QStringLiteral("copy src/");
+        const QStringList rel = {QString(), QStringLiteral("a.txt"), QStringLiteral("sub/b+c ä.txt")};
+        for (const QString& r : rel)
+            QVERIFY(put(src + r, r.isEmpty() ? QByteArray() : r.toUtf8()));
+        const QList<CopyJob::Item> items{{src, true}};
+        Job* job = run(new CopyJob(m_account, m_bucket, items, m_root, m_bucket, m_root + QStringLiteral("copy dst/"),
+                                   CopyJob::Mode::Copy, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().succeeded, rel.size());
+        const QString copied = m_root + QStringLiteral("copy dst/copy src/");
+        for (const QString& r : rel)
+            QVERIFY2(exists(copied + r) && exists(src + r), qPrintable(r));
+
+        // Again: the two files exist (skipped), the marker is copied over itself.
+        job = run(new CopyJob(m_account, m_bucket, items, m_root, m_bucket, m_root + QStringLiteral("copy dst/"),
+                              CopyJob::Mode::Copy, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QCOMPARE(job->report().skipped, 2);
+
+        // Move the copy: copied again, checked, the originals deleted.
+        const QList<CopyJob::Item> moveItems{{copied, true}};
+        job = run(new CopyJob(m_account, m_bucket, moveItems, m_root + QStringLiteral("copy dst/"), m_bucket,
+                              m_root + QStringLiteral("moved/"), CopyJob::Mode::Move, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        for (const QString& r : rel) {
+            QVERIFY2(!exists(copied + r), qPrintable(r));
+            QVERIFY2(exists(m_root + QStringLiteral("moved/copy src/") + r), qPrintable(r));
+        }
+
+        const QString second = qEnvironmentVariable("QBUCKET_IT_SECOND_BUCKET");
+        if (second.isEmpty())
+            return;
+        static const QRegularExpression safeName(QStringLiteral("^qbucket-it-[a-z0-9-]+$"));
+        QVERIFY2(safeName.match(second).hasMatch() && second != m_bucket, "QBUCKET_IT_SECOND_BUCKET must be another qbucket-it-* bucket");
+        job = run(new CopyJob(m_account, m_bucket, items, m_root, second, m_root, CopyJob::Mode::Move, m_ops->planDir()));
+        QCOMPARE(job->outcome(), Job::Outcome::Succeeded);
+        QVERIFY2(job->report().verified, qPrintable(job->report().verification));
+        for (const QString& r : rel)
+            QVERIFY2(!exists(src + r), qPrintable(r));
+        // Remove what landed in the second bucket (only this run's keys).
+        for (const QString& r : rel) {
+            const QString k = m_root + QStringLiteral("copy src/") + r;
+            QVERIFY(k.startsWith(m_root));
+            std::optional<bool> gone;
+            QObject ctx;
+            session()->deleteObject(second, k, QString(), &ctx, [&](const s3::Result<s3::DeleteObjectResult>& d) { gone = bool(d); });
+            QVERIFY(QTest::qWaitFor([&] { return gone.has_value(); }, 30000) && *gone);
         }
     }
 

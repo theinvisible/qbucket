@@ -32,6 +32,33 @@
     </message>
 </context>
 <context>
+    <name>qbucket::CopyJob</name>
+    <message numerus="yes">
+        <location filename="../../src/controllers/CopyJob.cpp" line="79"/>
+        <source>Move %n item(s) to “%1”</source>
+        <translation>
+            <numerusform>Move %n item to “%1”</numerusform>
+            <numerusform>Move %n items to “%1”</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/CopyJob.cpp" line="80"/>
+        <source>Copy %n item(s) to “%1”</source>
+        <translation>
+            <numerusform>Copy %n item to “%1”</numerusform>
+            <numerusform>Copy %n items to “%1”</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/controllers/CopyJob.cpp" line="577"/>
+        <source>not verified: %n original(s) still there</source>
+        <translation>
+            <numerusform>not verified: %n original still there</numerusform>
+            <numerusform>not verified: %n originals still there</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>qbucket::DeleteJob</name>
     <message numerus="yes">
         <location filename="../../src/controllers/DeleteJob.cpp" line="58"/>

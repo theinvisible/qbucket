@@ -858,6 +858,203 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
 </context>
 <context>
+    <name>qbucket::CopyJob</name>
+    <message numerus="yes">
+        <location filename="../src/controllers/CopyJob.cpp" line="79"/>
+        <source>Move %n item(s) to “%1”</source>
+        <translation>
+            <numerusform>%n Element nach „%1“ verschieben</numerusform>
+            <numerusform>%n Elemente nach „%1“ verschieben</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/CopyJob.cpp" line="80"/>
+        <source>Copy %n item(s) to “%1”</source>
+        <translation>
+            <numerusform>%n Element nach „%1“ kopieren</numerusform>
+            <numerusform>%n Elemente nach „%1“ kopieren</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="116"/>
+        <source>Nothing to copy.</source>
+        <translation>Nichts zu kopieren.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="121"/>
+        <source>“%1” is not below “%2”.</source>
+        <translation>„%1“ liegt nicht unter „%2“.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="125"/>
+        <source>“%1” can&apos;t be copied into itself.</source>
+        <translation>„%1“ kann nicht in sich selbst kopiert werden.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="131"/>
+        <source>The selection is already there.</source>
+        <translation>Die Auswahl ist schon dort.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="168"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="191"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="210"/>
+        <source>Not connected.</source>
+        <translation>Nicht verbunden.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="198"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="221"/>
+        <source>Could not look up “%1”: %2</source>
+        <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="236"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="262"/>
+        <source>Could not list “%1”: %2</source>
+        <translation>„%1“ konnte nicht aufgelistet werden: %2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="307"/>
+        <source>%1 — here %2; there %3</source>
+        <translation>%1 — hier %2; dort %3</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="324"/>
+        <source>The plan could not be written: %1</source>
+        <translation>Der Plan konnte nicht geschrieben werden: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="328"/>
+        <source>nothing to copy</source>
+        <translation>nichts zu kopieren</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="334"/>
+        <source>Move</source>
+        <translation>Verschieben</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="334"/>
+        <source>Copy</source>
+        <translation>Kopieren</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="339"/>
+        <source>To: s3://%1/%2</source>
+        <translation>Nach: s3://%1/%2</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="340"/>
+        <source>Each object is copied by the server, the copy checked, and only then the original deleted.</source>
+        <translation>Jedes Objekt wird vom Server kopiert, die Kopie geprüft und erst dann das Original gelöscht.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="342"/>
+        <source>Each object is copied by the server and the copy checked.</source>
+        <translation>Jedes Objekt wird vom Server kopiert und die Kopie geprüft.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="344"/>
+        <source>Copies into the same folder are made under a new name.</source>
+        <translation>Kopien in denselben Ordner bekommen einen neuen Namen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="347"/>
+        <source>Keep both (copy as “name (1)”)</source>
+        <translation>Beide behalten (als „Name (1)“ kopieren)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="352"/>
+        <source>The target bucket keeps versions: overwritten objects stay as earlier versions.</source>
+        <translation>Der Ziel-Bucket führt Versionen: überschriebene Objekte bleiben als frühere Versionen erhalten.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="354"/>
+        <source>Overwriting replaces those objects for good: the target bucket keeps no versions.</source>
+        <translation>Überschreiben ersetzt diese Objekte endgültig: der Ziel-Bucket führt keine Versionen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="359"/>
+        <source>The bucket keeps versions: the originals stay as earlier versions, hidden behind delete markers.</source>
+        <translation>Der Bucket führt Versionen: die Originale bleiben als frühere Versionen erhalten, verborgen hinter Löschmarkern.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="363"/>
+        <source>The originals are deleted for good once their copies are checked: the bucket keeps no versions.</source>
+        <translation>Die Originale werden endgültig gelöscht, sobald ihre Kopien geprüft sind: der Bucket führt keine Versionen.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="367"/>
+        <source>Object ACLs are not copied: the copies get the bucket&apos;s default access.</source>
+        <translation>Objekt-ACLs werden nicht kopiert: die Kopien bekommen den Standardzugriff des Buckets.</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="421"/>
+        <source>not copied (not connected) — the original is untouched</source>
+        <translation>nicht kopiert (nicht verbunden) — das Original ist unberührt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="432"/>
+        <source>exists at the target</source>
+        <translation>existiert am Ziel</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="437"/>
+        <location filename="../src/controllers/CopyJob.cpp" line="468"/>
+        <source>could not look up the target (%1) — the original is untouched</source>
+        <translation>das Ziel ließ sich nicht nachschlagen (%1) — das Original ist unberührt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="454"/>
+        <source>no free name for a second copy</source>
+        <translation>kein freier Name für eine zweite Kopie</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="454"/>
+        <source>not copied (not connected)</source>
+        <translation>nicht kopiert (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="517"/>
+        <source>cancelled — %1 of %2 done</source>
+        <translation>abgebrochen — %1 von %2 erledigt</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="539"/>
+        <source>done; cancelled while verifying</source>
+        <translation>erledigt; beim Prüfen abgebrochen</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="554"/>
+        <source>every copy checked (size, and the checksum where the ETag is one)</source>
+        <translation>jede Kopie geprüft (Größe, und die Prüfsumme, wo das ETag eine ist)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="576"/>
+        <source>verified: the originals are gone</source>
+        <translation>geprüft: die Originale sind weg</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/controllers/CopyJob.cpp" line="577"/>
+        <source>not verified: %n original(s) still there</source>
+        <translation>
+            <numerusform>nicht bestätigt: %n Original ist noch da</numerusform>
+            <numerusform>nicht bestätigt: %n Originale sind noch da</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="583"/>
+        <source>not verified (not connected)</source>
+        <translation>nicht geprüft (nicht verbunden)</translation>
+    </message>
+    <message>
+        <location filename="../src/controllers/CopyJob.cpp" line="602"/>
+        <source>not verified: %1</source>
+        <translation>nicht geprüft: %1</translation>
+    </message>
+</context>
+<context>
     <name>qbucket::CreateFolderJob</name>
     <message>
         <location filename="../src/controllers/CreateFolderJob.cpp" line="18"/>
@@ -967,12 +1164,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/DeleteJob.cpp" line="105"/>
         <source>Could not look up “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht abfragen: %2</translation>
+        <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/DeleteJob.cpp" line="140"/>
         <source>Could not list “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht auflisten: %2</translation>
+        <translation>„%1“ konnte nicht aufgelistet werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/DeleteJob.cpp" line="169"/>
@@ -1354,12 +1551,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/DownloadJob.cpp" line="337"/>
         <source>Could not look up “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht abfragen: %2</translation>
+        <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/DownloadJob.cpp" line="370"/>
         <source>Could not list “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht auflisten: %2</translation>
+        <translation>„%1“ konnte nicht aufgelistet werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/DownloadJob.cpp" line="398"/>
@@ -2532,12 +2729,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/RenameJob.cpp" line="138"/>
         <source>Could not look up “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht abfragen: %2</translation>
+        <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/RenameJob.cpp" line="155"/>
         <source>Could not list “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht auflisten: %2</translation>
+        <translation>„%1“ konnte nicht aufgelistet werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/RenameJob.cpp" line="183"/>
@@ -2575,24 +2772,8 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Objekt-ACLs werden nicht kopiert: Die umbenannten Objekte bekommen den Standardzugriff des Buckets.</translation>
     </message>
     <message>
-        <source>not copied (%1) — the original is untouched</source>
-        <translation>nicht kopiert (%1) — das Original ist unverändert</translation>
-    </message>
-    <message>
         <source>not copied (not connected) — the original is untouched</source>
         <translation>nicht kopiert (nicht verbunden) — das Original ist unberührt</translation>
-    </message>
-    <message>
-        <source>copied, but not verified (not connected) — the original is kept</source>
-        <translation>kopiert, aber nicht geprüft (nicht verbunden) — das Original bleibt</translation>
-    </message>
-    <message>
-        <source>copied and verified, but the original could not be deleted (not connected)</source>
-        <translation>kopiert und geprüft, aber das Original ließ sich nicht löschen (nicht verbunden)</translation>
-    </message>
-    <message>
-        <source>copied, but the original could not be deleted: %1</source>
-        <translation>kopiert, aber das Original ließ sich nicht löschen: %1</translation>
     </message>
     <message>
         <location filename="../src/controllers/RenameJob.cpp" line="286"/>
@@ -2929,12 +3110,12 @@ F5 drücken, um es erneut zu versuchen.</translation>
     <message>
         <location filename="../src/controllers/UploadJob.cpp" line="342"/>
         <source>Could not list “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht auflisten: %2</translation>
+        <translation>„%1“ konnte nicht aufgelistet werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/UploadJob.cpp" line="401"/>
         <source>Could not look up “%1”: %2</source>
-        <translation>„%1“ ließ sich nicht abfragen: %2</translation>
+        <translation>„%1“ konnte nicht nachgeschlagen werden: %2</translation>
     </message>
     <message>
         <location filename="../src/controllers/UploadJob.cpp" line="421"/>

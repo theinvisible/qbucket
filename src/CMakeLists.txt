@@ -68,6 +68,8 @@ add_library(qbucket_controllers STATIC
     controllers/RenameJob.cpp
     controllers/ObjectCopyRunner.h
     controllers/ObjectCopyRunner.cpp
+    controllers/CopyJob.h
+    controllers/CopyJob.cpp
     controllers/CreateFolderJob.h
     controllers/CreateFolderJob.cpp
     controllers/DeleteJob.h
