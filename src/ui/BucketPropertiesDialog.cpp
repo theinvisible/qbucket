@@ -327,21 +327,26 @@ QWidget* BucketPropertiesDialog::buildAccessPage_()
 {
     const BucketConfigPage::Context ctx{m_account, m_bucket, m_sessions, m_ops, m_caps};
     auto* content = new QWidget;
+    content->setObjectName(QStringLiteral("pageScrollContent"));
     auto* lay = new QVBoxLayout(content);
-    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setContentsMargins(0, 4, 0, 0);
+    lay->setSpacing(14);
     auto* aclBox = new QGroupBox(tr("Bucket ACL"));
     auto* aclLay = new QVBoxLayout(aclBox);
     m_acl = new AclSection(ctx);
     aclLay->addWidget(m_acl);
     lay->addWidget(aclBox);
+    auto* pabBox = new QGroupBox(tr("Public access block"));
+    auto* pabLay = new QVBoxLayout(pabBox);
+    // What the block's policy settings act on: whether the policy makes the
+    // bucket public.
     auto* statusRow = new QHBoxLayout;
     statusRow->addWidget(new QLabel(tr("Public through the policy:")));
     m_policyStatus = new QLabel(QStringLiteral("…"));
     m_policyStatus->setObjectName(QStringLiteral("policyStatus"));
     statusRow->addWidget(m_policyStatus, 1);
-    lay->addLayout(statusRow);
-    auto* pabBox = new QGroupBox(tr("Public access block"));
-    auto* pabLay = new QVBoxLayout(pabBox);
+    pabLay->addLayout(statusRow);
+    pabLay->addSpacing(6);
     m_pab = new PublicAccessBlockSection(ctx);
     pabLay->addWidget(m_pab);
     lay->addWidget(pabBox);
@@ -370,6 +375,7 @@ QWidget* BucketPropertiesDialog::buildAccessPage_()
     connect(m_acl, &BucketConfigPage::loaded, this, readStatus);
     connect(m_policy, &BucketConfigPage::loaded, this, readStatus);
     auto* scroll = new QScrollArea;
+    scroll->setObjectName(QStringLiteral("pageScroll"));   // the page's own background (QSS)
     scroll->setWidget(content);
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);

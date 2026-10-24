@@ -423,7 +423,7 @@ private slots:
 
     // QBUCKET_SCREENSHOT_DIR (with a real platform, or offscreen to look):
     // bucket-policy.png, bucket-lifecycle.png, bucket-object-lock.png,
-    // bucket-access.png.
+    // bucket-access.png, bucket-access-light.png.
     void screenshot()
     {
         const QString dir = qEnvironmentVariable("QBUCKET_SCREENSHOT_DIR");
@@ -472,6 +472,9 @@ private slots:
         shoot(BucketPropertiesDialog::LifecycleSettingsPage, nullptr, "bucket-lifecycle.png");
         shoot(BucketPropertiesDialog::ObjectLockSettingsPage, dlg->objectLockPage(), "bucket-object-lock.png");
         shoot(BucketPropertiesDialog::AccessSettingsPage, dlg->aclSection(), "bucket-access.png");
+        m_theme.apply(QStringLiteral("Light"));   // the cards on the light page
+        shoot(BucketPropertiesDialog::AccessSettingsPage, nullptr, "bucket-access-light.png");
+        m_theme.apply(QStringLiteral("Dark"));
         dlg->close();
 
         // Deleting the bucket with what is in it: the preview.

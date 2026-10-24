@@ -183,8 +183,10 @@ QDockWidget { color: @text2@; }
 QDockWidget::title { background: @panel2@; border-top: 1px solid @border@; border-bottom: 1px solid @border@; padding: 6px 12px; text-align: left; }
 
 /* ---- Group box / check ---- */
-QGroupBox { border: 1px solid @border@; border-radius: 9px; margin-top: 16px; padding: 16px 14px 14px; background: @panel2@; font-weight: 600; }
-QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 12px; padding: 0 4px; color: @text2@; }
+/* A card with its title inside (not on the border, where it would sit on
+   whatever is behind the card). */
+QGroupBox { border: 1px solid @border@; border-radius: 9px; margin-top: 0; padding: 38px 14px 12px; background: @panel2@; font-weight: 600; }
+QGroupBox::title { subcontrol-origin: padding; subcontrol-position: top left; left: 20px; top: 14px; color: @text2@; }
 QCheckBox, QRadioButton { color: @text@; spacing: 7px; }
 
 /* ---- Splitter ---- */
@@ -214,6 +216,9 @@ QWidget#detailPane QTabBar::tab { padding: 8px 9px; }
 
 /* ---- Misc ---- */
 QScrollArea { border: none; background: @panel@; }
+/* A dialog page that scrolls shows the page, not the item-view background
+   QAbstractScrollArea gives its viewport. */
+QScrollArea#pageScroll, QScrollArea#pageScroll > QWidget, QWidget#pageScrollContent { background: transparent; }
 QProgressBar { border: 1px solid @border@; border-radius: 6px; background: @inset@; text-align: center; color: @text@; }
 QProgressBar::chunk { background: @accent@; border-radius: 5px; }
 )QSS";

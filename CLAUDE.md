@@ -444,6 +444,10 @@ Each of these cost time there; don't relearn them.
   themes, and `QTabWidget::pane { border-top }` has no effect. The QSS
   sets `QTabBar { qproperty-drawBase: 0; border-bottom: … @border@ }`;
   test `tabBarsUseThemedSeparator` guards it. (Same in xyz-profiler.)
+- **A dialog page in a `QScrollArea` shows the item-view background**
+  (`QAbstractScrollArea { background: @win@ }`) around and between its
+  cards. Such a scroll area is `#pageScroll` (transparent in the QSS); a
+  `QGroupBox` card has its title inside, not on the border.
 - **QtKeychain on Linux never says "no backend".** A missing keyring daemon
   comes back as `OtherError` ("Unknown error", or the D-Bus error), so
   SecretStore's session-only mode never started and an account couldn't be
