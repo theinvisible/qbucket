@@ -19,6 +19,7 @@ check "the metainfo" "$(sed -n 's/.*<release version="\([^"]*\)".*/\1/p' \
     packaging/linux/io.github.theinvisible.QBucket.metainfo.xml | head -n 1)"
 if [ -f packaging/debian/changelog ]; then
     check packaging/debian/changelog "$(sed -n '1s/^qbucket (\([^-)]*\).*/\1/p' packaging/debian/changelog)"
+    check "the man page" "$(sed -n 's/^\.TH QBUCKET 1 "[^"]*" "qbucket \([^"]*\)".*/\1/p' packaging/debian/qbucket.1)"
 fi
 [ "$fail" -eq 0 ] || exit 1
 echo "version: $cmake everywhere"

@@ -64,6 +64,10 @@ governance bypass; creating and deleting buckets).
 copies on Linux / Flatpak; open in the default app and upload the changes;
 bookmarks and recent locations; importing accounts from the AWS CLI and
 rclone).
+**M8 done — released as 1.0.0** — devlog 011 (`qbucket --self-test`; .deb
+for Ubuntu 26.04 and the Flatpak bundle, built and smoke-tested in Docker;
+the Windows release script and Inno Setup installer; README, CHANGELOG,
+`docs/RELEASING.md`).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -165,14 +169,25 @@ What exists:
 - `bench/bench_listing` — the §13.4 budgets against a FakeS3Server (built
   with the tests, run by hand, release builds only; `--version-keys` for
   the versions view).
-- CI per push (`ci.yml`): Linux Release, Windows app, library as Windows DLL.
-  Weekly / tags / on demand: `ci-extended.yml` (ASan/UBSan, library
-  static/shared/LSan, clang-tidy, Flatpak), `s3-integration.yml` (Docker
-  backends). The user pushes; check runs with `gh`.
+- M8: `controllers/SelfTest` (`--self-test`), `platform/Console`,
+  `platform/KeychainService` (does a keychain service exist? —
+  `QtKeychainBackend` turns a failure without one into NoBackend);
+  `packaging/debian/` (control, rules, man page, `build-deb.sh`,
+  `build-in-docker.sh`), `packaging/flatpak/build-in-docker.sh` + smoke
+  container, `packaging/flathub/` (prepared, not submitted),
+  `packaging/windows/` (`build-release.ps1`, `installer.iss`);
+  `tools/check-version.sh`, `tools/tidy-in-docker.sh`;
+  `test_release_screenshots` (→ `docs/img/`).
+- Workflows: `ci.yml` per push (Linux Release, Windows app, library as
+  Windows DLL), `ci-extended.yml`, `s3-integration.yml`. **GitHub Actions
+  don't run at the moment (no build minutes)**: every check runs locally
+  before a commit — the list in `docs/RELEASING.md`; Windows is checked by
+  the user. The user pushes.
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
-Next: **M8** (packaging & release).
+Next: nothing planned — the post-parity backlog (PLAN.md §6) on request.
+Releases: `docs/RELEASING.md`.
 
 ## Devlog
 
@@ -266,8 +281,19 @@ build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR --id X upl
 build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR resume X
 ```
 
+Packages, built and smoke-tested in Docker (nothing installed on the host;
+`dist/`), and on Windows by hand — `docs/RELEASING.md`:
+
+```sh
+packaging/debian/build-in-docker.sh     # .deb for Ubuntu 26.04 (~15 min)
+packaging/flatpak/build-in-docker.sh    # Flatpak bundle (~15 min)
+# Windows: packaging\windows\build-release.ps1 (ZIP + installer)
+# the README / AppStream screenshots (real platform)
+QT_QPA_PLATFORM=xcb QBUCKET_SCREENSHOT_DIR=docs/img build/tests/test_release_screenshots
+```
+
 The extended CI (`ci-extended.yml`, `s3-integration.yml`) can be started by
-hand from the Actions tab (`workflow_dispatch`).
+hand from the Actions tab (`workflow_dispatch`) — once Actions run again.
 
 ## Conventions
 
@@ -406,10 +432,11 @@ Each of these cost time there; don't relearn them.
 - **lupdate sees only sources the build system compiles.** Texts of
   Windows-only files (`platform/win/`) live in the platform-neutral base
   (`ExternalDrag`), or the Linux `update_translations` never finds them.
-- **Windows code can be checked on Linux:** llvm-mingw (portable, in the
-  scratchpad) with `-fsyntax-only -Wshadow-all -D_WIN32_WINNT=0x0A00` and
-  the Linux Qt headers compiles the COM layer; the Windows CI stays the
-  judge (MSVC `/WX`, `test_virtual_file_drag`).
+- **Windows code can be checked on Linux:** llvm-mingw (Docker image
+  `mstorsjo/llvm-mingw:20261006`, the Linux Qt headers mounted) with
+  `-fsyntax-only -Wshadow-all -D_WIN32_WINNT=0x0A00` compiles the COM layer,
+  and its `windres` the rc file; a real Windows build stays the judge (MSVC
+  `/WX`, `test_virtual_file_drag` — `build-release.ps1`).
 - **A `#primary` button needs its own `:disabled` rule** — the accent
   background otherwise makes a disabled one look enabled.
 - **The tab-bar base ignores the palette.** With `setDocumentMode(true)`
@@ -417,6 +444,20 @@ Each of these cost time there; don't relearn them.
   themes, and `QTabWidget::pane { border-top }` has no effect. The QSS
   sets `QTabBar { qproperty-drawBase: 0; border-bottom: … @border@ }`;
   test `tabBarsUseThemedSeparator` guards it. (Same in xyz-profiler.)
+- **QtKeychain on Linux never says "no backend".** A missing keyring daemon
+  comes back as `OtherError` ("Unknown error", or the D-Bus error), so
+  SecretStore's session-only mode never started and an account couldn't be
+  saved. `QtKeychainBackend` asks `platform::checkKeychainService` on every
+  failure (devlog 011). Found only by installing the .deb in a clean
+  container — test packages where nothing else is installed.
+- **D-Bus in tests: a bus of its own needs a config of its own.**
+  `dbus-daemon --session` reads the system's service directories (this
+  machine's keyring becomes activatable), and a policy without receive rules
+  drops the replies — a check then fails for the wrong reason.
+- **flatpak-builder's `--state-dir` must be on the build directory's file
+  system** (both in one Docker volume).
+- **ISCC and rc.exe read BOM-less files as ANSI** — `installer.iss`,
+  `app.rc.in` and `build-release.ps1` (Windows PowerShell 5.1) stay ASCII.
 
 ## Production data — safety rules
 

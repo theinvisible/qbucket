@@ -823,7 +823,20 @@ imported account suggested by an exact preset-endpoint match
 - Bookmarks (account + bucket + prefix), recent locations
 - Import accounts from `~/.aws/credentials` / `~/.aws/config` and rclone config
 
-### M8 — Packaging & release — **M** (3–4 days)
+### M8 — Packaging & release — **M** (3–4 days) — ✅ done (devlog 011)
+
+Released as **1.0.0**. Deviations from the text below: GitHub Actions don't
+run (no build minutes), so every package is built and smoke-tested locally —
+the Linux ones in Docker, Windows by the maintainer with
+`packaging/windows/build-release.ps1`; no Flathub submission yet (the
+repository is private; the manifest and steps are ready in
+`packaging/flathub/`); added a **.deb for Ubuntu 26.04**; no AppImage, no
+static single binary (§10). The Flatpak needs no
+`--talk-name=org.freedesktop.secrets`: the Secret portal works (smoke test).
+Added `qbucket --self-test` and a fix: without a keychain daemon on Linux,
+QtKeychain's error now leads to session-only secrets (it never reported
+"no backend").
+
 
 - **Linux / Flatpak (primary):** finalise the manifest from M0, finish-args
   reviewed (`--share=network`, `--socket=wayland`/`fallback-x11`,
@@ -965,6 +978,8 @@ release time:
 - **Secrets:** QtKeychain → libsecret. Inside the sandbox libsecret uses the
   Secret portal (file-backed keyring in the app's data dir) when available;
   fall back to `--talk-name=org.freedesktop.secrets`. Test on GNOME and KDE.
+  *M8: the portal works (smoke test with GNOME Keyring, devlog 011), no
+  `--talk-name`; KDE is checked by hand.*
 - **File access:** file dialogs go through the FileChooser portal
   automatically with Qt; no blanket `--filesystem=home`. Downloads default to
   `xdg-download` (needs `--filesystem=xdg-download`).
@@ -1070,6 +1085,14 @@ release time:
 - 2026-10-20 — Downloads **never leave the target folder**
   (`LocalPathMapper`) and run on read-only accounts; drops always show the
   preview.
+
+- 2026-10-24 — **No static single binary, no AppImage** for 1.0: a static
+  Qt (LGPL-3.0) in an MIT app means shipping relinkable object files; the
+  windeployqt folder with an Inno Setup installer and a ZIP is enough on
+  Windows, Flatpak and .deb on Linux.
+- 2026-10-24 — **Packages are built and tested in Docker** (deb, Flatpak),
+  each with a smoke test in a clean container (`qbucket --self-test`); with
+  GitHub Actions unavailable, `docs/RELEASING.md` is the release procedure.
 
 ## 11. Open questions
 
