@@ -1,0 +1,40 @@
+.TH QBUCKET 1 "2026-10-24" "qbucket 1.0.0" "User Commands"
+.SH NAME
+qbucket \- browser for S3 and S3-compatible object storage
+.SH SYNOPSIS
+.B qbucket
+.RI [ Qt-options ]
+.br
+.B qbucket
+.BR \-\-self\-test " | " \-\-version " | " \-\-help
+.SH DESCRIPTION
+QBucket browses and manages buckets and objects on Amazon S3 and
+S3-compatible servers such as Hetzner Object Storage, Ceph RGW and Garage.
+Every change is planned, previewed, verified and journaled.
+Secrets are kept in the system keychain (Secret Service or KWallet); without
+one, QBucket asks for them once per session and keeps them in memory only.
+.SH OPTIONS
+.TP
+.B \-\-self\-test
+Check the installation without opening a window: print the version, the Qt
+in use, the sandbox, the settings, data and cache paths, and write, read
+back and remove a test entry in the keychain.
+Exits with 0 when the keychain works, 1 otherwise.
+.TP
+.BR \-v ", " \-\-version
+Print the version and exit.
+.TP
+.BR \-h ", " \-\-help
+Print the options and exit.
+.SH FILES
+.TP
+.I ~/.config/qbucket/qbucket/
+Settings, accounts (never a secret), bookmarks.
+.TP
+.I ~/.local/share/qbucket/qbucket/
+Journal, transfer state, server capabilities.
+.TP
+.I ~/.cache/qbucket/qbucket/
+Files opened in other applications and copies staged for dragging out.
+.SH SEE ALSO
+https://github.com/theinvisible/qbucket

@@ -1,0 +1,3 @@
+# Built for GitHub releases, never uploaded to the Debian or Ubuntu archive:
+# there is no ITP bug to close.
+qbucket: initial-upload-closes-no-bugs [usr/share/doc/qbucket/changelog.Debian.gz:1]

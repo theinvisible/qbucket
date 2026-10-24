@@ -1,0 +1,35 @@
+#!/usr/bin/make -f
+
+# Plain CMake build; install() in CMakeLists.txt puts the binary, the .desktop
+# file, the AppStream metainfo and the icon in place. The test suite builds
+# and runs with the package unless DEB_BUILD_OPTIONS has nocheck — headless
+# (offscreen) and against in-process fake servers only.
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+include /usr/share/dpkg/architecture.mk
+export QT_QPA_PLATFORM = offscreen
+
+ifneq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+TESTS := OFF
+else
+TESTS := ON
+endif
+
+%:
+	dh $@ --buildsystem=cmake+ninja
+
+# QtKeychain from the distribution (qtkeychain-qt6-dev), never fetched.
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-DQBUCKET_QTKEYCHAIN_PROVIDER=SYSTEM \
+		-DQBUCKET_BUILD_TESTS=$(TESTS)
+
+# ctest itself: the failing test's output in the build log, in parallel as
+# dpkg-buildpackage -jN asks.
+JOBS := $(or $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS))),1)
+override_dh_auto_test:
+ifeq ($(TESTS),ON)
+	ctest --test-dir obj-$(DEB_HOST_GNU_TYPE) --output-on-failure -j$(JOBS)
+endif
+
+override_dh_builddeb:
+	dh_builddeb -- -Zxz

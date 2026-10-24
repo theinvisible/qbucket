@@ -25,7 +25,7 @@ QString statusText(KeychainBackend::Status s, const QString& error)
         text = QStringLiteral("not found");
         break;
     case KeychainBackend::Status::NoBackend:
-        text = QStringLiteral("no backend — secrets would be kept for one session only");
+        text = QStringLiteral("no backend; secrets would be kept for one session only");
         break;
     case KeychainBackend::Status::AccessDenied:
         text = QStringLiteral("access denied");

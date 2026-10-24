@@ -56,3 +56,6 @@ Desktop.ini
 .flatpak-builder/
 build-flatpak/
 *.flatpak
+
+# Packages built by packaging/*/build-in-docker.sh
+dist/

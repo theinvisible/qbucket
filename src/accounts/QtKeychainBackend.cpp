@@ -48,7 +48,7 @@ void settle(const QtKeychainBackend::ServiceCheck& check, KeychainBackend::Statu
         if (exists)
             done(Status::Failed, error);
         else
-            done(Status::NoBackend, QStringLiteral("no keychain service (Secret Service, KWallet) is running"));
+            done(Status::NoBackend, QStringLiteral("nothing on the session bus offers a Secret Service or KWallet"));
     });
 }
 

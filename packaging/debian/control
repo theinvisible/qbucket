@@ -1,0 +1,40 @@
+Source: qbucket
+Section: net
+Priority: optional
+Maintainer: Rene Hadler <rene@hadler.me>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               dbus-daemon,
+               ninja-build,
+               qt6-base-dev,
+               qt6-svg-dev,
+               qt6-tools-dev,
+               qt6-l10n-tools,
+               qtkeychain-qt6-dev
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Homepage: https://github.com/theinvisible/qbucket
+Vcs-Browser: https://github.com/theinvisible/qbucket
+Vcs-Git: https://github.com/theinvisible/qbucket.git
+
+Package: qbucket
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         qt6-qpa-plugins,
+         qt6-svg-plugins
+Recommends: qt6-wayland,
+            qt6-translations-l10n,
+            gnome-keyring | kwalletmanager
+Description: browser for S3 and S3-compatible object storage
+ QBucket browses and manages buckets and objects on Amazon S3 and
+ S3-compatible servers such as Hetzner Object Storage, Ceph RGW and Garage:
+ uploads and downloads of any size (multipart, verified, resumable), copy and
+ move between buckets, metadata, tags and ACLs, versions, bucket policy, CORS,
+ lifecycle rules and object lock.
+ .
+ It is built for production data: every change gets a plan and a preview
+ first, is verified afterwards and journaled; features the server does not
+ support are detected and cannot be triggered; the window stays responsive
+ with millions of objects. Secrets are kept in the system keychain (Secret
+ Service or KWallet).
