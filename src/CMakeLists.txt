@@ -191,6 +191,8 @@ target_link_libraries(qbucket_ui_foundation
 add_library(qbucket_platform STATIC
     platform/Console.h
     platform/Console.cpp
+    platform/KeychainService.h
+    platform/KeychainService.cpp
     platform/ExternalDrag.h
     platform/ExternalDrag.cpp
     platform/StagedDrag.h
@@ -215,6 +217,10 @@ if(WIN32)
     )
     target_compile_definitions(qbucket_platform PUBLIC NOMINMAX UNICODE _UNICODE _WIN32_WINNT=0x0A00 WINVER=0x0A00)
     target_link_libraries(qbucket_platform PUBLIC ole32 shell32 uuid)
+endif()
+if(UNIX AND NOT APPLE)
+    # Asks the session bus whether a keychain service exists (KeychainService).
+    target_link_libraries(qbucket_platform PRIVATE Qt6::DBus)
 endif()
 target_include_directories(qbucket_platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(qbucket_platform

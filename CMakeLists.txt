@@ -31,6 +31,9 @@ set(_qbucket_qt_components Core Gui Widgets Svg Network Concurrent LinguistTools
 if(QBUCKET_BUILD_TESTS)
     list(APPEND _qbucket_qt_components Test)
 endif()
+if(UNIX AND NOT APPLE)
+    list(APPEND _qbucket_qt_components DBus)   # platform/KeychainService
+endif()
 
 find_package(Qt6 6.5 QUIET COMPONENTS ${_qbucket_qt_components})
 

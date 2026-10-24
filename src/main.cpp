@@ -6,6 +6,7 @@
 #include "diagnostics/Logging.h"
 #include "diagnostics/StallWatchdog.h"
 #include "platform/Console.h"
+#include "platform/KeychainService.h"
 #include "ui/MainWindow.h"
 #include "ui/ThemeManager.h"
 
@@ -94,7 +95,7 @@ int runCommandLine(int argc, char* argv[])
         return 0;
 
     QTextStream out(stdout);
-    qbucket::QtKeychainBackend keychain;
+    qbucket::QtKeychainBackend keychain(qbucket::platform::checkKeychainService);
     qbucket::SelfTest test(&keychain, &out);
     int exitCode = 1;
     QObject::connect(&test, &qbucket::SelfTest::finished, &app, [&](int code) {
@@ -147,7 +148,8 @@ int main(int argc, char* argv[])
     }
 
     qbucket::AccountStore accounts;
-    qbucket::SecretStore secrets{std::make_unique<qbucket::QtKeychainBackend>()};
+    qbucket::SecretStore secrets{
+        std::make_unique<qbucket::QtKeychainBackend>(qbucket::platform::checkKeychainService)};
 
     qbucket::MainWindow window(&settings, &theme, &accounts, &secrets);
     window.show();

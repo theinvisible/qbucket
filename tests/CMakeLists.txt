@@ -43,6 +43,14 @@ qbucket_add_test(test_settings_controller
     qbucket_controllers
 )
 
+if(UNIX AND NOT APPLE)
+    qbucket_add_test(test_keychain_service
+        test_keychain_service.cpp
+        qbucket_platform
+        Qt6::DBus
+    )
+endif()
+
 qbucket_add_test(test_self_test
     test_self_test.cpp
     qbucket_controllers
