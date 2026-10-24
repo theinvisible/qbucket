@@ -239,6 +239,10 @@ cmake --build build-release && ctest --test-dir build-release
 # on build/compile_commands.json; CI runs it as 4 shards (`… build 0 4`).
 # Check the exit code — a missing binary must not look like "no findings".
 tools/run-clang-tidy.sh build
+# … or without a local clang-tidy: the same from a Docker image (Ubuntu 26.04
+# with its Qt — the host's build directory is used as it is; ~10 min)
+tools/tidy-in-docker.sh run-clang-tidy.sh build
+tools/tidy-in-docker.sh check-msvc-shadow.sh build FILE…
 # real S3 servers in Docker (Ceph RGW, VersityGW, Garage): the library's
 # it_s3_backend and the app's jobs (it_operations)
 libs/qbucket-s3/tests/docker/it-up.sh

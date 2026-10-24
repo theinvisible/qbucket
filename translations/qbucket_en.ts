@@ -401,7 +401,7 @@
 <context>
     <name>qbucket::ImportAccountsDialog</name>
     <message numerus="yes">
-        <location filename="../../src/ui/ImportAccountsDialog.cpp" line="260"/>
+        <location filename="../../src/ui/ImportAccountsDialog.cpp" line="263"/>
         <source>Import %n Account(s)</source>
         <translation>
             <numerusform>Import %n Account</numerusform>

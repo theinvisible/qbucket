@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 project(qbucket
-    VERSION 0.1.0
+    VERSION 1.0.0
     DESCRIPTION "Desktop browser for S3 and S3-compatible object storage"
     HOMEPAGE_URL "https://github.com/theinvisible/qbucket"
     LANGUAGES CXX

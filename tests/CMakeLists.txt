@@ -43,6 +43,11 @@ qbucket_add_test(test_settings_controller
     qbucket_controllers
 )
 
+qbucket_add_test(test_self_test
+    test_self_test.cpp
+    qbucket_controllers
+)
+
 qbucket_add_test(test_stall_watchdog
     test_stall_watchdog.cpp
     qbucket_diagnostics
@@ -368,6 +373,14 @@ target_compile_definitions(test_translations PRIVATE QBUCKET_QM_DIR="${CMAKE_BIN
 add_dependencies(test_translations qbucket)
 
 # --- Static checks -----------------------------------------------------------
+# One version everywhere: CMake, CHANGELOG.md, the AppStream metainfo and the
+# Debian changelog.
+if(UNIX)
+    add_test(NAME version_consistency
+             COMMAND sh ${CMAKE_SOURCE_DIR}/tools/check-version.sh
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endif()
+
 # The mutation gate (PLAN.md §12.1): writing S3 calls only in src/controllers/.
 if(UNIX)
     add_test(NAME mutation_gate

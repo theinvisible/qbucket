@@ -4,43 +4,56 @@
 <context>
     <name>VirtualFileReader</name>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="122"/>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="308"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="160"/>
         <location filename="../src/platform/VirtualFileReader.cpp" line="352"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="399"/>
         <source>Not connected.</source>
         <translation>Nicht verbunden.</translation>
     </message>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="131"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="171"/>
         <source>“%1” could not be read: %2</source>
         <translation>„%1“ konnte nicht gelesen werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="167"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="210"/>
         <source>The folder could not be listed: %1</source>
         <translation>Der Ordner ließ sich nicht auflisten: %1</translation>
     </message>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="182"/>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="241"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="225"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="285"/>
         <source>More than %1 objects: too many to drag. Download them instead.</source>
         <translation>Mehr als %1 Objekte: zu viele zum Ziehen. Lade sie stattdessen herunter.</translation>
     </message>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="216"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="260"/>
         <source>“%1” can&apos;t be saved on Windows: %2</source>
         <translation>„%1“ lässt sich unter Windows nicht speichern: %2</translation>
     </message>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="232"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="276"/>
         <source>“%1” differs from another name only in case: Windows can&apos;t hold both.</source>
         <translation>„%1“ unterscheidet sich von einem anderen Namen nur in der Groß-/Kleinschreibung: Windows kann nicht beide halten.</translation>
     </message>
     <message>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="323"/>
-        <location filename="../src/platform/VirtualFileReader.cpp" line="368"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="369"/>
+        <location filename="../src/platform/VirtualFileReader.cpp" line="417"/>
         <source>changed on the server since the drag started</source>
         <translation>auf dem Server geändert, seit das Ziehen begann</translation>
+    </message>
+</context>
+<context>
+    <name>main</name>
+    <message>
+        <location filename="../src/main.cpp" line="85"/>
+        <source>Browse and manage S3-compatible object storage.</source>
+        <translation>S3-kompatiblen Objektspeicher durchsuchen und verwalten.</translation>
+    </message>
+    <message>
+        <location filename="../src/main.cpp" line="90"/>
+        <source>Check the installation (Qt, sandbox, paths, keychain) and exit.</source>
+        <translation>Die Installation prüfen (Qt, Sandbox, Pfade, Schlüsselbund) und beenden.</translation>
     </message>
 </context>
 <context>
@@ -302,37 +315,37 @@
         <translation>Kein Endpunkt in der Konfiguration.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="218"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="219"/>
         <source>%1 could not be read: %2</source>
         <translation>%1 konnte nicht gelesen werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="228"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="229"/>
         <source>No configuration file was found. Choose one.</source>
         <translation>Keine Konfigurationsdatei gefunden. Wähle eine aus.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="237"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="238"/>
         <source>The rclone configuration is encrypted. Decrypt it first (rclone config encryption remove), or set the accounts up by hand.</source>
         <translation>Die rclone-Konfiguration ist verschlüsselt. Entschlüssle sie zuerst (rclone config encryption remove) oder lege die Konten von Hand an.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="247"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="248"/>
         <source>The files hold no profiles.</source>
         <translation>Die Dateien enthalten keine Profile.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="247"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="248"/>
         <source>The file holds no S3 remotes.</source>
         <translation>Die Datei enthält keine S3-Remotes.</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="285"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="287"/>
         <source>“%1”: the keychain refused the secret: %2</source>
         <translation>„%1“: Der Schlüsselbund hat das Secret abgelehnt: %2</translation>
     </message>
     <message>
-        <location filename="../src/controllers/AccountImporter.cpp" line="287"/>
+        <location filename="../src/controllers/AccountImporter.cpp" line="289"/>
         <source>“%1”: the account could not be saved.</source>
         <translation>„%1“: Das Konto ließ sich nicht speichern.</translation>
     </message>
@@ -3908,13 +3921,13 @@ F5 drücken, um es erneut zu versuchen.</translation>
     </message>
     <message>
         <location filename="../src/ui/ImportAccountsDialog.cpp" line="91"/>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="262"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="265"/>
         <source>Test Selected</source>
         <translation>Ausgewählte testen</translation>
     </message>
     <message>
         <location filename="../src/ui/ImportAccountsDialog.cpp" line="92"/>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="260"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="263"/>
         <source>Import</source>
         <translation>Importieren</translation>
     </message>
@@ -3944,17 +3957,17 @@ F5 drücken, um es erneut zu versuchen.</translation>
         <translation>Konfigurationsdatei wählen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="210"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="213"/>
         <source>(preset)</source>
         <translation>(Vorgabe)</translation>
     </message>
     <message>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="216"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="219"/>
         <source>Already set up as “%1”.</source>
         <translation>Schon eingerichtet als „%1“.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="260"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="263"/>
         <source>Import %n Account(s)</source>
         <translation>
             <numerusform>%n Konto importieren</numerusform>
@@ -3962,22 +3975,22 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="262"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="265"/>
         <source>Stop Testing</source>
         <translation>Test abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="263"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="266"/>
         <source>Generic S3 knows no provider quirks — pick the provider where you know it.</source>
         <translation>Generisches S3 kennt keine Eigenheiten eines Anbieters — wähle den Anbieter, wo du ihn kennst.</translation>
     </message>
     <message>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="276"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="279"/>
         <source>Connecting…</source>
         <translation>Verbinde…</translation>
     </message>
     <message>
-        <location filename="../src/ui/ImportAccountsDialog.cpp" line="289"/>
+        <location filename="../src/ui/ImportAccountsDialog.cpp" line="292"/>
         <source>Saving the secrets in the keychain…</source>
         <translation>Die Secrets werden im Schlüsselbund gespeichert…</translation>
     </message>

@@ -123,6 +123,8 @@ add_library(qbucket_controllers STATIC
     controllers/DownloadJob.cpp
     controllers/ConnectionTester.h
     controllers/ConnectionTester.cpp
+    controllers/SelfTest.h
+    controllers/SelfTest.cpp
     controllers/SettingsController.h
     controllers/SettingsController.cpp
     controllers/TransferJobStore.h
@@ -187,6 +189,8 @@ target_link_libraries(qbucket_ui_foundation
 # The only place with platform #ifdefs for features; the Windows sources
 # (virtual-file drag) are added below.
 add_library(qbucket_platform STATIC
+    platform/Console.h
+    platform/Console.cpp
     platform/ExternalDrag.h
     platform/ExternalDrag.cpp
     platform/StagedDrag.h
@@ -294,10 +298,14 @@ target_link_libraries(qbucket_app_ui
 )
 
 # --- Application -------------------------------------------------------------
+# The Windows resource carries the icon and the version Explorer shows.
+if(WIN32)
+    configure_file(${CMAKE_SOURCE_DIR}/resources/app.rc.in ${CMAKE_CURRENT_BINARY_DIR}/app.rc @ONLY)
+endif()
 qt_add_executable(qbucket
     main.cpp
     ${CMAKE_SOURCE_DIR}/resources/app.qrc
-    $<$<PLATFORM_ID:Windows>:${CMAKE_SOURCE_DIR}/resources/app.rc>
+    $<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_BINARY_DIR}/app.rc>
 )
 
 set_target_properties(qbucket PROPERTIES

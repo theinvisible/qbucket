@@ -1,16 +1,21 @@
 #include "accounts/AccountStore.h"
 #include "accounts/QtKeychainBackend.h"
 #include "accounts/SecretStore.h"
+#include "controllers/SelfTest.h"
 #include "controllers/SettingsController.h"
 #include "diagnostics/Logging.h"
 #include "diagnostics/StallWatchdog.h"
+#include "platform/Console.h"
 #include "ui/MainWindow.h"
 #include "ui/ThemeManager.h"
 
 #include <QApplication>
+#include <QCommandLineParser>
 #include <QIcon>
 #include <QLibraryInfo>
 #include <QLocale>
+#include <QTextStream>
+#include <QTimer>
 #include <QTranslator>
 
 #include <memory>
@@ -24,11 +29,11 @@ void installTranslators()
     // language without its own file; a translation installed later wins.
     static QTranslator plurals;
     if (plurals.load(QStringLiteral(":/i18n/qbucket_en")))
-        QApplication::installTranslator(&plurals);
+        QCoreApplication::installTranslator(&plurals);
     static QTranslator appTranslator;
     if (appTranslator.load(QLocale(), QStringLiteral("qbucket"),
                            QStringLiteral("_"), QStringLiteral(":/i18n")))
-        QApplication::installTranslator(&appTranslator);
+        QCoreApplication::installTranslator(&appTranslator);
 
     // Qt's own strings (standard dialog buttons …) live in qtbase_<locale>.qm.
     // Try the Qt install's translations dir first, then a translations/ folder
@@ -41,20 +46,81 @@ void installTranslators()
     for (const QString& dir : qtTrDirs) {
         if (qtBaseTranslator.load(QLocale(), QStringLiteral("qtbase"),
                                   QStringLiteral("_"), dir)) {
-            QApplication::installTranslator(&qtBaseTranslator);
+            QCoreApplication::installTranslator(&qtBaseTranslator);
             break;
         }
     }
+}
+
+void setIdentity()
+{
+    QCoreApplication::setApplicationName(QStringLiteral("qbucket"));
+    QCoreApplication::setOrganizationName(QStringLiteral("qbucket"));
+    QCoreApplication::setApplicationVersion(QStringLiteral(QBUCKET_VERSION_STRING));
+}
+
+// --version, --help and --self-test run without a window (and without a
+// display: the self-test is every package's smoke test). Anything else on
+// the command line is left to QApplication, as before.
+bool wantsCommandLine(int argc, char* argv[])
+{
+    for (int i = 1; i < argc; ++i) {
+        const QByteArray arg(argv[i]);
+        if (arg == "--self-test" || arg == "--version" || arg == "-v" || arg == "--help" || arg == "-h"
+            || arg == "--help-all" || arg == "-?")
+            return true;
+    }
+    return false;
+}
+
+int runCommandLine(int argc, char* argv[])
+{
+    qbucket::platform::attachParentConsole();
+    QCoreApplication app(argc, argv);
+    setIdentity();
+    installTranslators();
+
+    QCommandLineParser parser;
+    parser.setApplicationDescription(
+        QCoreApplication::translate("main", "Browse and manage S3-compatible object storage."));
+    parser.addHelpOption();
+    parser.addVersionOption();
+    const QCommandLineOption selfTest(
+        QStringLiteral("self-test"),
+        QCoreApplication::translate("main", "Check the installation (Qt, sandbox, paths, keychain) and exit."));
+    parser.addOption(selfTest);
+    parser.process(app);   // --help / --version print and exit here
+    if (!parser.isSet(selfTest))
+        return 0;
+
+    QTextStream out(stdout);
+    qbucket::QtKeychainBackend keychain;
+    qbucket::SelfTest test(&keychain, &out);
+    int exitCode = 1;
+    QObject::connect(&test, &qbucket::SelfTest::finished, &app, [&](int code) {
+        exitCode = code;
+        app.quit();
+    });
+    // A keychain that waits for an unlock prompt nobody answers.
+    QTimer::singleShot(60000, &app, [&] {
+        out << "Keychain:   no answer within 60 s\n";
+        out.flush();
+        app.quit();
+    });
+    QTimer::singleShot(0, &test, &qbucket::SelfTest::start);
+    app.exec();
+    return exitCode;
 }
 
 } // namespace
 
 int main(int argc, char* argv[])
 {
+    if (wantsCommandLine(argc, argv))
+        return runCommandLine(argc, argv);
+
     QApplication app(argc, argv);
-    QCoreApplication::setApplicationName(QStringLiteral("qbucket"));
-    QCoreApplication::setOrganizationName(QStringLiteral("qbucket"));
-    QCoreApplication::setApplicationVersion(QStringLiteral(QBUCKET_VERSION_STRING));
+    setIdentity();
     // Wayland / desktop integration: ties the window to the installed
     // .desktop file (icon, name, Flatpak id).
     QGuiApplication::setDesktopFileName(QStringLiteral(QBUCKET_APP_ID));
