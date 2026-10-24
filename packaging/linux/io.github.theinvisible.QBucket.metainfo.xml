@@ -16,7 +16,8 @@
   <description>
     <p>
       QBucket is a native desktop browser for Amazon S3 and S3-compatible
-      object storage such as Hetzner Object Storage, Ceph RGW and others.
+      object storage such as Hetzner Object Storage, Ceph RGW, Garage and
+      others.
     </p>
     <p>
       It is built for working with production data: every destructive
@@ -24,14 +25,54 @@
       not support are detected automatically and cannot be triggered, and the
       interface stays responsive even with millions of objects.
     </p>
+    <ul>
+      <li>Uploads and downloads of any size: multipart, verified, resumable after a crash</li>
+      <li>Copy and move between buckets, drag and drop in and out of the file manager</li>
+      <li>Metadata, tags, access control, presigned links</li>
+      <li>Versions: browse, restore, undelete</li>
+      <li>Bucket policy, CORS, lifecycle rules and object lock</li>
+      <li>Open an object in another application and upload the changes</li>
+      <li>Secrets in the system keychain only</li>
+    </ul>
   </description>
 
   <launchable type="desktop-id">io.github.theinvisible.QBucket.desktop</launchable>
   <icon type="stock">io.github.theinvisible.QBucket</icon>
+  <provides>
+    <binary>qbucket</binary>
+  </provides>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Browsing a bucket</caption>
+      <image>https://raw.githubusercontent.com/theinvisible/qbucket/v1.0.0/docs/img/main-dark.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The light theme</caption>
+      <image>https://raw.githubusercontent.com/theinvisible/qbucket/v1.0.0/docs/img/main-light.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Object versions</caption>
+      <image>https://raw.githubusercontent.com/theinvisible/qbucket/v1.0.0/docs/img/versions-dark.png</image>
+    </screenshot>
+  </screenshots>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#93b4f5</color>
+    <color type="primary" scheme_preference="dark">#1e3a8a</color>
+  </branding>
 
   <url type="homepage">https://github.com/theinvisible/qbucket</url>
   <url type="bugtracker">https://github.com/theinvisible/qbucket/issues</url>
   <url type="vcs-browser">https://github.com/theinvisible/qbucket</url>
+
+  <keywords>
+    <keyword>S3</keyword>
+    <keyword>object storage</keyword>
+    <keyword>bucket</keyword>
+    <keyword>Hetzner</keyword>
+    <keyword>Ceph</keyword>
+  </keywords>
 
   <categories>
     <category>Network</category>
@@ -42,13 +83,26 @@
     <control>pointing</control>
     <control>keyboard</control>
   </supports>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <recommends>
+    <internet>always</internet>
+  </recommends>
 
   <content_rating type="oars-1.1"/>
 
   <releases>
     <release version="1.0.0" date="2026-10-24" type="stable">
+      <url type="details">https://github.com/theinvisible/qbucket/blob/v1.0.0/CHANGELOG.md</url>
       <description>
-        <p>The first release, on par with the essentials of S3 Browser.</p>
+        <p>The first release, on par with the essentials of S3 Browser:</p>
+        <ul>
+          <li>Accounts for AWS S3, Hetzner, Ceph RGW, Garage and any S3-compatible endpoint, imported from the AWS CLI or rclone</li>
+          <li>Verified, resumable transfers of any size; copy, move, drag and drop</li>
+          <li>Metadata, tags, access, versions, bucket configuration and object lock</li>
+          <li>Every change planned, previewed, verified and journaled</li>
+        </ul>
       </description>
     </release>
     <release version="0.1.0" date="2026-10-20" type="development">

@@ -1,9 +1,14 @@
 # Flatpak manifest for QBucket.
 #
-# Local build (from the repository root):
+# Built and tested in Docker, nothing installed on the host:
+#   packaging/flatpak/build-in-docker.sh        → dist/qbucket-<version>-x86_64.flatpak
+# or with a local flatpak-builder (from the repository root):
 #   flatpak-builder --user --install --force-clean build-flatpak \
 #       packaging/flatpak/io.github.theinvisible.QBucket.yml
 #   flatpak run io.github.theinvisible.QBucket
+#
+# The test suite runs in the build sandbox (offscreen, in-process fake
+# servers on loopback) — the shipped binary is the tested one.
 #
 # The runtime brings Qt; our CMake finds it via find_package() inside the SDK.
 # Keep runtime-version on a supported KDE branch (Qt >= 6.5).
@@ -54,15 +59,24 @@ modules:
     builddir: true
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
-      - -DQBUCKET_BUILD_TESTS=OFF
+      - -DQBUCKET_BUILD_TESTS=ON
       # The build is offline: use the qtkeychain module above.
       - -DQBUCKET_QTKEYCHAIN_PROVIDER=SYSTEM
+    run-tests: true
+    build-options:
+      env:
+        QT_QPA_PLATFORM: offscreen
+        CTEST_OUTPUT_ON_FAILURE: '1'
     sources:
       - type: dir
         path: ../..
         skip:
           - build
           - build-flatpak
+          - build-release
+          - build-asan
+          - build-s3-asan
           - .flatpak-builder
           - cmake-build-debug
           - cmake-build-release
+          - dist

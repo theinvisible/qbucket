@@ -1,0 +1,68 @@
+# Flathub manifest for QBucket — the submission's copy of
+# packaging/flatpak/io.github.theinvisible.QBucket.yml, with the sources taken
+# from the release tag instead of the working tree. Not submitted yet: Flathub
+# builds from public sources only (packaging/flathub/README.md).
+#
+# Keep it in step with the development manifest; on a release, set `tag` and
+# `commit` to the new tag.
+id: io.github.theinvisible.QBucket
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+command: qbucket
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # S3 endpoints (from M1 on).
+  - --share=network
+  # Default download target; everything else goes through the FileChooser
+  # portal — no blanket home access (PLAN.md §9).
+  - --filesystem=xdg-download
+
+cleanup:
+  - /include
+  - /lib/cmake
+  - '*.a'
+
+modules:
+  # Secrets go to the keychain through QtKeychain → libsecret (in the KDE
+  # runtime), which uses the Secret portal inside the sandbox.
+  - name: qtkeychain
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_WITH_QT6=ON
+      - -DBUILD_TRANSLATIONS=OFF
+      - -DBUILD_TEST_APPLICATION=OFF
+    cleanup:
+      - /include
+      - /lib/cmake
+      - /mkspecs
+    sources:
+      - type: archive
+        url: https://github.com/frankosterfeld/qtkeychain/archive/refs/tags/0.15.0.tar.gz
+        sha256: f4254dc8f0933b06d90672d683eab08ef770acd8336e44dfa030ce041dc2ca22
+
+  - name: qbucket
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DQBUCKET_BUILD_TESTS=ON
+      # The build is offline: use the qtkeychain module above.
+      - -DQBUCKET_QTKEYCHAIN_PROVIDER=SYSTEM
+    run-tests: true
+    build-options:
+      env:
+        QT_QPA_PLATFORM: offscreen
+        CTEST_OUTPUT_ON_FAILURE: '1'
+    sources:
+      # The release tag, pinned to its commit (Flathub wants both).
+      - type: git
+        url: https://github.com/theinvisible/qbucket.git
+        tag: v1.0.0
+        commit: COMMIT-OF-v1.0.0
