@@ -58,7 +58,9 @@ Windows and Linux. Built on `qbucket-s3` 0.1.0. How each feature came about:
 ### Packages
 
 - Linux: a Flatpak bundle (KDE runtime 6.10) and a `.deb` for Ubuntu 26.04.
-- Windows: an installer and a ZIP (x64).
+- Windows: an installer and a ZIP (x64), with the MSVC runtime inside — no
+  Visual C++ Redistributable and no admin rights needed (the installer
+  installs per user unless "for all users" is chosen).
 - `qbucket --self-test` checks an installation (Qt, sandbox, paths, a keychain
   round trip) without a window; `--version`, `--help`.
 

@@ -835,7 +835,10 @@ static single binary (§10). The Flatpak needs no
 `--talk-name=org.freedesktop.secrets`: the Secret portal works (smoke test).
 Added `qbucket --self-test` and a fix: without a keychain daemon on Linux,
 QtKeychain's error now leads to session-only secrets (it never reported
-"no backend").
+"no backend"). Windows built and checked on Windows (devlog 012): the MSVC
+runtime app-local, a `dumpbin` dependency check instead of a clean machine,
+the installer tested per user (install, update, uninstall); no code signing
+yet.
 
 
 - **Linux / Flatpak (primary):** finalise the manifest from M0, finish-args

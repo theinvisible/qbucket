@@ -47,6 +47,8 @@ What changed: [CHANGELOG.md](CHANGELOG.md).
 
 From the release page. `qbucket --self-test` checks an installation without
 opening a window: Qt, sandbox, paths and a round trip through the keychain.
+On Windows QBucket is a GUI program, which the console doesn't wait for:
+pipe it, `qbucket --self-test | Out-String` (PowerShell).
 Without a keychain service (no Secret Service / KWallet on Linux) QBucket
 asks for secrets once per session and keeps them in memory — never in a
 file.

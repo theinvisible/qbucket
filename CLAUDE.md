@@ -67,7 +67,9 @@ rclone).
 **M8 done — released as 1.0.0** — devlog 011 (`qbucket --self-test`; .deb
 for Ubuntu 26.04 and the Flatpak bundle, built and smoke-tested in Docker;
 the Windows release script and Inno Setup installer; README, CHANGELOG,
-`docs/RELEASING.md`).
+`docs/RELEASING.md`), devlog 012 (the Windows release built and checked on
+Windows: app-local MSVC runtime, dependency check, installer test; the
+fixes the first full Windows test run found).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -175,7 +177,8 @@ What exists:
   `packaging/debian/` (control, rules, man page, `build-deb.sh`,
   `build-in-docker.sh`), `packaging/flatpak/build-in-docker.sh` + smoke
   container, `packaging/flathub/` (prepared, not submitted),
-  `packaging/windows/` (`build-release.ps1`, `installer.iss`);
+  `packaging/windows/` (`build-release.ps1`, `installer.iss`,
+  `test-installer.ps1`);
   `tools/check-version.sh`, `tools/tidy-in-docker.sh`;
   `test_release_screenshots` (→ `docs/img/`).
 - Workflows: `ci.yml` per push (Linux Release, Windows app, library as
@@ -287,7 +290,8 @@ Packages, built and smoke-tested in Docker (nothing installed on the host;
 ```sh
 packaging/debian/build-in-docker.sh     # .deb for Ubuntu 26.04 (~15 min)
 packaging/flatpak/build-in-docker.sh    # Flatpak bundle (~15 min)
-# Windows: packaging\windows\build-release.ps1 (ZIP + installer)
+# Windows: packaging\windows\build-release.ps1 -TestInstaller (ZIP + installer,
+#   dependency check, per-user install / update / uninstall)
 # the README / AppStream screenshots (real platform)
 QT_QPA_PLATFORM=xcb QBUCKET_SCREENSHOT_DIR=docs/img build/tests/test_release_screenshots
 ```
@@ -462,6 +466,28 @@ Each of these cost time there; don't relearn them.
   system** (both in one Docker volume).
 - **ISCC and rc.exe read BOM-less files as ANSI** — `installer.iss`,
   `app.rc.in` and `build-release.ps1` (Windows PowerShell 5.1) stay ASCII.
+- **Run the whole suite on Windows before a release.** Its first full run
+  (devlog 012) found seven failures that no Linux run and no llvm-mingw
+  syntax check could show — a crash, a race, a protocol hole.
+- **windeployqt deploys no MSVC runtime for a Release** (only
+  `vc_redist.x64.exe`, which nothing ran). A development machine has the
+  runtime in System32, so the copy starts there and fails on a clean
+  Windows. `build-release.ps1` stages it app-local and checks every import
+  with `dumpbin`.
+- **QObject deletes children in the order they were made.** `MainWindow`
+  made `AccountSessions` first, so it went first, and `~OperationController`
+  cancelled a running job through a deleted `Session` (crash on closing with
+  a job running). `~MainWindow` moves the sessions to the end of the list;
+  test `destroyedWhileAnUploadRuns`.
+- **`QDir::mkpath` on Windows races**: when another thread creates a missing
+  parent at the same moment, Qt's recursion climbs to the drive and fails.
+  Parallel downloads into a new tree do that — try again, then check
+  `isDir()` (`Downloader`, `DownloadJob`).
+- **PowerShell doesn't wait for a GUI executable** started with `&` and may
+  not capture its output: scripts run `qbucket.exe` with `Start-Process
+  -Wait -RedirectStandardOutput`; by hand, pipe it (`| Out-String`).
+- **Windows deletes no open file**: a test that still holds a `QFile` on what
+  it expects removed fails there only.
 
 ## Production data — safety rules
 
@@ -618,6 +644,13 @@ Fill in as they're discovered. Seeded from `PLAN.md` §8:
 - Clock skew: correct from the server `Date` header, never ask the user to
   fix their clock.
 - Self-signed TLS: per-account certificate pinning, never a global ignore.
+- **QNAM sends a request again by itself** when the connection closes
+  before the response — any method, no signal says so (`requestSent` didn't
+  fire; seen with Qt 6.12 on Windows). Non-idempotent requests go out with a
+  `OneShotBody` (also when empty) that refuses the rewind before such a
+  resend: QNAM fails with `ContentReSendError` → `outcomeUnknown`. Tests
+  `theNetworkLayerNeverSendsANonIdempotentRequestAgain`,
+  `copyObjectFailuresAreNeverSuccesses`.
 - **QNAM normalises `.` / `..` path segments on the wire** — even
   `%2E%2E`, and although `QUrl::path()` still shows them. A key
   `a/../b` would address `b`. `S3Uri::build` refuses such keys

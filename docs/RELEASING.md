@@ -60,28 +60,44 @@ portal. Lintian (deb) and flatpak-builder-lint (Flatpak) must have no
 errors; the Flatpak's three expected ones are those of a private repository
 (`packaging/flathub/README.md`). Docker is all they need on the host.
 
-On Windows (Visual Studio 2022 with C++, Qt `msvc2022_64`, Inno Setup 6):
+On Windows (Visual Studio 2022 with C++, Qt `msvc2022_64`, Inno Setup 6 —
+`winget install JRSoftware.InnoSetup`):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File packaging\windows\build-release.ps1
+powershell -ExecutionPolicy Bypass -File packaging\windows\build-release.ps1 -TestInstaller
 # dist\qbucket-x.y.z-windows-x64.zip, dist\qbucket-x.y.z-windows-x64-setup.exe
 ```
 
 It builds with `/WX`, runs ctest (including `test_virtual_file_drag`),
-stages the windeployqt folder, checks the staged `qbucket.exe` (`--version`,
-`--self-test` against the Credential Manager — not possible in an SSH
-session with key login), then zips and builds the installer.
+deploys the staged folder with windeployqt into an empty directory and adds
+the MSVC runtime app-local (no `vc_redist`, no admin rights). Then:
+
+- **dependency check** — `dumpbin /dependents` on every staged exe / dll:
+  each import must be staged or a Windows system DLL, and the MSVC runtime
+  in System32 doesn't count. This stands in for the clean container of the
+  Linux packages: a development machine has the runtime installed, a fresh
+  Windows doesn't, and the copy would only fail there;
+- the staged `qbucket.exe` with nothing but Windows on `PATH`: `--version`,
+  `--self-test` against the Credential Manager (not possible in an SSH
+  session with key login);
+- ZIP and installer;
+- with `-TestInstaller`, `packaging\windows\test-installer.ps1`: an older
+  version (0.9.0, built from the same folder) installed per user, the update
+  over it (one uninstall entry, stale plugins removed, every file there,
+  `--version` / `--self-test` of the installed exe), the uninstall (folder,
+  entry and Start menu gone, settings untouched). It refuses to run while
+  QBucket is installed.
 
 ## 4. By hand
 
 Not automated; each release on the real desktops:
 
-- **Windows** — install with the setup (per user), start from the Start menu,
-  add an account (secret in the Credential Manager), browse, upload and
-  download; drag a file, several files and a folder into Explorer, a large
-  file (Explorer's progress, QBucket stays usable), Escape and Explorer's
-  Cancel; uninstall (settings and secrets stay); an update over an older
-  version.
+- **Windows** — install with the setup "for all users" (UAC; per user,
+  update and uninstall are what `-TestInstaller` checks), start from the
+  Start menu, add an account (secret in the Credential Manager), browse,
+  upload and download; drag a file, several files and a folder into
+  Explorer, a large file (Explorer's progress, QBucket stays usable), Escape
+  and Explorer's Cancel; uninstall (settings and secrets stay).
 - **Ubuntu 26.04 (.deb)** — `sudo apt install ./qbucket_x.y.z-1_amd64.deb`;
   KDE and GNOME: an account with the secret in KWallet / GNOME Keyring, drag
   into Dolphin / Nautilus, open in the default application and upload the
