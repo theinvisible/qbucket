@@ -372,11 +372,19 @@ if(WIN32)
             HINTS "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}")
         set(_windeployqt "${WINDEPLOYQT_EXE}")
     endif()
+    # The DXC shader compiler (dxcompiler.dll, dxil.dll, ~20 MB) is for the
+    # D3D12 RHI only; a Widgets app paints in software. Newer windeployqt
+    # deploys it unless told not to.
+    set(_windeployqt_dxc "")
+    if(Qt6_VERSION VERSION_GREATER_EQUAL 6.6)
+        set(_windeployqt_dxc --no-system-dxc-compiler)
+    endif()
     if(_windeployqt)
         add_custom_command(TARGET qbucket POST_BUILD
             COMMAND "${_windeployqt}"
                     --translations de,en
                     --no-system-d3d-compiler
+                    ${_windeployqt_dxc}
                     --no-opengl-sw
                     "$<TARGET_FILE:qbucket>"
             COMMENT "Deploying Qt runtime next to qbucket.exe"
