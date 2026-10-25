@@ -176,9 +176,12 @@ private slots:
         const OpenFileService::Entry e = *only(*service);
         QVERIFY(e.readOnly);
         QVERIFY(!(QFile::permissions(e.path) & QFileDevice::WriteOwner));
-        QFile f(e.path);
-        QVERIFY(f.open(QIODevice::ReadOnly));
-        QCOMPARE(f.readAll(), QByteArray("buy milk\n"));
+        {
+            // Closed before the discard: Windows deletes no open file.
+            QFile f(e.path);
+            QVERIFY(f.open(QIODevice::ReadOnly));
+            QCOMPARE(f.readAll(), QByteArray("buy milk\n"));
+        }
         service->upload(e.id);   // never
         QCOMPARE(only(*service)->state, OpenFileService::State::Open);
         service->discard(e.id);

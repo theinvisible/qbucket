@@ -4,7 +4,9 @@
 // quitting with an unsent change asks first.
 
 #include "controllers/BrowseController.h"
+#include "controllers/Job.h"
 #include "controllers/OpenFileService.h"
+#include "controllers/OperationController.h"
 #include "controllers/SettingsController.h"
 #include "support/AccountHarness.h"
 #include "ui/MainWindow.h"
@@ -25,6 +27,8 @@
 #include <QTableWidget>
 #include <QTableView>
 #include <QtTest>
+
+#include <algorithm>
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
@@ -85,8 +89,10 @@ private slots:
     void cleanup()
     {
         // Nothing to ask about on the way out.
-        for (const auto& e : m_window->openFiles()->entries())
-            m_window->openFiles()->discard(e.id);
+        if (m_window) {
+            for (const auto& e : m_window->openFiles()->entries())
+                m_window->openFiles()->discard(e.id);
+        }
         m_window.reset();
         m_objects.reset();
         m_h.reset();
@@ -184,6 +190,33 @@ private slots:
         QTest::qWait(100);
         QVERIFY(m_window->isVisible());
         QCOMPARE(m_window->openFiles()->changedEntries().size(), 1);
+    }
+
+    void destroyedWhileAnUploadRuns()
+    {
+        // ~OperationController cancels the running job, and the job cancels
+        // its requests through the account's session — which must still be
+        // there (QObject deletes children in the order they were made).
+        m_objects->setDelay(QStringLiteral("PutObject"), 3000);
+        m_browser->view()->selectRow(0);
+        m_browser->openAction()->trigger();
+        QTRY_COMPARE_WITH_TIMEOUT(m_opened.size(), 1, 10000);
+        {
+            QFile f(m_opened.first().toLocalFile());
+            QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            f.write("on its way\n");
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!m_window->changeBar()->isHidden(), 5000);
+        m_window->openFiles()->upload(m_window->openFiles()->changedEntries().first().id);
+        auto* operations = m_window->findChild<OperationController*>();
+        QVERIFY(operations);
+        const auto executing = [operations] {
+            const QList<Job*> jobs = operations->jobs();
+            return std::any_of(jobs.cbegin(), jobs.cend(), [](const Job* j) { return j->phase() == Job::Phase::Executing; });
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(executing(), 5000);
+        QTest::qWait(200);   // the PUT is out
+        m_window.reset();
     }
 };
 

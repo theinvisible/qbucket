@@ -55,6 +55,7 @@ public:
     MainWindow(SettingsController* settings, ThemeManager* theme,
                AccountStore* accounts = nullptr, SecretStore* secrets = nullptr,
                QWidget* parent = nullptr);
+    ~MainWindow() override;
 
     // The Bucket menu (tests).
     [[nodiscard]] QAction* newBucketAction() const { return m_actNewBucket; }

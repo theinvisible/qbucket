@@ -260,6 +260,18 @@ MainWindow::MainWindow(SettingsController* settings, ThemeManager* theme,
         QTimer::singleShot(0, this, &MainWindow::offerResume_);
 }
 
+MainWindow::~MainWindow()
+{
+    // QObject deletes its children in the order they were made: the account
+    // sessions would go before the jobs, transfers and services that use them
+    // (~OperationController cancels what still runs — through a deleted
+    // Session). Moved to the end of the list, they go last.
+    if (m_sessions) {
+        m_sessions->setParent(nullptr);
+        m_sessions->setParent(this);
+    }
+}
+
 void MainWindow::offerResume_()
 {
     m_transfers->jobs()->load(this, [this](const QList<TransferJobStore::Record>& records) {

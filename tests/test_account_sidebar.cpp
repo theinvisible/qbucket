@@ -3,6 +3,7 @@
 #include "accounts/SecretStore.h"
 #include "controllers/AccountSessions.h"
 #include "models/AccountTreeModel.h"
+#include "support/DragPosition.h"
 #include "support/FakeKeychainBackend.h"
 #include "models/ObjectSelection.h"
 #include "ui/AccountSidebar.h"
@@ -27,6 +28,7 @@
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
+using qbucket::testing::DragPosition;
 
 namespace {
 
@@ -124,7 +126,7 @@ private slots:
         files.setUrls({QUrl::fromLocalFile(QDir::tempPath())});
         const auto dropAt = [&](const QModelIndex& index) {
             const QPoint pos = sidebar.view()->visualRect(index).center();
-            QDragEnterEvent enter(pos, Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
+            QDragEnterEvent enter(DragPosition(pos), Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
             QCoreApplication::sendEvent(sidebar.view()->viewport(), &enter);
             QDropEvent drop(QPointF(pos), Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
             QCoreApplication::sendEvent(sidebar.view()->viewport(), &drop);
@@ -171,7 +173,7 @@ private slots:
         std::unique_ptr<QMimeData> mime(sel.toMimeData());
         const auto dropAt = [&](const QModelIndex& index, Qt::KeyboardModifiers mods, const QMimeData* data) {
             const QPoint pos = sidebar.view()->visualRect(index).center();
-            QDragEnterEvent enter(pos, Qt::CopyAction | Qt::MoveAction, data, Qt::LeftButton, mods);
+            QDragEnterEvent enter(DragPosition(pos), Qt::CopyAction | Qt::MoveAction, data, Qt::LeftButton, mods);
             QCoreApplication::sendEvent(sidebar.view()->viewport(), &enter);
             QDropEvent drop(QPointF(pos), Qt::CopyAction | Qt::MoveAction, data, Qt::LeftButton, mods);
             QCoreApplication::sendEvent(sidebar.view()->viewport(), &drop);

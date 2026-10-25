@@ -32,6 +32,19 @@ QString describeSide(qint64 size, qint64 mtimeMs)
     return QStringLiteral("%1, %2").arg(locale.formattedDataSize(std::max<qint64>(0, size)), when);
 }
 
+// QDir::mkpath on Windows fails when another thread creates one of the
+// missing parents at the same moment (Qt's recursion then climbs up to the
+// drive and gives up) — the transfer workers create folders of the same
+// tree. Once more, then look.
+bool makePath(const QString& dir)
+{
+    for (int i = 0; i < 3; ++i) {
+        if (QDir().mkpath(dir))
+            return true;
+    }
+    return QFileInfo(dir).isDir();
+}
+
 QString lastSegment(QString key)
 {
     while (key.endsWith(u'/'))
@@ -138,7 +151,7 @@ DownloadJob::LocalCheck DownloadJob::checkLocal(const QString& rawPath, const QS
         c.error = in.errorString();
         return c;
     }
-    QDir().mkpath(QFileInfo(finalPath).absolutePath());
+    makePath(QFileInfo(finalPath).absolutePath());   // a failure shows at the open
     if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         c.error = out.errorString();
         return c;
@@ -594,7 +607,7 @@ void DownloadJob::startItem_(const Record& r)
 {
     if (r.path.endsWith(u'/')) {
         // A folder marker: the folder.
-        if (QDir().mkpath(absolute_(r.path))) {
+        if (makePath(absolute_(r.path))) {
             ++m_succeeded;
             ++m_processed;
             markDone_(r);

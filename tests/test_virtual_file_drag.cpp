@@ -14,6 +14,7 @@
 #include <qbucket/s3/testing/FakeObjectStore.h>
 
 #include <QMimeData>
+#include <QScopeGuard>
 #include <QtTest>
 
 #include <atomic>
@@ -278,6 +279,12 @@ private slots:
 
     void createdInTheMtaUsedThroughAProxy()
     {
+        // What VirtualFileDrag holds for the app's lifetime: without it the
+        // MTA ends with the thread that created the object, and the proxy is
+        // disconnected (RPC_E_DISCONNECTED).
+        CO_MTA_USAGE_COOKIE mta = nullptr;
+        QVERIFY(SUCCEEDED(CoIncrementMTAUsage(&mta)));
+        const auto releaseMta = qScopeGuard([mta] { CoDecrementMTAUsage(mta); });
         auto reader = std::make_shared<VirtualFileReader>(
             session(), DragStaging::Selection{m_h->account.id, kBucket, {{QStringLiteral("docs/a.txt"), false, 3}}});
         QMimeData internal;

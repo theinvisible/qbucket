@@ -4,6 +4,7 @@
 #include "controllers/BrowseController.h"
 #include "models/ObjectSelection.h"
 #include "platform/ExternalDrag.h"
+#include "support/DragPosition.h"
 #include "support/FakeBucket.h"
 #include "support/FakeKeychainBackend.h"
 #include "ui/ObjectBrowser.h"
@@ -33,6 +34,7 @@
 
 using namespace qbucket;
 using namespace qbucket::s3::testing;
+using qbucket::testing::DragPosition;
 using qbucket::testing::FakeBucket;
 
 namespace {
@@ -200,9 +202,9 @@ private slots:
         files.setUrls({QUrl::fromLocalFile(m_dir.filePath(QStringLiteral("a.txt"))),
                        QUrl::fromLocalFile(m_dir.path())});
         const auto dragTo = [&](const QPoint& pos, QMimeData* mime) {
-            QDragEnterEvent enter(pos, Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QDragEnterEvent enter(DragPosition(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
             QCoreApplication::sendEvent(viewport, &enter);
-            QDragMoveEvent move(pos, Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QDragMoveEvent move(DragPosition(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
             QCoreApplication::sendEvent(viewport, &move);
             const bool accepted = move.isAccepted();
             QDropEvent drop(QPointF(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
@@ -302,9 +304,9 @@ private slots:
                 [&](const ObjectSelection& sel, const QString& prefix, bool move) { dropped.append({sel, prefix, move}); });
         QWidget* viewport = browser.view()->viewport();
         const auto dragTo = [&](const QPoint& pos, const QMimeData* mime, Qt::KeyboardModifiers mods) {
-            QDragEnterEvent enter(pos, Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
+            QDragEnterEvent enter(DragPosition(pos), Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
             QCoreApplication::sendEvent(viewport, &enter);
-            QDragMoveEvent move(pos, Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
+            QDragMoveEvent move(DragPosition(pos), Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
             QCoreApplication::sendEvent(viewport, &move);
             const bool accepted = move.isAccepted();
             QDropEvent drop(QPointF(pos), Qt::CopyAction | Qt::MoveAction, mime, Qt::LeftButton, mods);
