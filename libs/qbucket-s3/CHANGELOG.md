@@ -376,7 +376,21 @@ First release, shipped with QBucket 1.0.0.
   release builds (asserts in debug, returns an Internal error otherwise);
   `error() &&` returns by value.
 
+- Found by the first full Windows run (Qt 6.12): upload progress only ever
+  grows (Qt reported 0 again after the last byte); parallel downloads into
+  a new folder tree no longer fail with "cannot create the folder" (Qt's
+  `QDir::mkpath` on Windows gives up when another thread creates a parent
+  at the same moment — the `Downloader` tries again, then looks).
+
 ### Safety
+
+- Non-idempotent requests (CopyObject, CompleteMultipartUpload,
+  CreateBucket) reach the server at most once per attempt. QNAM sends a
+  request again by itself when the connection closes before the response —
+  any method; seen with Qt 6.12 on Windows, invisible to the library and to
+  every public signal. Their body (also an empty one) now refuses the rewind
+  that precedes such a resend, so QNAM fails with `ContentReSendError`
+  instead, reported as `outcomeUnknown`.
 
 - `Uploader`: a conditional single PUT (If-Match / If-None-Match) refused
   with 412 is resolved by HEAD — a retry after a lost answer meets our own

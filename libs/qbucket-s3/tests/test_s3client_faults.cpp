@@ -166,6 +166,38 @@ private Q_SLOTS:
         QCOMPARE(r.error().category, ErrorCategory::Transient);
         QVERIFY(r.error().outcomeUnknown);
         QCOMPARE(m_server->requestCount(), 1);
+        QMutexLocker lock(&m_observer->mutex);
+        QCOMPARE(m_observer->attempts, QList<int>{1});
+    }
+
+    void theNetworkLayerNeverSendsANonIdempotentRequestAgain()
+    {
+        // QNAM sends a request again by itself when the connection closes
+        // before the response (Qt 6.12 on Windows does, for any method). The
+        // second send would find the bucket the first one created and answer
+        // a definite-looking 409 — it must never go out.
+        FakeResponse drop;
+        drop.dropWithoutResponse = true;
+        Matcher any;
+        m_server->addRoute(any, {drop, FakeResponse::s3Error(409, "BucketAlreadyOwnedByYou")});
+        auto client = makeClient();
+        CreateBucketParams p;
+        p.bucket = QStringLiteral("maybe-created");
+        p.region = QStringLiteral("eu-central-1");   // with a body
+        Result<void> r = await<void>([&](auto cb) { client->createBucket(p, std::move(cb)); });
+        QVERIFY(!r);
+        QVERIFY2(r.error().outcomeUnknown, qPrintable(r.error().toString()));
+        QCOMPARE(m_server->requestCount(), 1);
+
+        // The same without a body.
+        m_server->clearRequests();
+        m_server->clearRoutes();
+        m_server->addRoute(any, {drop, FakeResponse::s3Error(409, "BucketAlreadyOwnedByYou")});
+        p.region.clear();
+        r = await<void>([&](auto cb) { client->createBucket(p, std::move(cb)); });
+        QVERIFY(!r);
+        QVERIFY2(r.error().outcomeUnknown, qPrintable(r.error().toString()));
+        QCOMPARE(m_server->requestCount(), 1);
     }
 
     void serverErrorOnNonIdempotentRequestIsNotRetried()

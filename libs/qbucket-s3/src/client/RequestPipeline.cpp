@@ -1,6 +1,7 @@
 #include "client/RequestPipeline.h"
 
 #include "client/FileRangeDevice.h"
+#include "client/OneShotBody.h"
 #include "core/ErrorMapping.h"
 #include "core/HttpDate.h"
 #include "core/Mailbox.h"
@@ -337,11 +338,23 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
     call->startedAt = QDateTime::currentDateTimeUtc();
     call->timer.start();
 
+    // Non-idempotent: a body QNAM can't rewind, so it never sends the request
+    // a second time by itself (OneShotBody) — even an empty one.
+    OneShotBody* oneShot = nullptr;
+    if (!upload && !spec.idempotent && spec.method != "HEAD") {
+        oneShot = new OneShotBody(spec.body);
+        oneShot->open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+        req.setHeader(QNetworkRequest::ContentLengthHeader, spec.body.size());
+        req.setAttribute(QNetworkRequest::DoNotBufferUploadDataAttribute, true);
+    }
+
     QNetworkReply* reply = nullptr;
     if (spec.method == "HEAD")
         reply = nam()->head(req);
     else if (upload)
         reply = nam()->sendCustomRequest(req, spec.method, upload);
+    else if (oneShot)
+        reply = nam()->sendCustomRequest(req, spec.method, oneShot);
     else
         reply = nam()->sendCustomRequest(req, spec.method, spec.body);
     call->reply = reply;
@@ -349,6 +362,8 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
         upload->setParent(reply);   // must outlive the reply; goes with it
         call->upload = upload;
     }
+    if (oneShot)
+        oneShot->setParent(reply);
 
     if (call->sink) {
         reply->setReadBufferSize(kSinkReadBufferBytes);
@@ -366,9 +381,14 @@ void RequestPipeline::start(const std::shared_ptr<Call>& call, const Credentials
         }
     });
     if (upload && spec.progress) {
-        connect(reply, &QNetworkReply::uploadProgress, this, [call](qint64 sent, qint64) {
-            if (call->spec.progress && call->spec.file)
-                call->spec.progress(sent, call->spec.file->length);
+        // Forward only what grows: Qt 6.12 on Windows reports 0 again once
+        // the upload is over, and a resend by QNAM starts over from 0.
+        auto reported = std::make_shared<qint64>(-1);
+        connect(reply, &QNetworkReply::uploadProgress, this, [call, reported](qint64 sent, qint64) {
+            if (!call->spec.progress || !call->spec.file || sent <= *reported)
+                return;
+            *reported = sent;
+            call->spec.progress(sent, call->spec.file->length);
         });
     }
 #if QT_CONFIG(ssl)

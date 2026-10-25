@@ -52,11 +52,24 @@ bool etagIsContentMd5(const ObjectMeta& meta)
     return true;
 }
 
+// QDir::mkpath on Windows fails when another thread creates one of the
+// missing parents at the same moment (Qt's recursion then climbs up to the
+// drive and gives up) — parallel downloads into one new folder tree do that.
+// Once more, then look.
+bool makePath(const QString& dir)
+{
+    for (int i = 0; i < 3; ++i) {
+        if (QDir().mkpath(dir))
+            return true;
+    }
+    return QFileInfo(dir).isDir();
+}
+
 // Creates the parent directory and a file of `size` bytes (sparse where
 // the file system can). fresh: truncate first.
 Result<void> preparePartial(const QString& path, qint64 size, bool fresh)
 {
-    if (!QDir().mkpath(QFileInfo(path).absolutePath()))
+    if (!makePath(QFileInfo(path).absolutePath()))
         return localError(QStringLiteral("cannot create the folder for %1").arg(path));
     QFile f(path);
     if (!f.open(fresh ? QIODevice::WriteOnly | QIODevice::Truncate : QIODevice::ReadWrite))

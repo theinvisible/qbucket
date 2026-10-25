@@ -353,7 +353,8 @@ private Q_SLOTS:
         r = await<CopyObjectResult>([&](auto cb) { client->copyObject(p, std::move(cb)); });
         QCOMPARE(r.error().category, ErrorCategory::PreconditionFailed);
 
-        // A lost answer: the copy may exist. Unknown, and sent once.
+        // A lost answer: the copy may exist. Unknown, and sent once — by QNAM
+        // too, which would otherwise send it again by itself (OneShotBody).
         m_server->clearRequests();
         FakeResponse drop;
         drop.dropWithoutResponse = true;

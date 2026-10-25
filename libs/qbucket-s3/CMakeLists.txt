@@ -75,6 +75,8 @@ add_library(qbucket_s3 ${_s3_lib_type}
     src/capabilities/ProbeInterpreter.cpp
     src/client/FileRangeDevice.h
     src/client/FileRangeDevice.cpp
+    src/client/OneShotBody.h
+    src/client/OneShotBody.cpp
     src/client/RequestPipeline.h
     src/client/RequestPipeline.cpp
     src/client/RetryPolicy.h
