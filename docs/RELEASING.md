@@ -58,7 +58,9 @@ clean container and runs `qbucket --version`, the window (offscreen) and
 session-only secrets) and with GNOME Keyring, the Flatpak through the Secret
 portal. Lintian (deb) and flatpak-builder-lint (Flatpak) must have no
 errors; the Flatpak's three expected ones are those of a private repository
-(`packaging/flathub/README.md`). Docker is all they need on the host.
+(`packaging/flathub/README.md`). Docker is all they need on the host. They
+compile with 12 jobs in a container limited to 20 GB (`QBUCKET_JOBS`,
+`QBUCKET_DOCKER_MEMORY`): with every core the machine can hang.
 
 On Windows (Visual Studio 2022 with C++, Qt `msvc2022_64`, Inno Setup 6 —
 `winget install JRSoftware.InnoSetup`):

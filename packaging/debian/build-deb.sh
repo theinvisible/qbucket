@@ -6,6 +6,8 @@
 #
 #   packaging/debian/build-deb.sh <repository> <output-dir>
 #
+# QBUCKET_JOBS: parallel compilers and tests (default: every core).
+#
 # The tree is copied first: dpkg-buildpackage writes next to the sources and
 # drops the .deb in the parent directory, and the repository is a read-only
 # mount or the developer's working copy. packaging/debian/ becomes debian/ in
@@ -50,7 +52,7 @@ if ! dpkg-checkbuilddeps "$TREE/debian/control" 2>/dev/null; then
 fi
 
 log "dpkg-buildpackage"
-( cd "$TREE" && dpkg-buildpackage -b -uc -us "-j$(nproc)" )
+( cd "$TREE" && dpkg-buildpackage -b -uc -us "-j${QBUCKET_JOBS:-$(nproc)}" )
 
 shopt -s nullglob
 debs=()

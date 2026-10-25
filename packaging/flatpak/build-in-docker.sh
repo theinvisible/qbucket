@@ -20,6 +20,10 @@
 # qbucket-flatpak-builder (sources, build, repo and flatpak-builder's state)
 # and qbucket-flatpak-smoke
 # (the runtime in the smoke container).
+#
+# The build runs QBUCKET_JOBS compilers at a time (default 12) in a container
+# limited to QBUCKET_DOCKER_MEMORY (default 20g): with every core next to a
+# desktop the machine can hang; at the limit the OOM killer ends the build.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -32,12 +36,14 @@ RUNTIME="$(sed -n "s/^runtime-version: '\(.*\)'/\1/p" "$REPO/$MANIFEST")"
 VERSION="$(sed -n '/^project(qbucket/,/)/s/^[[:space:]]*VERSION[[:space:]]\{1,\}\([0-9.]*\).*/\1/p' "$REPO/CMakeLists.txt")"
 BUNDLE="qbucket-$VERSION-x86_64.flatpak"
 BUILDER="ghcr.io/flathub-infra/flatpak-github-actions:kde-$RUNTIME"
+JOBS="${QBUCKET_JOBS:-12}"
+MEMORY="${QBUCKET_DOCKER_MEMORY:-20g}"
 log() { printf '\n==> %s\n' "$*"; }
 
 log "build ($BUILDER)"
-docker run --rm --privileged \
+docker run --rm --privileged --memory="$MEMORY" --memory-swap="$MEMORY" \
     -v "$REPO:/src:ro" -v "$OUT:/out" -v qbucket-flatpak-builder:/cache \
-    -e APP_ID="$APP_ID" -e MANIFEST="$MANIFEST" -e BUNDLE="$BUNDLE" -e OWNER="$(id -u):$(id -g)" \
+    -e JOBS="$JOBS" -e APP_ID="$APP_ID" -e MANIFEST="$MANIFEST" -e BUNDLE="$BUNDLE" -e OWNER="$(id -u):$(id -g)" \
     --entrypoint bash "$BUILDER" -euc '
     # The manifest takes the sources from ../.. — a copy without build trees.
     # Everything in the volume: flatpak-builder wants its state and build
@@ -48,7 +54,7 @@ docker run --rm --privileged \
         --exclude="./cmake-build-*" --exclude=./dist --exclude=./.flatpak-builder \
         -cf - . | tar -C /cache/src -xf -
     cd /cache/src
-    flatpak-builder --disable-rofiles-fuse --force-clean --state-dir=/cache/state \
+    flatpak-builder --disable-rofiles-fuse --force-clean --jobs="$JOBS" --state-dir=/cache/state \
         --repo=/cache/repo /cache/build "$MANIFEST"
     flatpak build-bundle /cache/repo "/out/$BUNDLE" "$APP_ID" \
         --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo

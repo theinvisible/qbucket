@@ -17,6 +17,11 @@
 #        on a D-Bus session (exit 0),
 #      - the installed .desktop file and AppStream metainfo validate.
 # apt's downloads are kept in the Docker volume qbucket-deb-apt.
+#
+# The build runs QBUCKET_JOBS compilers and tests at a time (default 12) in a
+# container limited to QBUCKET_DOCKER_MEMORY (default 20g): with every core
+# (-j20) next to a desktop this laptop hung; at the limit the OOM killer
+# ends the build, not the machine.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -24,6 +29,8 @@ OUT="${1:-$REPO/dist}"
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
 IMAGE=ubuntu:26.04
+JOBS="${QBUCKET_JOBS:-12}"
+MEMORY="${QBUCKET_DOCKER_MEMORY:-20g}"
 log() { printf '\n==> %s\n' "$*"; }
 
 # Keep the downloaded packages between runs (the image deletes them).
@@ -32,7 +39,8 @@ APT=(-v qbucket-deb-apt:/var/cache/apt/archives
 NOCLEAN='rm -f /etc/apt/apt.conf.d/docker-clean'
 
 log "build ($IMAGE)"
-docker run --rm "${APT[@]}" -v "$REPO:/src:ro" -v "$OUT:/out" "$IMAGE" bash -euc "
+docker run --rm --memory="$MEMORY" --memory-swap="$MEMORY" "${APT[@]}" -e QBUCKET_JOBS="$JOBS" \
+    -v "$REPO:/src:ro" -v "$OUT:/out" "$IMAGE" bash -euc "
     $NOCLEAN
     apt-get update -qq
     apt-get install -y -qq --no-install-recommends dpkg-dev build-essential lintian >/dev/null

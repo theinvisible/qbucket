@@ -423,7 +423,10 @@ Each of these cost time there; don't relearn them.
 - **Heavy work one after the other, at `-j12`.** Two builds at `-j20` side
   by side plus a 1M-row benchmark took the machine down (31 GB, no swap).
   A reboot empties `/tmp` — the scratchpad's clang-tidy too; the scripts
-  then fail loudly.
+  then fail loudly. Builds inside Docker count too: dpkg-buildpackage and
+  flatpak-builder take every core by default, and the .deb at `-j20` hung
+  the laptop. The package scripts run at `QBUCKET_JOBS` (12) in a container
+  capped at `QBUCKET_DOCKER_MEMORY` (20g).
 - **Debugging a hanging QtTest binary:** after an abort, QtTest's crash
   handler forks to print a stack and can deadlock on the malloc lock —
   `QTEST_DISABLE_STACK_DUMP=1` shows the real failure.

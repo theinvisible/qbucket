@@ -144,14 +144,40 @@ The first release run stopped at `/WX`, then failed 7 of 94 tests.
   `RelWithDebInfo` build of the one test (`build-windows-rwdi`) named the
   frames at once.
 
+## Back on Linux
+
+The shared code changed on Windows, so the whole of `docs/RELEASING.md`
+§2 and §3 ran again on the Linux machine (Ubuntu 26.04, Qt 6.10.2):
+
+- Debug ctest 102 / 102 with Ceph, VersityGW and Garage; the changed tests
+  (`test_s3client_faults`, `_write`, `test_main_window_open`,
+  `test_drag_staging`, `test_session_transfer`, the drag tests) 10 runs
+  each, green. Release with `-Werror` 96 / 96; the library under ASan +
+  UBSan + LSan 36 / 36, the app under ASan + UBSan 96 / 96,
+  `test_main_window_open` and `test_drag_staging` 10 more runs there.
+  clang-tidy 18 over 240 files clean.
+- **The close crash is a Linux bug too.** With `~MainWindow`'s reordering
+  taken out, ASan reports a heap-use-after-free in `destroyedWhileAnUploadRuns`
+  3 runs of 3. With it, none.
+- **Qt 6.10 on Linux doesn't resend** — not here. With `OneShotBody` taken out
+  of the pipeline, `theNetworkLayerNeverSendsANonIdempotentRequestAgain`,
+  `lostReplyOfNonIdempotentRequestIsNeverRetried` and
+  `copyObjectFailuresAreNeverSuccesses` still pass: the fake server's dropped
+  connection never makes QNAM send again. So on Linux these tests can't
+  catch a regression; Windows (Qt 6.12) is where they bite.
+- The packages rebuilt with the fixes: the .deb (96 / 96 in the package
+  build, lintian clean, the clean-install smoke test) and the Flatpak
+  (96 / 96 in the sandbox, lint with only the three private-repository
+  errors, the keychain through the Secret portal). The .deb build at
+  `-j20` (every core) had hung the laptop the first time; the package
+  scripts now compile with 12 jobs in a container capped at 20 GB.
+
 ## Still to check — by hand
 
 - The setup "for all users" (UAC), start from the Start menu, an account,
   browse / upload / download, dragging into Explorer (one file, several, a
   folder, a large one; Escape and Explorer's Cancel), uninstall —
   `docs/RELEASING.md` §4.
-- The changed shared code on Linux: debug, release `-Werror`, ASan,
-  clang-tidy (`docs/RELEASING.md` §2) — this machine has no Docker.
 
 ## Open points
 
@@ -160,5 +186,6 @@ The first release run stopped at `/WX`, then failed 7 of 94 tests.
   inference with a real start.
 - `qbucket --self-test` in a console needs the pipe; a console twin
   (`qbucket.com`) would make it plain.
-- Does Qt 6.10 / Linux resend too, on an RST? `OneShotBody` covers both
+- Does Qt 6.10 / Linux resend in some other case, an RST at another moment,
+  say? Not with the fake server's drop (above). `OneShotBody` covers it
   either way.
