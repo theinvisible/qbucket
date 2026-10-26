@@ -4,9 +4,11 @@
 #include "controllers/TransferJobStore.h"
 #include "models/AccountTreeModel.h"
 #include "support/AccountHarness.h"
+#include "support/DragPosition.h"
 #include "models/ObjectSelection.h"
 #include "support/FakeBucket.h"
 #include "ui/AccountSidebar.h"
+#include "ui/CreateBucketDialog.h"
 #include "ui/MainWindow.h"
 #include "ui/ObjectBrowser.h"
 #include "ui/EditMetadataDialog.h"
@@ -23,13 +25,17 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
+#include <QMimeData>
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QStackedWidget>
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QTableView>
 #include <QToolButton>
+#include <QTreeView>
+#include <QUrl>
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QtTest>
@@ -370,6 +376,15 @@ private slots:
         m_window.reset();   // before the store
     }
 
+    // A new bucket, made here, opened from the sidebar, a file dropped onto
+    // its empty page: the file shows once uploaded.
+    void aFileDroppedIntoANewBucketShowsUp()
+    {
+        FakeObjectStore store(m_h->server.get());
+        newBucketDropFlow(m_h->account.id, QStringLiteral("fresh"), 10000);
+        m_window.reset();   // before the store
+    }
+
     void unfinishedTransfersAreOfferedAtStart()
     {
         // The last session left an upload behind.
@@ -411,6 +426,75 @@ private slots:
     }
 
 private:
+    // Creates `bucket` through the sidebar's New Bucket, opens it by making
+    // it current in the sidebar, drops a local file onto its empty page,
+    // confirms the upload and expects the file in the list.
+    void newBucketDropFlow(const QUuid& account, const QString& bucket, int timeoutMs)
+    {
+        auto* sidebar = m_window->findChild<AccountSidebar*>();
+        AccountTreeModel* tree = sidebar->model();
+        tree->refresh(tree->accountIndex(account));
+        QTRY_VERIFY_WITH_TIMEOUT(tree->rowCount(tree->accountIndex(account)) > 0, timeoutMs);
+
+        emit sidebar->createBucketRequested(account);
+        QTRY_VERIFY(m_window->findChild<CreateBucketDialog*>() != nullptr);
+        auto* create = m_window->findChild<CreateBucketDialog*>();
+        create->nameEdit()->setText(bucket);
+        QTRY_VERIFY(create->createButton()->isEnabled());
+        create->createButton()->click();
+        // Confirmed by the dialog; a preview only if the job asks for one.
+        QTRY_VERIFY_WITH_TIMEOUT(tree->bucketIndex(account, bucket).isValid()
+                                     || m_window->findChild<OperationPreviewDialog*>() != nullptr,
+                                 timeoutMs);
+        if (auto* p = m_window->findChild<OperationPreviewDialog*>()) {
+            if (p->productionCheck())
+                p->productionCheck()->setChecked(true);
+            if (p->typedConfirmation())
+                p->typedConfirmation()->setText(p->expectedTyping());
+            QTRY_VERIFY(p->confirmButton()->isEnabled());
+            p->confirmButton()->click();
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(tree->bucketIndex(account, bucket).isValid(), timeoutMs);
+        for (QMessageBox* b : m_window->findChildren<QMessageBox*>())
+            b->close();
+
+        sidebar->view()->setCurrentIndex(tree->bucketIndex(account, bucket));   // a click on it
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->navigation()->current().bucket, bucket, timeoutMs);
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->state(), ObjectTableModel::State::Complete, timeoutMs);
+        auto* stack = m_browser->findChild<QStackedWidget*>();
+        QVERIFY(stack->currentWidget() != m_browser->view());   // "This folder is empty."
+
+        const QString file = m_h->path(QStringLiteral("hello.txt"));
+        {
+            QFile f(file);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            f.write("hello");
+        }
+        QMimeData files;
+        files.setUrls({QUrl::fromLocalFile(file)});
+        QWidget* page = stack->currentWidget();
+        const QPoint pos = page->rect().center();
+        QDragEnterEvent enter(qbucket::testing::DragPosition(pos), Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(page, &enter);
+        QDragMoveEvent move(qbucket::testing::DragPosition(pos), Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(page, &move);
+        QVERIFY(move.isAccepted());
+        QDropEvent drop(QPointF(pos), Qt::CopyAction, &files, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(page, &drop);
+
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<OperationPreviewDialog*>() != nullptr, timeoutMs);
+        auto* dlg = m_window->findChild<OperationPreviewDialog*>();
+        QTRY_VERIFY(dlg->isVisible());
+        dlg->productionCheck()->setChecked(true);
+        QTRY_VERIFY(dlg->confirmButton()->isEnabled());
+        dlg->confirmButton()->click();
+
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->rowCount(), 1, timeoutMs);
+        QCOMPARE(m_browser->model()->index(0, 0).data().toString(), QStringLiteral("hello.txt"));
+        QTRY_VERIFY(stack->currentWidget() == m_browser->view());
+        QCOMPARE(m_browser->navigation()->current().bucket, bucket);
+    }
+
     // The sidebar's Delete Bucket with "everything in it", through the
     // question and the preview (typed name, production), confirmed.
     void deleteBucketWithEverything(const QString& bucket)
