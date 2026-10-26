@@ -81,6 +81,14 @@ void Job::setBytes_(qint64 done, qint64 total)
     emit progressChanged();
 }
 
+void Job::setStep_(const QString& step)
+{
+    if (step == m_step)
+        return;
+    m_step = step;
+    emit progressChanged();
+}
+
 void Job::executed_()
 {
     if (m_phase != Phase::Executing)
@@ -171,6 +179,7 @@ void Job::setPhase_(Phase phase)
     if (phase == m_phase)
         return;
     m_phase = phase;
+    m_step.clear();
     emit phaseChanged(phase);
 }
 

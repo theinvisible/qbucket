@@ -42,6 +42,7 @@ private:
     std::unique_ptr<Journal> m_journal;
     std::unique_ptr<OperationController> m_ops;
     QList<Job::Preview> m_previews;
+    QStringList m_steps;
     bool m_bypass = false;
     std::function<void()> m_onConfirm;
 
@@ -79,10 +80,34 @@ private:
         connect(job, &Job::finished, this, [&out, job] {
             out = Outcome{job->outcome(), job->errorText() + QLatin1Char('|') + job->report().verification, job->report()};
         });
+        recordSteps(job);
         m_ops->start(job);
         if (!QTest::qWaitFor([&] { return out.has_value(); }, 30000))
             return {Job::Outcome::None, QStringLiteral("timeout"), {}};
         return *out;
+    }
+
+    // The job's steps as the status bar sees them, each once in a row.
+    void recordSteps(Job* job)
+    {
+        m_steps.clear();
+        connect(job, &Job::progressChanged, this, [this, job] {
+            if (!job->step().isEmpty() && (m_steps.isEmpty() || m_steps.last() != job->step()))
+                m_steps.append(job->step());
+        });
+    }
+    // `expected` appear in m_steps in this order (others may come between).
+    bool stepsInOrder(const QStringList& expected) const
+    {
+        qsizetype at = 0;
+        for (const QString& e : expected) {
+            while (at < m_steps.size() && !m_steps[at].startsWith(e))
+                ++at;
+            if (at == m_steps.size())
+                return false;
+            ++at;
+        }
+        return true;
     }
 
     QByteArray journalText()
@@ -251,6 +276,13 @@ private slots:
         QCOMPARE(p.typeToConfirm, kBucket);
         QVERIFY(!p.bypassOffer);
         QCOMPARE(o.report.succeeded, qint64(4 + 1 + 1));   // versions, the upload, the bucket
+        // The status bar can say what happens at every stage.
+        QVERIFY2(stepsInOrder({QStringLiteral("listing the bucket"), QStringLiteral("listing unfinished uploads"),
+                               QStringLiteral("deleting the contents"), QStringLiteral("aborting unfinished uploads"),
+                               QStringLiteral("checking that the bucket is empty"),
+                               QStringLiteral("checking that the bucket is still empty"),
+                               QStringLiteral("deleting the bucket"), QStringLiteral("checking that the bucket is gone")}),
+                 qPrintable(m_steps.join(u'|')));
         const QByteArray journal = journalText();
         QVERIFY(journal.contains("AbortMultipartUpload"));
         QVERIFY(journal.contains("DeleteBucket"));
@@ -288,6 +320,25 @@ private slots:
         QVERIFY2(o.text.contains(QLatin1String("stays")), qPrintable(o.text));
         QVERIFY(m_objects->hasBucket(kBucket));
         QCOMPARE(o.report.failed, qint64(1));
+    }
+
+    // The server's settle time (Hetzner: 20 s) is the longest quiet stretch:
+    // the step says it is a wait, not a hang.
+    void theSettleWaitIsAStepOfItsOwn()
+    {
+        probe();
+        auto* job = new DeleteBucketJob(m_h->account, kBucket, false, m_ops->planDir());
+        job->setDelaysForTesting(10, 1000);
+        bool done = false;
+        connect(job, &Job::finished, this, [&done] { done = true; });
+        recordSteps(job);
+        m_ops->start(job);
+        QVERIFY(QTest::qWaitFor([&] { return done; }, 30000));
+        QVERIFY(!m_objects->hasBucket(kBucket));
+        QVERIFY2(stepsInOrder({QStringLiteral("checking that the bucket is empty"), QStringLiteral("waiting 1 s"),
+                               QStringLiteral("checking that the bucket is still empty"),
+                               QStringLiteral("deleting the bucket")}),
+                 qPrintable(m_steps.join(u'|')));
     }
 
     // Written between "empty" and "still empty": the bucket stays.

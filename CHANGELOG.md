@@ -7,8 +7,19 @@ keeps the AppStream metainfo and the Debian changelog in step.
 
 ## [Unreleased]
 
+### Changed
+
+- A running operation shows a progress bar in the status bar (a share where
+  the rest can be counted, busy otherwise) and says what it is doing. Deleting
+  a bucket names each stage — deleting the contents, checking it is empty,
+  waiting for the server, deleting the bucket, checking it is gone — and ends
+  with a message instead of a status line that disappears after 10 s.
+
 ### Fixed
 
+- A bucket deletion that ends with the bucket still there (cancelled, a version
+  under retention or legal hold) lists the open bucket afresh: the objects it
+  deleted no longer show.
 - An empty bucket or folder takes files again: dropping files, folders or
   objects onto "This folder is empty." uploads / copies them there, and a
   right-click offers Upload Files…, Upload Folder…, New Folder… and Paste

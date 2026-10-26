@@ -2285,6 +2285,49 @@ F5 drücken, um es erneut zu versuchen.</translation>
         </translation>
     </message>
     <message>
+        <source>listing the bucket</source>
+        <translation>Bucket wird aufgelistet</translation>
+    </message>
+    <message>
+        <source>listing unfinished uploads</source>
+        <translation>unvollständige Uploads werden aufgelistet</translation>
+    </message>
+    <message>
+        <source>deleting the contents</source>
+        <translation>Inhalt wird gelöscht</translation>
+    </message>
+    <message>
+        <source>aborting unfinished uploads</source>
+        <translation>unvollständige Uploads werden abgebrochen</translation>
+    </message>
+    <message>
+        <source>checking that the bucket is empty</source>
+        <translation>es wird geprüft, ob der Bucket leer ist</translation>
+    </message>
+    <message>
+        <source>checking again that the bucket is empty (the listing may lag behind)</source>
+        <translation>es wird erneut geprüft, ob der Bucket leer ist (die Auflistung kann nachhinken)</translation>
+    </message>
+    <message numerus="yes">
+        <source>waiting %n s for the server to confirm the bucket is empty</source>
+        <translation>
+            <numerusform>Warten, bis der Server bestätigt, dass der Bucket leer ist (eine Sekunde)</numerusform>
+            <numerusform>Warten, bis der Server bestätigt, dass der Bucket leer ist (%n s)</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>checking that the bucket is still empty</source>
+        <translation>es wird geprüft, ob der Bucket noch leer ist</translation>
+    </message>
+    <message>
+        <source>deleting the bucket</source>
+        <translation>Bucket wird gelöscht</translation>
+    </message>
+    <message>
+        <source>checking that the bucket is gone</source>
+        <translation>es wird geprüft, ob der Bucket weg ist</translation>
+    </message>
+    <message>
         <location filename="../src/controllers/DeleteBucketJob.cpp" line="267"/>
         <source>%1 (unfinished upload): %2</source>
         <translation>%1 (unvollständiger Upload): %2</translation>
@@ -4388,6 +4431,18 @@ F5 drücken, um es erneut zu versuchen.</translation>
 </context>
 <context>
     <name>qbucket::MainWindow</name>
+    <message>
+        <source>%1 found</source>
+        <translation>%1 gefunden</translation>
+    </message>
+    <message>
+        <source>%1, %2</source>
+        <translation>%1, %2</translation>
+    </message>
+    <message>
+        <source>The bucket “%1” was deleted.</source>
+        <translation>Der Bucket „%1“ wurde gelöscht.</translation>
+    </message>
     <message>
         <location filename="../src/ui/MainWindow.cpp" line="207"/>
         <source>No system keychain available — secrets are kept for this session only (%1).</source>

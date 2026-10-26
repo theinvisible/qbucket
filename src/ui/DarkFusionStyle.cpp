@@ -209,6 +209,10 @@ QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 QStatusBar { background: @panel2@; border-top: 1px solid @border@; color: @text2@; }
 QStatusBar::item { border: none; }
 QStatusBar QLabel { color: @text2@; padding: 0 6px; }
+/* A running job: slim, so the bar keeps the height of its text. */
+QStatusBar QToolButton { padding: 0 8px; border-radius: 4px; }
+QStatusBar QProgressBar { min-height: 6px; max-height: 6px; border-radius: 3px; }
+QStatusBar QProgressBar::chunk { border-radius: 2px; }
 
 /* ---- Detail pane ---- */
 QWidget#detailPane, QWidget#detailInner { background: @panel@; }

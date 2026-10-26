@@ -2,25 +2,34 @@
 #include "controllers/BrowseController.h"
 #include "controllers/SettingsController.h"
 #include "controllers/TransferJobStore.h"
+#include "models/AccountTreeModel.h"
 #include "support/AccountHarness.h"
 #include "models/ObjectSelection.h"
 #include "support/FakeBucket.h"
+#include "ui/AccountSidebar.h"
 #include "ui/MainWindow.h"
 #include "ui/ObjectBrowser.h"
 #include "ui/EditMetadataDialog.h"
 #include "ui/OperationPreviewDialog.h"
 #include "ui/ThemeManager.h"
 
+#include <qbucket/s3/testing/FakeObjectStore.h>
+
 #include <QAction>
 #include <QCheckBox>
 #include <QDir>
 #include <QFile>
 #include <QInputDialog>
+#include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMessageBox>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QStandardPaths>
+#include <QStatusBar>
 #include <QTableView>
+#include <QToolButton>
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QtTest>
@@ -29,6 +38,37 @@ using namespace qbucket;
 using namespace qbucket::s3::testing;
 using qbucket::testing::AccountHarness;
 using qbucket::testing::FakeBucket;
+
+namespace {
+
+// Counts how often a widget is shown; remembers the job label beside it.
+class ShowCounter : public QObject {
+public:
+    explicit ShowCounter(QWidget* w)
+        : m_widget(w)
+    {
+        w->installEventFilter(this);
+    }
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (watched == m_widget && event->type() == QEvent::Show) {
+            ++count;
+            // The job label sits left of the bar in the status bar.
+            for (const QLabel* l : m_widget->parentWidget()->findChildren<QLabel*>()) {
+                if (l->isVisibleTo(m_widget->parentWidget()) && l->text().contains(QLatin1String("Delete bucket")))
+                    labelText = l->text();
+            }
+        }
+        return false;
+    }
+    int count = 0;
+    QString labelText;
+
+private:
+    QWidget* m_widget;
+};
+
+} // namespace
 
 // The mutation path end to end through the real main window: actions,
 // gate, preview dialog, job, refresh.
@@ -252,6 +292,84 @@ private slots:
         QVERIFY(m_browser->downloadAction()->isEnabled());
     }
 
+    // Deleting a bucket with what is in it: the status bar shows that it
+    // runs (bar + step), the end is a message that can't be missed.
+    void deletingABucketShowsProgressAndTheEnd()
+    {
+        FakeObjectStore store(m_h->server.get());   // replaces the FakeBucket fallback
+        store.createBucket(QStringLiteral("gone"));
+        store.putObject(QStringLiteral("gone"), QStringLiteral("a.txt"), "1");
+        store.putObject(QStringLiteral("gone"), QStringLiteral("dir/b.txt"), "2");
+        // Listed in the sidebar and open in the browser.
+        auto* sidebar = m_window->findChild<AccountSidebar*>();
+        AccountTreeModel* tree = sidebar->model();
+        tree->refresh(tree->accountIndex(m_h->account.id));
+        QTRY_VERIFY_WITH_TIMEOUT(tree->bucketIndex(m_h->account.id, QStringLiteral("gone")).isValid(), 10000);
+        m_browser->openBucket(m_h->account.id, QStringLiteral("gone"));
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->state(), ObjectTableModel::State::Complete, 10000);
+        QCOMPARE(m_browser->model()->rowCount(), 2);   // a.txt, dir/
+        auto* bar = m_window->findChild<QProgressBar*>(QStringLiteral("jobProgress"));
+        QVERIFY(bar);
+        QVERIFY(!bar->isVisible());
+        // Slim: neither the bar nor Cancel makes the status bar taller than its text.
+        m_theme->apply(QStringLiteral("Dark"));
+        bar->ensurePolished();
+        QCOMPARE(bar->maximumHeight(), 8);   // 6 px and the border
+        QToolButton* cancel = nullptr;
+        for (QToolButton* b : m_window->statusBar()->findChildren<QToolButton*>()) {
+            if (b->text() == QLatin1String("Cancel"))
+                cancel = b;
+        }
+        QVERIFY(cancel);
+        cancel->ensurePolished();
+        QVERIFY2(cancel->sizeHint().height() <= QFontMetrics(cancel->font()).height() + 6,
+                 qPrintable(QString::number(cancel->sizeHint().height())));
+        ShowCounter shown(bar);
+
+        deleteBucketWithEverything(QStringLiteral("gone"));
+        if (QTest::currentTestFailed())
+            return;
+
+        QTRY_VERIFY_WITH_TIMEOUT(!store.hasBucket(QStringLiteral("gone")), 20000);
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<QMessageBox*>(QStringLiteral("bucketDeletedBox")) != nullptr, 20000);
+        auto* done = m_window->findChild<QMessageBox*>(QStringLiteral("bucketDeletedBox"));
+        QVERIFY(done->text().contains(QLatin1String("gone")));
+        QVERIFY(shown.count > 0);          // the bar showed while it ran …
+        QVERIFY(!shown.labelText.isEmpty());
+        QTRY_VERIFY(!bar->isVisible());    // … and goes when it's done
+        // Gone from the sidebar; the browser left it.
+        QTRY_VERIFY_WITH_TIMEOUT(!tree->bucketIndex(m_h->account.id, QStringLiteral("gone")).isValid(), 10000);
+        QVERIFY(!m_browser->navigation()->current().hasBucket());
+        done->close();
+        m_window.reset();   // before the store: the window's sessions still point at it
+    }
+
+    // Emptied only in part — a version under retention keeps the bucket —
+    // while the browser shows it: listed afresh, not the objects that went.
+    void aBucketThatStaysIsListedAfresh()
+    {
+        FakeObjectStore store(m_h->server.get());
+        store.createBucket(QStringLiteral("held"));
+        store.setObjectLockEnabled(QStringLiteral("held"));
+        store.putObject(QStringLiteral("held"), QStringLiteral("free.txt"), "1");
+        const QString v = store.putObject(QStringLiteral("held"), QStringLiteral("kept.txt"), "2");
+        store.setRetention(QStringLiteral("held"), QStringLiteral("kept.txt"), v, s3::ObjectLockMode::Governance,
+                           QDateTime::currentDateTimeUtc().addDays(1));
+        m_browser->openBucket(m_h->account.id, QStringLiteral("held"));
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->state(), ObjectTableModel::State::Complete, 10000);
+        QCOMPARE(m_browser->model()->rowCount(), 2);
+
+        deleteBucketWithEverything(QStringLiteral("held"));
+        if (QTest::currentTestFailed())
+            return;
+
+        QTRY_COMPARE_WITH_TIMEOUT(m_browser->model()->rowCount(), 1, 20000);
+        QCOMPARE(m_browser->model()->index(0, 0).data().toString(), QStringLiteral("kept.txt"));
+        QVERIFY(store.hasBucket(QStringLiteral("held")));
+        QCOMPARE(m_browser->navigation()->current().bucket, QStringLiteral("held"));   // still there: stays open
+        m_window.reset();   // before the store
+    }
+
     void unfinishedTransfersAreOfferedAtStart()
     {
         // The last session left an upload behind.
@@ -293,6 +411,33 @@ private slots:
     }
 
 private:
+    // The sidebar's Delete Bucket with "everything in it", through the
+    // question and the preview (typed name, production), confirmed.
+    void deleteBucketWithEverything(const QString& bucket)
+    {
+        emit m_window->findChild<AccountSidebar*>()->deleteBucketRequested(m_h->account.id, bucket);
+        QTRY_VERIFY(m_window->findChild<QMessageBox*>() != nullptr);
+        auto* ask = m_window->findChild<QMessageBox*>();
+        QVERIFY(ask && ask->checkBox());
+        ask->checkBox()->setChecked(true);
+        QAbstractButton* go = nullptr;
+        for (QAbstractButton* b : ask->buttons()) {
+            if (ask->buttonRole(b) == QMessageBox::AcceptRole)
+                go = b;
+        }
+        QVERIFY(go);
+        go->click();
+
+        QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<OperationPreviewDialog*>() != nullptr, 10000);
+        auto* dlg = m_window->findChild<OperationPreviewDialog*>();
+        QVERIFY(dlg);
+        QTRY_VERIFY(dlg->isVisible());
+        dlg->productionCheck()->setChecked(true);
+        dlg->typedConfirmation()->setText(dlg->expectedTyping());
+        QTRY_VERIFY(dlg->confirmButton()->isEnabled());
+        dlg->confirmButton()->click();
+    }
+
     std::unique_ptr<SettingsController> m_settings;
     std::unique_ptr<ThemeManager> m_theme;
     std::unique_ptr<AccountHarness> m_h;

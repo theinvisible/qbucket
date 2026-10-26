@@ -81,6 +81,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QSplitter>
@@ -343,11 +344,16 @@ void MainWindow::connectOperations_()
         const bool deleted = qobject_cast<DeleteBucketJob*>(job) != nullptr;
         if ((created || deleted) && job->outcome() != Job::Outcome::Refused) {
             m_sidebar->model()->refresh(m_sidebar->model()->accountIndex(job->account().id));
-            if (deleted && job->outcome() == Job::Outcome::Succeeded && m_locations)
+            const bool succeeded = job->outcome() == Job::Outcome::Succeeded;
+            if (deleted && succeeded && m_locations)
                 m_locations->forgetBucket(job->account().id, job->bucket());
-            if (deleted && here.account == job->account().id && here.bucket == job->bucket()
-                && job->outcome() == Job::Outcome::Succeeded)
+            const bool shown = here.account == job->account().id && here.bucket == job->bucket();
+            // Gone: the browser leaves it. Still there (cancelled, partly
+            // failed): what was in it may be gone — listed afresh.
+            if (deleted && shown && succeeded)
                 m_browser->navigation()->navigate({job->account().id, {}, {}});
+            else if (deleted && shown)
+                m_browser->refresh();
             return;
         }
         if (job->outcome() != Job::Outcome::Refused && job->phase() == Job::Phase::Finished
@@ -884,32 +890,71 @@ void MainWindow::updateJobStatus_()
             || j->phase() == Job::Phase::Verifying)
             busy.append(j);
     }
-    m_jobLabel->setVisible(!busy.isEmpty());
-    m_jobCancel->setVisible(!busy.isEmpty());
-    if (busy.isEmpty())
+    if (busy.isEmpty()) {
+        m_jobLabel->hide();
+        m_jobProgress->hide();
+        m_jobCancel->hide();
         return;
-    const Job* job = busy.first();
-    QString step;
-    switch (job->phase()) {
-    case Job::Phase::Planning:
-        step = tr("planning");
-        break;
-    case Job::Phase::Verifying:
-        step = tr("verifying");
-        break;
-    default:
-        step = job->progressTotal() > 0 ? tr("%1 of %2").arg(job->progressDone()).arg(job->progressTotal())
-                                        : tr("running");
-        break;
     }
-    m_jobLabel->setText(busy.size() > 1 ? tr("%1 (%2) and %n more", nullptr, int(busy.size() - 1)).arg(job->title(), step)
-                                        : tr("%1 (%2)").arg(job->title(), step));
+    const Job* job = busy.first();
+    const QLocale locale;
+    const qint64 done = job->progressDone();
+    const qint64 total = job->progressTotal();
+    // Counted only while there is something left to count: "5 000 of
+    // 5 000" next to "waiting for the server" would read as stuck.
+    const bool counting = job->phase() == Job::Phase::Executing && total > 0 && done < total;
+    QString count;
+    if (counting)
+        count = tr("%1 of %2").arg(locale.toString(done), locale.toString(total));
+    else if (job->phase() == Job::Phase::Planning && done > 0)
+        count = tr("%1 found").arg(locale.toString(done));
+    QString step = job->step();
+    if (step.isEmpty()) {
+        switch (job->phase()) {
+        case Job::Phase::Planning:
+            step = tr("planning");
+            break;
+        case Job::Phase::Verifying:
+            step = tr("verifying");
+            break;
+        default:
+            step = count.isEmpty() ? tr("running") : QString();
+            break;
+        }
+    }
+    const QString detail = step.isEmpty() ? count : count.isEmpty() ? step : tr("%1, %2").arg(step, count);
+    const QString text = busy.size() > 1
+                             ? tr("%1 (%2) and %n more", nullptr, int(busy.size() - 1)).arg(job->title(), detail)
+                             : tr("%1 (%2)").arg(job->title(), detail);
+    m_jobLabel->setText(text);
+    m_jobLabel->setToolTip(text);
+    if (counting) {
+        m_jobProgress->setRange(0, 1000);   // per mille: totals beyond int
+        m_jobProgress->setValue(int(done * 1000 / total));
+    } else {
+        m_jobProgress->setRange(0, 0);      // busy
+    }
+    // Shown once filled: never a moment with the last job's text.
+    m_jobLabel->show();
+    m_jobProgress->show();
+    m_jobCancel->show();
 }
 
 void MainWindow::showJobReport_(Job* job)
 {
     const QString summary = OperationController::summary(*job);
     const Job::Outcome outcome = job->outcome();
+    // A deleted bucket is said where it can't be missed: the run may have
+    // taken minutes, and the status bar only shows it for a few seconds.
+    if (outcome == Job::Outcome::Succeeded && qobject_cast<const DeleteBucketJob*>(job)) {
+        auto* box = new QMessageBox(QMessageBox::Information, job->title(),
+                                    tr("The bucket “%1” was deleted.").arg(job->bucket()), QMessageBox::Close, this);
+        box->setObjectName(QStringLiteral("bucketDeletedBox"));
+        box->setInformativeText(summary);
+        box->setAttribute(Qt::WA_DeleteOnClose);
+        box->open();
+        return;
+    }
     if (outcome == Job::Outcome::Succeeded || outcome == Job::Outcome::Cancelled) {
         statusBar()->showMessage(summary, 10000);
         return;
@@ -1758,6 +1803,14 @@ void MainWindow::buildStatusBar_()
     m_jobLabel = new QLabel;
     m_jobLabel->hide();
     sb->addPermanentWidget(m_jobLabel);
+    // Moves while anything runs: a share where the rest is countable,
+    // busy where it isn't (listing, waiting for the server, checking).
+    m_jobProgress = new QProgressBar;
+    m_jobProgress->setObjectName(QStringLiteral("jobProgress"));
+    m_jobProgress->setTextVisible(false);
+    m_jobProgress->setFixedWidth(140);
+    m_jobProgress->hide();
+    sb->addPermanentWidget(m_jobProgress);
     m_jobCancel = new QToolButton;
     m_jobCancel->setText(tr("Cancel"));
     m_jobCancel->hide();

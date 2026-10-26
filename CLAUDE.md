@@ -439,6 +439,9 @@ Each of these cost time there; don't relearn them.
 - **lupdate sees only sources the build system compiles.** Texts of
   Windows-only files (`platform/win/`) live in the platform-neutral base
   (`ExternalDrag`), or the Linux `update_translations` never finds them.
+- **Run `update_translations` on Linux only.** On Windows lupdate also takes
+  in QtKeychain's Windows sources and moves hundreds of location lines; there,
+  add new entries to the `.ts` files by hand (devlog 014).
 - **Windows code can be checked on Linux:** llvm-mingw (Docker image
   `mstorsjo/llvm-mingw:20261006`, the Linux Qt headers mounted) with
   `-fsyntax-only -Wshadow-all -D_WIN32_WINNT=0x0A00` compiles the COM layer,

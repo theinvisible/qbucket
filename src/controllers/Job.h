@@ -103,6 +103,9 @@ public:
     [[nodiscard]] qint64 bytesDone() const { return m_bytesDone; }
     [[nodiscard]] qint64 bytesTotal() const { return m_bytesTotal; }
     [[nodiscard]] virtual QList<ActiveItem> activeItems() const { return {}; }
+    // What the job is doing right now, where its phase says too little
+    // ("waiting for the server …"); empty: nothing beyond the phase.
+    [[nodiscard]] QString step() const { return m_step; }
 
     // One line for menus, logs and the progress view.
     [[nodiscard]] virtual QString title() const = 0;
@@ -159,6 +162,8 @@ protected:
     void setPreview_(const Preview& preview);
     void setProgress_(qint64 done, qint64 total);
     void setBytes_(qint64 done, qint64 total);
+    // Cleared by every phase change.
+    void setStep_(const QString& step);
     // For suspend(): the job stops as cancelled, its resume data stays.
     void markSuspended_() { m_suspended = true; }
     void executed_();
@@ -188,6 +193,7 @@ private:
     Preview m_preview;
     Report m_report;
     QString m_error;
+    QString m_step;
     qint64 m_done = 0;
     qint64 m_total = 0;
     qint64 m_bytesDone = 0;

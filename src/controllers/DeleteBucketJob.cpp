@@ -51,6 +51,7 @@ void DeleteBucketJob::walk_()
         fail_(tr("Not connected."));
         return;
     }
+    setStep_(tr("listing the bucket"));
     m_walk = std::make_unique<VersionWalk>(*session, bucket(), QString(), false, m_run.get(),
                                            m_currentOnly ? VersionWalk::Source::CurrentOnly : VersionWalk::Source::Versions);
     m_walk->run(
@@ -100,6 +101,7 @@ void DeleteBucketJob::listUploads_(const QString& keyMarker, const QString& uplo
         planDone_();
         return;
     }
+    setStep_(tr("listing unfinished uploads"));
     s3::ListMultipartUploadsParams p;
     p.bucket = bucket();
     p.keyMarker = keyMarker;
@@ -209,6 +211,7 @@ void DeleteBucketJob::execute()
     m_purger = new VersionPurger(this, m_plan.get(), o);
     connect(m_purger, &VersionPurger::progressed, this, [this](qint64 n) { setProgress_(n, progressTotal()); });
     setProgress_(0, m_plan->count() + m_uploads.size());
+    setStep_(tr("deleting the contents"));
     m_purger->run([this] {
         if (phase() != Phase::Executing)
             return;
@@ -225,6 +228,8 @@ void DeleteBucketJob::execute()
 
 void DeleteBucketJob::abortUploads_()
 {
+    if (!m_uploads.isEmpty())
+        setStep_(tr("aborting unfinished uploads"));
     m_abortIndex = 0;
     abortNext_();
 }
@@ -333,6 +338,8 @@ void DeleteBucketJob::checkEmpty_(const std::function<void(bool empty, const QSt
 // up (Hetzner) — only then DeleteBucket.
 void DeleteBucketJob::beforeDelete_(int attempt)
 {
+    setStep_(attempt == 1 ? tr("checking that the bucket is empty")
+                          : tr("checking again that the bucket is empty (the listing may lag behind)"));
     checkEmpty_([this, attempt](bool empty, const QString& left) {
         if (isCancelled()) {
             m_verification = tr("cancelled — the bucket stays");
@@ -347,7 +354,11 @@ void DeleteBucketJob::beforeDelete_(int attempt)
             fail_(tr("The bucket isn't empty yet (%1) — it stays. Something may have been written meanwhile.").arg(left));
             return;
         }
+        // The longest quiet stretch (Hetzner: 20 s) — said, so it doesn't look stuck.
+        if (m_settleMs >= 1000)
+            setStep_(tr("waiting %n s for the server to confirm the bucket is empty", nullptr, m_settleMs / 1000));
         QTimer::singleShot(m_settleMs, m_run.get(), [this, attempt] {
+            setStep_(tr("checking that the bucket is still empty"));
             checkEmpty_([this, attempt](bool stillEmpty, const QString& now) {
                 if (isCancelled()) {
                     m_verification = tr("cancelled — the bucket stays");
@@ -371,6 +382,7 @@ void DeleteBucketJob::deleteBucket_(int attempt)
         fail_(tr("Not connected."));
         return;
     }
+    setStep_(tr("deleting the bucket"));
     session->deleteBucket(bucket(), m_run.get(), [this, attempt](const s3::Result<void>& r) {
         Journal::Record rec = record_(s3::operationName(s3::Operation::DeleteBucket));
         if (r) {
@@ -424,6 +436,7 @@ void DeleteBucketJob::verifyGone_(int attempt)
         finish_(report_());
         return;
     }
+    setStep_(tr("checking that the bucket is gone"));
     session->headBucket(bucket(), m_run.get(), [this, attempt](const s3::Result<void>& r) {
         const bool gone = !r && r.error().category == s3::ErrorCategory::NotFound;
         if (!gone && attempt <= kRetries) {

@@ -100,6 +100,13 @@
             <numerusform>the bucket stays: %n versions could not be deleted</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>waiting %n s for the server to confirm the bucket is empty</source>
+        <translation>
+            <numerusform>waiting %n s for the server to confirm the bucket is empty</numerusform>
+            <numerusform>waiting %n s for the server to confirm the bucket is empty</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>qbucket::DeleteJob</name>

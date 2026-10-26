@@ -191,6 +191,10 @@ Consequences:
 - The guard objects keep protecting the scratch buckets against a
   subresource DELETE run as DeleteBucket — they have been there for days.
   A bucket that looked empty within the last ~10 s would not be protected.
+- ListBuckets and HeadBucket do *not* lag behind a DeleteBucket: measured
+  2026-10-26 (nbg1), the bucket was missing from the list and HEAD answered
+  404 one second after the 204, for empty buckets and for ones emptied by
+  QBucket first. The sidebar needs no grace period for deleted buckets.
 
 ### A new bucket unknown to one gateway
 

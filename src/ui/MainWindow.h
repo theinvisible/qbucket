@@ -12,6 +12,7 @@ class QFrame;
 class QLabel;
 class QLineEdit;
 class QMenu;
+class QProgressBar;
 class QPushButton;
 class QSplitter;
 class QStackedWidget;
@@ -233,6 +234,7 @@ private:
     // Status bar
     QLabel* m_locationLabel   = nullptr;
     QLabel* m_jobLabel        = nullptr;
+    QProgressBar* m_jobProgress = nullptr;
     QToolButton* m_jobCancel  = nullptr;
     QLabel* m_connectionDot   = nullptr;
     QLabel* m_connectionLabel = nullptr;
