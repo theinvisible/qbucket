@@ -172,7 +172,16 @@ ObjectBrowser::ObjectBrowser(AccountStore* accounts, AccountSessions* sessions, 
         emit statusChanged();
     });
     m_view->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(m_view, &QWidget::customContextMenuRequested, this, &ObjectBrowser::showContextMenu_);
+    connect(m_view, &QWidget::customContextMenuRequested, this,
+            [this](const QPoint& pos) { showContextMenu_(m_view->viewport(), pos); });
+    // An empty folder shows the message page, not the list: the first files
+    // drop (or are uploaded, pasted) there.
+    m_messagePage->setAcceptDrops(true);
+    m_messagePage->installEventFilter(this);
+    m_messagePage->addAction(m_actPaste);   // Ctrl+V here too
+    m_messagePage->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_messagePage, &QWidget::customContextMenuRequested, this,
+            [this](const QPoint& pos) { showContextMenu_(m_messagePage, pos); });
     connect(m_actOpen, &QAction::triggered, this, [this] {
         const QModelIndexList rows = selectedRows();
         if (rows.size() == 1)
@@ -428,8 +437,9 @@ void ObjectBrowser::maybePrefetch_()
 
 bool ObjectBrowser::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == m_view->viewport()) {
-        if (event->type() == QEvent::Resize)
+    const bool onList = watched == m_view->viewport();
+    if (onList || watched == m_messagePage) {
+        if (onList && event->type() == QEvent::Resize)
             QMetaObject::invokeMethod(this, &ObjectBrowser::maybePrefetch_, Qt::QueuedConnection);
         switch (event->type()) {
         case QEvent::DragEnter:
@@ -440,7 +450,7 @@ bool ObjectBrowser::eventFilter(QObject* watched, QEvent* event)
                 event->ignore();
                 return true;
             }
-            return handleDrop_(event);
+            return handleDrop_(event, onList);
         default:
             break;
         }
@@ -466,12 +476,14 @@ QStringList ObjectBrowser::localPaths(const QMimeData* mime)
     return paths;
 }
 
-QString ObjectBrowser::dropPrefixAt_(const QPoint& pos, int* row) const
+QString ObjectBrowser::dropPrefixAt_(const QPoint& pos, bool onList, int* row) const
 {
     *row = -1;
     const Location here = m_nav->current();
     if (!here.hasBucket())
         return {};
+    if (!onList)
+        return here.prefix;
     const QModelIndex at = m_view->indexAt(pos);
     if (at.isValid() && at.data(ObjectTableModel::IsFolderRole).toBool()) {
         *row = at.row();
@@ -488,16 +500,22 @@ void ObjectBrowser::setDropRow_(int row)
     m_view->viewport()->update();
 }
 
-bool ObjectBrowser::handleDrop_(QEvent* event)
+bool ObjectBrowser::handleDrop_(QEvent* event, bool onList)
 {
     if (event->type() == QEvent::DragLeave) {
         setDropRow_(-1);
         return true;
     }
     auto* drop = static_cast<QDropEvent*>(event);
+    // The message page stands for a folder only while it is one (empty,
+    // loading, filtered) — an error is no place to upload into.
+    if (!onList && m_model->state() == ObjectTableModel::State::Error) {
+        drop->ignore();
+        return true;
+    }
     if (const std::optional<ObjectSelection> sel = ObjectSelection::fromMimeData(drop->mimeData())) {
         int row = -1;
-        const QString prefix = dropPrefixAt_(drop->position().toPoint(), &row);
+        const QString prefix = dropPrefixAt_(drop->position().toPoint(), onList, &row);
         // Not onto one of the dragged rows themselves.
         bool onSelf = false;
         if (row >= 0) {
@@ -528,7 +546,7 @@ bool ObjectBrowser::handleDrop_(QEvent* event)
         return true;
     }
     int row = -1;
-    const QString prefix = dropPrefixAt_(drop->position().toPoint(), &row);
+    const QString prefix = dropPrefixAt_(drop->position().toPoint(), onList, &row);
     if (event->type() == QEvent::Drop) {
         setDropRow_(-1);
         drop->setDropAction(Qt::CopyAction);
@@ -846,13 +864,34 @@ bool ObjectBrowser::acceptsObjects_(const ObjectSelection& sel, const QString& p
     return true;
 }
 
-void ObjectBrowser::showContextMenu_(const QPoint& pos)
+void ObjectBrowser::setLocationActions(const QList<QAction*>& actions)
+{
+    m_locationActions = actions;
+}
+
+void ObjectBrowser::showContextMenu_(QWidget* origin, const QPoint& pos)
 {
     if (!m_model || !m_nav->current().hasBucket())
         return;
     QMenu menu(this);
     menu.setToolTipsVisible(true);
     const bool versions = m_mode == ObjectTableModel::Mode::Versions;
+    if (origin == m_messagePage) {
+        // Nothing listed, nothing selected: what goes into this folder.
+        if (m_model->state() == ObjectTableModel::State::Error)
+            return;
+        if (!versions) {
+            menu.addAction(m_actPaste);
+            menu.addSeparator();
+            menu.addActions(m_locationActions);
+            menu.addSeparator();
+        }
+        menu.addAction(m_actRestoreDeleted);
+        menu.addSeparator();
+        menu.addAction(tr("Refresh"), this, &ObjectBrowser::refresh);
+        menu.exec(origin->mapToGlobal(pos));
+        return;
+    }
     if (m_actOpen->isEnabled())
         menu.addAction(m_actOpen);
     if (!versions) {
@@ -880,11 +919,15 @@ void ObjectBrowser::showContextMenu_(const QPoint& pos)
     }
     menu.addAction(m_actDelete);
     menu.addSeparator();
+    if (!versions) {
+        menu.addActions(m_locationActions);
+        menu.addSeparator();
+    }
     menu.addAction(m_actDeleteAllVersions);
     menu.addAction(m_actRestoreDeleted);
     menu.addSeparator();
     menu.addAction(tr("Refresh"), this, &ObjectBrowser::refresh);
-    menu.exec(m_view->viewport()->mapToGlobal(pos));
+    menu.exec(origin->mapToGlobal(pos));
 }
 
 QString ObjectBrowser::statusText() const

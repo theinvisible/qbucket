@@ -78,6 +78,9 @@ public:
     [[nodiscard]] QAction* removeMarkerAction() const { return m_actRemoveMarker; }
     [[nodiscard]] QAction* deleteAllVersionsAction() const { return m_actDeleteAllVersions; }
     [[nodiscard]] QAction* restoreDeletedAction() const { return m_actRestoreDeleted; }
+    // Actions on the current location (upload, new folder — MainWindow's,
+    // which also enables them) for the context menu, also of an empty folder.
+    void setLocationActions(const QList<QAction*>& actions);
 
     // The gate's verdict for the mutating actions (MainWindow decides).
     void setMutationsAllowed(bool allowed, const QString& reason);
@@ -116,8 +119,8 @@ signals:
     // Counts, state or selection changed.
     void statusChanged();
     void locationChanged(const qbucket::Location& location);
-    // Local files and folders dropped onto the list (prefix: the folder row
-    // they were dropped on, or the current one).
+    // Local files and folders dropped onto the list or an empty folder
+    // (prefix: the folder row they were dropped on, or the current one).
     void filesDropped(const QStringList& paths, const QString& prefix);
     // Objects of this account dropped onto the list (move: with Shift).
     void objectsDropped(const qbucket::ObjectSelection& selection, const QString& prefix, bool move);
@@ -142,7 +145,8 @@ private:
     void buildActions_();
     void updateActions_();
     void updateVersionActions_(const QModelIndexList& rows);
-    void showContextMenu_(const QPoint& pos);
+    // origin: the list's viewport or the message page (an empty folder).
+    void showContextMenu_(QWidget* origin, const QPoint& pos);
     void copySelection_(bool asUri);
     void copyObjects_(ObjectSelection::Intent intent);
     void paste_();
@@ -152,9 +156,11 @@ private:
     // A drag of objects may land in `prefix` of the current bucket.
     [[nodiscard]] bool acceptsObjects_(const ObjectSelection& sel, const QString& prefix) const;
     // Drag & drop in: the prefix the files would land in; -1 / "" if none.
-    [[nodiscard]] QString dropPrefixAt_(const QPoint& pos, int* row) const;
+    // Off the list (the message page) that is the current folder.
+    [[nodiscard]] QString dropPrefixAt_(const QPoint& pos, bool onList, int* row) const;
     void setDropRow_(int row);
-    bool handleDrop_(QEvent* event);
+    // onList: the list's viewport; otherwise the message page.
+    bool handleDrop_(QEvent* event, bool onList);
 
     AccountStore* m_accounts;
     AccountSessions* m_sessions;
@@ -193,6 +199,7 @@ private:
     QAction* m_actRemoveMarker = nullptr;
     QAction* m_actDeleteAllVersions = nullptr;
     QAction* m_actRestoreDeleted = nullptr;
+    QList<QAction*> m_locationActions;
     bool m_versionsAllowed = false;
     QString m_versionsReason;
     bool m_downloadsAllowed = false;

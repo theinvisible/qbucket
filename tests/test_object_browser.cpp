@@ -18,12 +18,14 @@
 #include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMimeData>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QToolButton>
 #include <QTableView>
 #include <QUrl>
@@ -430,6 +432,94 @@ private slots:
         QCOMPARE(message(browser), QStringLiteral("This folder is empty."));
     }
 
+    // An empty folder shows a message, not the list — the first upload
+    // happens there: files and objects drop in, the context menu offers
+    // the location's actions (upload, new folder) and Paste.
+    void anEmptyFolderTakesDropsAndHasAContextMenu()
+    {
+        m_bucket.add(QStringLiteral("empty/"));
+        m_bucket.add(QStringLiteral("readme.txt"), 1);
+        m_bucket.sort();
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.resize(700, 400);
+        browser.show();
+        QAction uploadHere(QStringLiteral("Upload Here"));
+        browser.setLocationActions({&uploadHere});
+        browser.navigation()->navigate({m_account, QStringLiteral("bkt"), QStringLiteral("empty/")});
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QCOMPARE(message(browser), QStringLiteral("This folder is empty."));
+        QWidget* page = browser.findChild<QLabel*>(QStringLiteral("emptyState"))->parentWidget();
+        QSignalSpy filesDropped(&browser, &ObjectBrowser::filesDropped);
+        QSignalSpy objectsDropped(&browser, &ObjectBrowser::objectsDropped);
+        const auto dragTo = [&](const QMimeData* mime) {
+            const QPoint pos = page->rect().center();
+            QDragEnterEvent enter(DragPosition(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(page, &enter);
+            QDragMoveEvent move(DragPosition(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(page, &move);
+            const bool accepted = move.isAccepted();
+            QDropEvent drop(QPointF(pos), Qt::CopyAction, mime, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(page, &drop);
+            return accepted;
+        };
+        QMimeData files;
+        files.setUrls({QUrl::fromLocalFile(m_dir.filePath(QStringLiteral("a.txt")))});
+
+        // Not allowed (read-only account, no bucket rights): refused.
+        QVERIFY(page->acceptDrops());
+        QVERIFY(!dragTo(&files));
+        QCOMPARE(filesDropped.size(), 0);
+
+        browser.setUploadsAllowed(true);
+        QVERIFY(dragTo(&files));
+        QCOMPARE(filesDropped.size(), 1);
+        QCOMPARE(filesDropped.last().at(1).toString(), QStringLiteral("empty/"));
+        // Objects of this bucket from elsewhere land here too.
+        ObjectSelection sel;
+        sel.account = m_account;
+        sel.bucket = QStringLiteral("bkt");
+        sel.items.append({QStringLiteral("readme.txt"), false});
+        std::unique_ptr<QMimeData> objects(sel.toMimeData());
+        QVERIFY(dragTo(objects.get()));
+        QCOMPARE(objectsDropped.size(), 1);
+        QCOMPARE(objectsDropped.last().at(1).toString(), QStringLiteral("empty/"));
+
+        QStringList menu = contextMenuOf(page);
+        QVERIFY2(menu.contains(QStringLiteral("Upload Here")), qPrintable(menu.join(u'|')));
+        QVERIFY(menu.contains(browser.pasteAction()->text()));
+        QVERIFY(!menu.contains(browser.deleteAction()->text()));   // nothing selected here
+
+        // The versions view takes nothing, and offers no upload.
+        browser.setMode(ObjectTableModel::Mode::Versions);
+        QVERIFY(!dragTo(&files));
+        QVERIFY(!contextMenuOf(page).contains(QStringLiteral("Upload Here")));
+        browser.setMode(ObjectTableModel::Mode::Folders);
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+
+        // An error is no folder to upload into.
+        m_server->setFallbackHandler([](const RecordedRequest&) { return FakeResponse::s3Error(403, "AccessDenied", "nope"); });
+        browser.refresh();
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Error, 10000);
+        QVERIFY(!dragTo(&files));
+        QCOMPARE(filesDropped.size(), 1);
+        QVERIFY(contextMenuOf(page).isEmpty());
+    }
+
+    // The list's context menu offers the location's actions as well.
+    void theListsContextMenuOffersTheLocationActions()
+    {
+        m_bucket.add(QStringLiteral("readme.txt"), 1);
+        ObjectBrowser browser(m_accounts.get(), m_sessions.get());
+        browser.resize(700, 400);
+        browser.show();
+        QAction uploadHere(QStringLiteral("Upload Here"));
+        browser.setLocationActions({&uploadHere});
+        browser.openBucket(m_account, QStringLiteral("bkt"));
+        QTRY_COMPARE_WITH_TIMEOUT(browser.model()->state(), State::Complete, 10000);
+        QVERIFY(listShown(browser));
+        QVERIFY(contextMenuOf(browser.view()).contains(QStringLiteral("Upload Here")));
+    }
+
     void scrollingNearTheEndLoadsTheNextPage()
     {
         for (int i = 0; i < 2500; ++i)
@@ -567,6 +657,26 @@ private:
     {
         const auto* label = b.findChild<QLabel*>(QStringLiteral("emptyState"));
         return label && label->isVisibleTo(const_cast<ObjectBrowser*>(&b)) ? label->text() : QString();
+    }
+    // The texts of the context menu `w` opens (empty: none opened).
+    static QStringList contextMenuOf(QWidget* w)
+    {
+        QStringList texts;
+        QTimer closer;
+        closer.setInterval(10);
+        QObject::connect(&closer, &QTimer::timeout, &closer, [&texts] {
+            auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!menu)
+                return;
+            for (const QAction* a : menu->actions()) {
+                if (!a->isSeparator())
+                    texts.append(a->text());
+            }
+            menu->close();
+        });
+        closer.start();
+        emit w->customContextMenuRequested(QPoint(5, 5));
+        return texts;
     }
     static bool listShown(const ObjectBrowser& b)
     {

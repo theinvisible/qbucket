@@ -998,6 +998,7 @@ void MainWindow::connectBrowser_()
     m_uploadBtn->setMenu(uploadMenu);
     m_uploadBtn->setPopupMode(QToolButton::MenuButtonPopup);
     connect(m_uploadBtn, &QToolButton::clicked, m_actUploadFiles, &QAction::trigger);
+    m_browser->setLocationActions({m_actUploadFiles, m_actUploadFolder, m_actNewFolder});
     connect(m_browser->deleteAction(), &QAction::triggered, this, &MainWindow::deleteSelection_);
     connect(m_browser->renameAction(), &QAction::triggered, this, &MainWindow::renameSelection_);
     connect(m_browser->editMetadataAction(), &QAction::triggered, this, &MainWindow::editMetadata_);

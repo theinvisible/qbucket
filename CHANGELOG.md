@@ -5,6 +5,16 @@ version and changelog: [`libs/qbucket-s3/CHANGELOG.md`](libs/qbucket-s3/CHANGELO
 The version here is the one in `CMakeLists.txt`; `tools/check-version.sh`
 keeps the AppStream metainfo and the Debian changelog in step.
 
+## [Unreleased]
+
+### Fixed
+
+- An empty bucket or folder takes files again: dropping files, folders or
+  objects onto "This folder is empty." uploads / copies them there, and a
+  right-click offers Upload Files…, Upload Folder…, New Folder… and Paste
+  (Ctrl+V works there too). The list's context menu has the upload entries
+  as well now.
+
 ## [1.0.0] — 2026-10-24
 
 The first release: parity with the essentials of NetSDK's S3 Browser, on
