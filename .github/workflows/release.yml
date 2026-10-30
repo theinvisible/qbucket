@@ -1,0 +1,196 @@
+name: Release
+
+# A tag vX.Y.Z builds the packages with the scripts of a local release
+# (docs/RELEASING.md) — each with the whole test suite in the build and a
+# smoke test of the installed result — and creates a *draft* release with
+# them, the SHA-256 sums and the notes from CHANGELOG.md. The maintainer
+# checks the draft's packages by hand and publishes it.
+#
+# Started by hand (workflow_dispatch) it is a dry run: the same builds, the
+# packages as workflow artifacts, no release.
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+
+env:
+  # As ci.yml: aqtinstall can't install 6.11+ yet.
+  QT_VERSION: 6.10.2
+
+jobs:
+  # ---------------------------------------------------------------------------
+  check:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: One version and release date everywhere
+        run: sh tools/check-version.sh
+
+      - name: The version, and the tag naming it
+        id: version
+        run: |
+          version=$(sed -n '/^project(qbucket/,/)/s/^[[:space:]]*VERSION[[:space:]]\{1,\}\([0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but CMakeLists.txt says $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes
+        run: tools/release-notes.sh "${{ steps.version.outputs.version }}"
+
+  # ---------------------------------------------------------------------------
+  deb:
+    name: .deb (Ubuntu 26.04)
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # Build in ubuntu:26.04 with the tests and lintian, then install in a
+      # clean container: --version, the window, --self-test with and without
+      # a keychain, desktop file and metainfo.
+      - name: Build and smoke-test (Docker)
+        env:
+          QBUCKET_JOBS: 4
+          QBUCKET_DOCKER_MEMORY: 12g
+        run: packaging/debian/build-in-docker.sh dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb
+          path: dist/qbucket_${{ needs.check.outputs.version }}-1_amd64.deb
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  flatpak:
+    name: Flatpak
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      # Flathub's builder image, the KDE runtime and SDK, the smoke test's
+      # runtime: more than the image leaves free.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      # Build with the tests in the sandbox, lint, then run the bundle in a
+      # Fedora container: --version, the window, --self-test through the
+      # Secret portal. The metainfo's screenshots are files of the tag, so a
+      # dry run (no tag yet) may miss them.
+      - name: Build, lint and smoke-test (Docker)
+        env:
+          QBUCKET_JOBS: 4
+          QBUCKET_DOCKER_MEMORY: 12g
+          QBUCKET_FLATPAK_LINT_ALLOWED: >-
+            ${{ github.ref_type == 'tag' && 'appstream-screenshots-not-mirrored-in-ostree'
+                || 'appstream-missing-screenshots appstream-screenshots-not-mirrored-in-ostree' }}
+        run: packaging/flatpak/build-in-docker.sh dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flatpak
+          path: dist/qbucket-${{ needs.check.outputs.version }}-x86_64.flatpak
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  windows:
+    name: Windows (ZIP + setup)
+    needs: check
+    # Pinned: windows-latest moved to a VS-2026 image that lacks the VS 2022
+    # layout Qt's msvc2022 binaries expect (ci.yml). Inno Setup 6 is on it.
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+
+      # /WX, ctest, windeployqt into an empty folder with the MSVC runtime
+      # app-local, the dumpbin dependency check, the staged exe's --version
+      # and --self-test, ZIP, setup; then install an older version per user,
+      # update, uninstall (test-installer.ps1).
+      - name: Build, test, package, test the installer
+        shell: pwsh
+        run: packaging\windows\build-release.ps1 -QtDir $env:QT_ROOT_DIR -TestInstaller
+
+      # ctest shows no QtTest output on Windows: rerun what failed with
+      # QtTest's own file logger and print that (as ci.yml).
+      - name: Output of failed tests
+        if: failure()
+        shell: pwsh
+        run: |
+          $build = "build-windows-release"
+          $log = "$build/Testing/Temporary/LastTestsFailed.log"
+          if (!(Test-Path $log)) { exit 0 }
+          $env:PATH = "$env:QT_ROOT_DIR\bin;$PWD\$build;$env:PATH"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          foreach ($line in Get-Content $log) {
+            $name = $line.Split(':')[1]
+            $exe = Get-ChildItem $build -Recurse -Filter "$name.exe" | Select-Object -First 1
+            if (!$exe) { continue }
+            & $exe.FullName -o "$name-log.txt,txt"
+            Write-Host "===== $name (exit $LASTEXITCODE)"
+            Get-Content "$name-log.txt" -ErrorAction SilentlyContinue
+          }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: |
+            dist/qbucket-${{ needs.check.outputs.version }}-windows-x64.zip
+            dist/qbucket-${{ needs.check.outputs.version }}-windows-x64-setup.exe
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  release:
+    name: Draft release
+    if: github.ref_type == 'tag'
+    needs: [check, deb, flatpak, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums and notes
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
+          [ "$(wc -l < dist/SHA256SUMS)" -eq 4 ] || { echo "::error::expected 4 packages"; exit 1; }
+          tools/release-notes.sh "$VERSION" dist/SHA256SUMS > notes.md
+
+      # A draft: published by hand after the checks of docs/RELEASING.md §4.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "QBucket $VERSION" --notes-file notes.md dist/*

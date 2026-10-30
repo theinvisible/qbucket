@@ -5,28 +5,7 @@ version and changelog: [`libs/qbucket-s3/CHANGELOG.md`](libs/qbucket-s3/CHANGELO
 The version here is the one in `CMakeLists.txt`; `tools/check-version.sh`
 keeps the AppStream metainfo and the Debian changelog in step.
 
-## [Unreleased]
-
-### Changed
-
-- A running operation shows a progress bar in the status bar (a share where
-  the rest can be counted, busy otherwise) and says what it is doing. Deleting
-  a bucket names each stage — deleting the contents, checking it is empty,
-  waiting for the server, deleting the bucket, checking it is gone — and ends
-  with a message instead of a status line that disappears after 10 s.
-
-### Fixed
-
-- A bucket deletion that ends with the bucket still there (cancelled, a version
-  under retention or legal hold) lists the open bucket afresh: the objects it
-  deleted no longer show.
-- An empty bucket or folder takes files again: dropping files, folders or
-  objects onto "This folder is empty." uploads / copies them there, and a
-  right-click offers Upload Files…, Upload Folder…, New Folder… and Paste
-  (Ctrl+V works there too). The list's context menu has the upload entries
-  as well now.
-
-## [1.0.0] — 2026-10-24
+## [1.0.0] — 2026-10-30
 
 The first release: parity with the essentials of NetSDK's S3 Browser, on
 Windows and Linux. Built on `qbucket-s3` 0.1.0. How each feature came about:
@@ -65,6 +44,8 @@ Windows and Linux. Built on `qbucket-s3` 0.1.0. How each feature came about:
 - Bucket policy, CORS, lifecycle rules, ACL, public access block, object lock
   (default retention, retention and legal hold per object, the governance
   bypass per operation); create and delete buckets.
+- A running operation shows its progress and what it is doing in the status
+  bar; deleting a bucket names each stage and ends with a message.
 
 ### Transfers
 
@@ -72,6 +53,8 @@ Windows and Linux. Built on `qbucket-s3` 0.1.0. How each feature came about:
   after a quit or a crash; a transfer panel; adaptive concurrency per account.
 - Drag & drop in from the file manager; drag out into Explorer (virtual files)
   or a Linux file manager (staged copies, also from the Flatpak).
+- An empty bucket or folder takes files too: drop them onto it, or upload,
+  create a folder or paste from its context menu.
 - Open an object in its default application and upload the changes, keeping
   its headers, tags and ACL; a change on the server meanwhile is a conflict,
   never overwritten silently.

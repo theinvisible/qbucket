@@ -4,7 +4,7 @@ All notable changes to the library's public API. The library has its own
 semantic version, independent of the QBucket application. Before 1.0, a minor
 version bump may break the API.
 
-## [0.1.0] — 2026-10-24
+## [0.1.0] — 2026-10-30
 
 First release, shipped with QBucket 1.0.0.
 

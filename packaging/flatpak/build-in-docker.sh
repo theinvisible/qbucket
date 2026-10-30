@@ -8,8 +8,8 @@
 # 1. Build: Flathub's builder image for the manifest's KDE runtime builds the
 #    manifest (the test suite runs in the build sandbox), exports a repo and
 #    a single-file bundle, and runs flatpak-builder-lint on the manifest and
-#    the repo (its errors fail the build, but for the three a private
-#    repository can't avoid).
+#    the repo (its errors fail the build, but for those in
+#    QBUCKET_FLATPAK_LINT_ALLOWED).
 # 2. Smoke test (packaging/flatpak/smoke.Dockerfile, smoke.sh): a Fedora
 #    container installs the KDE runtime from Flathub and the bundle, then
 #    runs the app inside its sandbox: --version, the window (offscreen), and
@@ -24,6 +24,12 @@
 # The build runs QBUCKET_JOBS compilers at a time (default 12) in a container
 # limited to QBUCKET_DOCKER_MEMORY (default 20g): with every core next to a
 # desktop the machine can hang; at the limit the OOM killer ends the build.
+#
+# QBUCKET_FLATPAK_LINT_ALLOWED: lint errors that don't fail the build. By
+# default the two no build outside Flathub avoids before its tag exists: the
+# metainfo's screenshots are files of the tag (missing until it is pushed),
+# and Flathub mirrors screenshots into the repo only on its own builders.
+# The release workflow allows only the second.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -38,12 +44,13 @@ BUNDLE="qbucket-$VERSION-x86_64.flatpak"
 BUILDER="ghcr.io/flathub-infra/flatpak-github-actions:kde-$RUNTIME"
 JOBS="${QBUCKET_JOBS:-12}"
 MEMORY="${QBUCKET_DOCKER_MEMORY:-20g}"
+LINT_ALLOWED="${QBUCKET_FLATPAK_LINT_ALLOWED-appstream-missing-screenshots appstream-screenshots-not-mirrored-in-ostree}"
 log() { printf '\n==> %s\n' "$*"; }
 
 log "build ($BUILDER)"
 docker run --rm --privileged --memory="$MEMORY" --memory-swap="$MEMORY" \
     -v "$REPO:/src:ro" -v "$OUT:/out" -v qbucket-flatpak-builder:/cache \
-    -e JOBS="$JOBS" -e APP_ID="$APP_ID" -e MANIFEST="$MANIFEST" -e BUNDLE="$BUNDLE" -e OWNER="$(id -u):$(id -g)" \
+    -e JOBS="$JOBS" -e LINT_ALLOWED="$LINT_ALLOWED" -e APP_ID="$APP_ID" -e MANIFEST="$MANIFEST" -e BUNDLE="$BUNDLE" -e OWNER="$(id -u):$(id -g)" \
     --entrypoint bash "$BUILDER" -euc '
     # The manifest takes the sources from ../.. — a copy without build trees.
     # Everything in the volume: flatpak-builder wants its state and build
@@ -59,15 +66,12 @@ docker run --rm --privileged --memory="$MEMORY" --memory-swap="$MEMORY" \
     flatpak build-bundle /cache/repo "/out/$BUNDLE" "$APP_ID" \
         --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
     chown "$OWNER" "/out/$BUNDLE"
-    # Errors fail the build, except those of a private repository: its URLs
-    # (homepage, screenshots) are unreachable, and Flathub mirrors the
-    # screenshots into the repo only on its own builders.
-    known="appid-url-not-reachable appstream-missing-screenshots appstream-screenshots-not-mirrored-in-ostree"
+    # Errors fail the build, except those in LINT_ALLOWED (see the top).
     lint() {
         echo "--- flatpak-builder-lint $1"
         out=$(flatpak-builder-lint --exceptions "$@" || true)
         echo "$out" | jq -c "{errors, warnings}"
-        bad=$(echo "$out" | jq -r ".errors // [] | .[]" | grep -vxF -e ${known// / -e } || true)
+        bad=$(echo "$out" | jq -r ".errors // [] | .[]" | grep -vxF -e "" ${LINT_ALLOWED:+-e ${LINT_ALLOWED// / -e }} || true)
         if [ -n "$bad" ]; then echo "flatpak-builder-lint $1: $bad"; return 1; fi
     }
     lint manifest "$MANIFEST"

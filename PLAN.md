@@ -1096,6 +1096,10 @@ release time:
 - 2026-10-24 — **Packages are built and tested in Docker** (deb, Flatpak),
   each with a smoke test in a clean container (`qbucket --self-test`); with
   GitHub Actions unavailable, `docs/RELEASING.md` is the release procedure.
+- 2026-10-30 — **A tag builds the release** (`release.yml`): the same Docker
+  and PowerShell scripts, run on GitHub's runners, end in a *draft* release;
+  the maintainer checks its packages by hand and publishes. Windows ships
+  with CI's Qt 6.10.2 (aqtinstall can't install 6.11+). Flathub after 1.0.0.
 
 ## 11. Open questions
 

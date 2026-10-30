@@ -70,6 +70,9 @@ the Windows release script and Inno Setup installer; README, CHANGELOG,
 `docs/RELEASING.md`), devlog 012 (the Windows release built and checked on
 Windows: app-local MSVC runtime, dependency check, installer test; the
 fixes the first full Windows test run found).
+**After M8, before the tag:** devlog 013 (uploads into an empty bucket or
+folder), 014 (a job's progress in the status bar), 015 (`release.yml`: a tag
+builds the packages into a draft release; 1.0.0 dated 2026-10-30).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.
@@ -179,13 +182,15 @@ What exists:
   container, `packaging/flathub/` (prepared, not submitted),
   `packaging/windows/` (`build-release.ps1`, `installer.iss`,
   `test-installer.ps1`);
-  `tools/check-version.sh`, `tools/tidy-in-docker.sh`;
+  `tools/check-version.sh` (version and release date everywhere),
+  `tools/release-notes.sh`, `tools/tidy-in-docker.sh`;
   `test_release_screenshots` (→ `docs/img/`).
 - Workflows: `ci.yml` per push (Linux Release, Windows app, library as
-  Windows DLL), `ci-extended.yml`, `s3-integration.yml`. **GitHub Actions
-  don't run at the moment (no build minutes)**: every check runs locally
-  before a commit — the list in `docs/RELEASING.md`; Windows is checked by
-  the user. The user pushes.
+  Windows DLL), `ci-extended.yml`, `s3-integration.yml`, `release.yml` (a tag
+  `vx.y.z` → the four packages built and smoke-tested with the scripts
+  above → a draft release; by hand = dry run). Every check still runs
+  locally before a commit (the list in `docs/RELEASING.md`); the user
+  pushes, tags and publishes.
 
 Provider knowledge: `docs/providers/hetzner.md`.
 
@@ -284,8 +289,9 @@ build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR --id X upl
 build/libs/qbucket-s3/tests/s3cp/s3cp --endpoint … --resume-dir DIR resume X
 ```
 
-Packages, built and smoke-tested in Docker (nothing installed on the host;
-`dist/`), and on Windows by hand — `docs/RELEASING.md`:
+Packages — built by `release.yml` from a tag, or the same locally: in Docker
+(nothing installed on the host; `dist/`), and on Windows by hand —
+`docs/RELEASING.md`:
 
 ```sh
 packaging/debian/build-in-docker.sh     # .deb for Ubuntu 26.04 (~15 min)
@@ -296,8 +302,9 @@ packaging/flatpak/build-in-docker.sh    # Flatpak bundle (~15 min)
 QT_QPA_PLATFORM=xcb QBUCKET_SCREENSHOT_DIR=docs/img build/tests/test_release_screenshots
 ```
 
-The extended CI (`ci-extended.yml`, `s3-integration.yml`) can be started by
-hand from the Actions tab (`workflow_dispatch`) — once Actions run again.
+The extended CI (`ci-extended.yml`, `s3-integration.yml`) and the release
+dry run (`release.yml`) start by hand from the Actions tab
+(`workflow_dispatch`).
 
 ## Conventions
 
