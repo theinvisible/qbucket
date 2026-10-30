@@ -40,6 +40,8 @@
 #include <QGuiApplication>
 #include <QtTest>
 
+#include <algorithm>
+
 using namespace qbucket;
 using namespace qbucket::s3::testing;
 using qbucket::testing::AccountHarness;
@@ -504,13 +506,11 @@ private:
         auto* ask = m_window->findChild<QMessageBox*>();
         QVERIFY(ask && ask->checkBox());
         ask->checkBox()->setChecked(true);
-        QAbstractButton* go = nullptr;
-        for (QAbstractButton* b : ask->buttons()) {
-            if (ask->buttonRole(b) == QMessageBox::AcceptRole)
-                go = b;
-        }
-        QVERIFY(go);
-        go->click();
+        const QList<QAbstractButton*> buttons = ask->buttons();
+        const auto go = std::find_if(buttons.cbegin(), buttons.cend(),
+                                     [ask](QAbstractButton* b) { return ask->buttonRole(b) == QMessageBox::AcceptRole; });
+        QVERIFY(go != buttons.cend());
+        (*go)->click();
 
         QTRY_VERIFY_WITH_TIMEOUT(m_window->findChild<OperationPreviewDialog*>() != nullptr, 10000);
         auto* dlg = m_window->findChild<OperationPreviewDialog*>();
