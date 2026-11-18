@@ -91,14 +91,17 @@ jobs:
       # Build with the tests in the sandbox, lint, then run the bundle in a
       # Fedora container: --version, the window, --self-test through the
       # Secret portal. The metainfo's screenshots are files of the tag, so a
-      # dry run (no tag yet) may miss them.
+      # dry run (no tag yet) may miss them; a tag build must find them. Found,
+      # they aren't on Flathub's media server nor mirrored into the repo —
+      # only Flathub's builders do that.
       - name: Build, lint and smoke-test (Docker)
         env:
           QBUCKET_JOBS: 4
           QBUCKET_DOCKER_MEMORY: 12g
           QBUCKET_FLATPAK_LINT_ALLOWED: >-
-            ${{ github.ref_type == 'tag' && 'appstream-screenshots-not-mirrored-in-ostree'
-                || 'appstream-missing-screenshots appstream-screenshots-not-mirrored-in-ostree' }}
+            ${{ github.ref_type == 'tag'
+                && 'appstream-external-screenshot-url appstream-screenshots-not-mirrored-in-ostree'
+                || 'appstream-missing-screenshots appstream-external-screenshot-url appstream-screenshots-not-mirrored-in-ostree' }}
         run: packaging/flatpak/build-in-docker.sh dist
 
       - uses: actions/upload-artifact@v7

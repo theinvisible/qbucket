@@ -26,10 +26,12 @@
 # desktop the machine can hang; at the limit the OOM killer ends the build.
 #
 # QBUCKET_FLATPAK_LINT_ALLOWED: lint errors that don't fail the build. By
-# default the two no build outside Flathub avoids before its tag exists: the
-# metainfo's screenshots are files of the tag (missing until it is pushed),
-# and Flathub mirrors screenshots into the repo only on its own builders.
-# The release workflow allows only the second.
+# default the three no build outside Flathub avoids before its tag exists:
+# the metainfo's screenshots are files of the tag (missing until it is
+# pushed); once they are found, the linter wants them on Flathub's media
+# server and mirrored into the repo, which only Flathub's own builders do.
+# The release workflow's tag build allows only the last two: a screenshot
+# it can't reach still fails it (appstream-missing-screenshots).
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -44,7 +46,7 @@ BUNDLE="qbucket-$VERSION-x86_64.flatpak"
 BUILDER="ghcr.io/flathub-infra/flatpak-github-actions:kde-$RUNTIME"
 JOBS="${QBUCKET_JOBS:-12}"
 MEMORY="${QBUCKET_DOCKER_MEMORY:-20g}"
-LINT_ALLOWED="${QBUCKET_FLATPAK_LINT_ALLOWED-appstream-missing-screenshots appstream-screenshots-not-mirrored-in-ostree}"
+LINT_ALLOWED="${QBUCKET_FLATPAK_LINT_ALLOWED-appstream-missing-screenshots appstream-external-screenshot-url appstream-screenshots-not-mirrored-in-ostree}"
 log() { printf '\n==> %s\n' "$*"; }
 
 log "build ($BUILDER)"

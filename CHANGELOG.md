@@ -5,7 +5,7 @@ version and changelog: [`libs/qbucket-s3/CHANGELOG.md`](libs/qbucket-s3/CHANGELO
 The version here is the one in `CMakeLists.txt`; `tools/check-version.sh`
 keeps the AppStream metainfo and the Debian changelog in step.
 
-## [1.0.0] — 2026-10-30
+## [1.0.0] — 2026-11-18
 
 The first release: parity with the essentials of NetSDK's S3 Browser, on
 Windows and Linux. Built on `qbucket-s3` 0.1.0. How each feature came about:

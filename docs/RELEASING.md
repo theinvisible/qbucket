@@ -83,9 +83,11 @@ git push origin vx.y.z
   metainfo;
 - **Flatpak** — `packaging/flatpak/build-in-docker.sh`: Flathub's builder
   image, the tests in the build sandbox, flatpak-builder-lint (only
+  `appstream-external-screenshot-url` and
   `appstream-screenshots-not-mirrored-in-ostree` may pass — Flathub mirrors
-  screenshots on its own builders), the bundle run in Fedora with the
-  keychain through the Secret portal;
+  screenshots to its media server on its own builders; the screenshots
+  themselves must be found), the bundle run in Fedora with the keychain
+  through the Secret portal;
 - **Windows** — `packaging\windows\build-release.ps1 -TestInstaller` on
   `windows-2022` with Qt 6.10.2 (as `ci.yml`): `/WX`, ctest, windeployqt
   into an empty folder with the MSVC runtime app-local, the `dumpbin`

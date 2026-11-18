@@ -72,7 +72,7 @@ Windows: app-local MSVC runtime, dependency check, installer test; the
 fixes the first full Windows test run found).
 **After M8, before the tag:** devlog 013 (uploads into an empty bucket or
 folder), 014 (a job's progress in the status bar), 015 (`release.yml`: a tag
-builds the packages into a draft release; 1.0.0 dated 2026-10-30).
+builds the packages into a draft release; 1.0.0 dated 2026-11-18).
 The full plan — decisions, scope, architecture, milestones M0–M8, test
 strategy, protocol pitfalls — lives in **`PLAN.md`**. Start there, and
 update this section as milestones land.

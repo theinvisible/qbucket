@@ -24,8 +24,10 @@ gets released through a workflow of its own.
   a release a week later would have shipped that date.
 - **1.0.0's content.** What collected under `[Unreleased]` since (devlogs
   013, 014: uploads into an empty folder, a job's progress in the status
-  bar) went into the 1.0.0 section — nothing had been published. Date
-  2026-10-30 everywhere, the library's 0.1.0 too (it ships with it).
+  bar) went into the 1.0.0 section — nothing had been published. Dated
+  2026-10-30 everywhere at first, the library's 0.1.0 too (it ships with
+  it); the tag came on 2026-11-18, and with the fix below the date moved
+  there.
 - `packaging/flatpak/build-in-docker.sh`: `QBUCKET_FLATPAK_LINT_ALLOWED`
   replaces the fixed list of tolerated lint errors.
 
@@ -42,13 +44,15 @@ gets released through a workflow of its own.
 - **Windows with Qt 6.10.2**, as `ci.yml`: aqtinstall can't install 6.11+
   yet. The machine that ran devlog 012 has 6.12; both pass the suite. The
   draft's setup is what the Windows check by hand installs.
-- **Flatpak lint: one exception left.** With the repository public the
-  homepage is reachable (`appid-url-not-reachable` gone). The metainfo's
-  screenshots are files of the tag: a tag build must find them, a dry run
-  can't (`appstream-missing-screenshots` tolerated there only).
-  `appstream-screenshots-not-mirrored-in-ostree` stays — Flathub mirrors
-  screenshots on its own builders. The local default tolerates the two
-  pre-tag ones.
+- **Flatpak lint: what only Flathub can do is tolerated, nothing else.**
+  With the repository public the homepage is reachable
+  (`appid-url-not-reachable` gone). The metainfo's screenshots are files of
+  the tag: a tag build must find them, a dry run can't
+  (`appstream-missing-screenshots` tolerated there only). Found, they
+  aren't on Flathub's media server (`appstream-external-screenshot-url`) nor
+  mirrored into the repo (`appstream-screenshots-not-mirrored-in-ostree`) —
+  both only Flathub's builders do; tolerated in every build. The local
+  default tolerates all three.
 - **Runner sizes.** `QBUCKET_JOBS=4`, `QBUCKET_DOCKER_MEMORY=12g` (4 cores,
   16 GB); the Flatpak job deletes preinstalled SDKs first (the builder image,
   the KDE SDK and the smoke test's runtime need the room). Inno Setup 6 is on
@@ -83,11 +87,32 @@ Linux:
   `appstream-screenshots-not-mirrored-in-ostree` — the homepage is reachable
   now; the smoke test's keychain round trip through the Secret portal.
 
+## The dry run, and the first tag run
+
+The dry run (2026-10-30) was green: the four packages, the Windows
+`--self-test` with the Credential Manager on the runner, the installer test.
+
+The tag `v1.0.0` (2026-11-18) failed in the Flatpak job's lint — .deb and
+Windows green, no draft created: `appstream-external-screenshot-url`.
+flatpak-builder-lint checks the screenshots one step at a time
+(`checks/screenshots.py`) and returns at the first failure. Without the tag
+the screenshot URLs 404, the catalogue has no screenshots, and the check
+stops at `appstream-missing-screenshots` — so the dry run could never reach
+the next step: every screenshot must start with Flathub's media URL (it
+skips that only in Flathub's own pipeline). Tolerated now for the tag too;
+a screenshot the tag build can't reach still fails it with
+`appstream-missing-screenshots`. The tag had to move (RELEASING §4), so the
+release date moved to the tag's day.
+Checked locally before the new tag, with the tag build's list against the
+published `v1.0.0`: the screenshots found, lint with only those two errors,
+96 / 96 in the sandbox, the keychain through the Secret portal.
+
+**A dry run can't show what only exists with the tag.** Here: the
+screenshots. The metainfo's URLs at the tag are the one thing the dry run
+couldn't check.
+
 ## Open points
 
-- The workflow itself runs only on GitHub: the dry run is its first test.
-- The Windows `--self-test` on a runner: whether the Credential Manager works
-  in the runner's session shows in the dry run.
 - `ci.yml`'s Windows ZIP is still the old fixed copy (no MSVC runtime); the
   release ZIP comes from `build-release.ps1`.
 - Flathub; code signing (SmartScreen).
